@@ -1,0 +1,23 @@
+{
+  "name": "dead-signal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "node tools/bench.mjs",
+    "serve": "node tools/serve.mjs",
+    "test": "node tools/test.mjs && node tools/test-city.mjs && node tools/test-art-refs.mjs && node tools/test-boss.mjs && node tools/test-campaign.mjs && node tools/test-medkits.mjs && node tools/test-input.mjs && node tools/test-stealth.mjs && node tools/test-vehicles.mjs && node tools/test-songs.mjs audio.js && node tools/test-pulse.mjs audio.js",
+    "test:browser": "node tools/test-browser.mjs && node tools/test-controls.mjs && node tools/test-audio.mjs && node tools/test-vehicles-browser.mjs && node tools/test-options-browser.mjs",
+    "art:lint": "node tools/art/lint.mjs",
+    "art:lint:all": "node tools/art/lint.mjs --family all --quiet --budget tools/fixtures/art-warn-budget.json",
+    "art:preview": "node tools/art/preview.mjs",
+    "art:sheet": "node tools/sheet.mjs sprites --family",
+    "art:frame": "node tools/frame.mjs",
+    "art:ramp": "node tools/art/ramp.mjs",
+    "art:trace": "node tools/art/trace.mjs",
+    "shot": "node tools/shot.mjs",
+    "art:lint:strict": "node tools/art/lint.mjs --family all --strict --quiet",
+    "test:score": "node tools/test-songs.mjs audio.js",
+    "test:tempo": "node tools/test-pulse.mjs audio.js",
+    "bench:browser": "node tools/bench-browser.mjs"
+  }
+}

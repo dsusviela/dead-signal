@@ -1,0 +1,180 @@
+{
+  "seeds": "1-50",
+  "geometry": {
+    "obstacles": 1454,
+    "obstaclesByType": {
+      "wall": 538,
+      "door": 5,
+      "furniture": 327,
+      "fence": 106,
+      "debris": 4,
+      "rubble": 214,
+      "building": 51,
+      "car": 157,
+      "barrier": 47,
+      "gate": 5
+    },
+    "buildingMasses": 51,
+    "buildings": 89,
+    "byStyle": {
+      "market": 1,
+      "civic": 3,
+      "chapel": 1,
+      "hospital": 1,
+      "clinic": 12,
+      "industrial": 3,
+      "military": 3,
+      "shop": 17,
+      "terrace": 15,
+      "row": 31,
+      "shack": 2
+    },
+    "byDistrict": {
+      "checkpoint": 22,
+      "ruins": 18,
+      "hospital": 22,
+      "northline": 7,
+      "industry": 5,
+      "quarantine": 15
+    },
+    "locations": 199,
+    "lots": 18,
+    "vehicleSlots": 38,
+    "sites": 201,
+    "landmarks": [
+      "checkpoint",
+      "radio",
+      "hospital",
+      "ruins",
+      "industry"
+    ],
+    "driveableCars": 33,
+    "props": 856,
+    "lights": 149,
+    "burningWrecksByDistrict": {
+      "industry": 5
+    }
+  },
+  "worldLoot": {
+    "pickups": {
+      "min": 231,
+      "median": 251,
+      "max": 267
+    },
+    "bullets": {
+      "min": 2249,
+      "median": 2587.5,
+      "max": 2927
+    },
+    "shells": {
+      "min": 380,
+      "median": 464.5,
+      "max": 507
+    },
+    "incendiaryFuel": {
+      "min": 744,
+      "median": 872,
+      "max": 1058
+    },
+    "medkits": {
+      "min": 9,
+      "median": 11.5,
+      "max": 13
+    },
+    "xp": {
+      "min": 679,
+      "median": 821,
+      "max": 966
+    },
+    "provisions": {
+      "min": 13,
+      "median": 16,
+      "max": 18
+    },
+    "vehicleFuel": {
+      "min": 200,
+      "median": 240,
+      "max": 280
+    },
+    "vehicleTank": {
+      "min": 43640.14,
+      "median": 61155.42,
+      "max": 78187.17
+    },
+    "emptyTanks": {
+      "min": 3,
+      "median": 9,
+      "max": 13
+    }
+  },
+  "weaponPickups": {
+    "ar/q1": {
+      "min": 1,
+      "median": 1,
+      "max": 1
+    },
+    "flame/q1": {
+      "min": 1,
+      "median": 5,
+      "max": 11
+    },
+    "flame/q2": {
+      "min": 0,
+      "median": 0,
+      "max": 2
+    },
+    "rifle/q1": {
+      "min": 1,
+      "median": 5.5,
+      "max": 10
+    },
+    "rifle/q2": {
+      "min": 0,
+      "median": 2,
+      "max": 6
+    },
+    "shotgun/q1": {
+      "min": 1,
+      "median": 5,
+      "max": 11
+    },
+    "shotgun/q2": {
+      "min": 0,
+      "median": 2,
+      "max": 4
+    },
+    "smg/q1": {
+      "min": 1,
+      "median": 6,
+      "max": 13
+    },
+    "smg/q2": {
+      "min": 0,
+      "median": 2,
+      "max": 4
+    }
+  },
+  "nonWorldSources": {
+    "startingSharedAmmo": {
+      "bullets": 90,
+      "shells": 16,
+      "fuel": 65
+    },
+    "startingPerPlayer": {
+      "medkits": 1,
+      "weapon": null,
+      "backupPistol": true,
+      "loadedRounds": 0
+    },
+    "enemyDrops": "XP only: walker 2, runner 2, ghost 3, brute 7, band 2, carrier 5 (game.js ENEMY.xp)",
+    "radioPallet": {
+      "bullets": 240,
+      "shells": 45,
+      "incendiaryFuel": 130,
+      "medkits": 1,
+      "objectiveXp": 65
+    },
+    "provisionsCarryCap": 6,
+    "vehicleFuelCarryCapLitres": 60
+  }
+}
