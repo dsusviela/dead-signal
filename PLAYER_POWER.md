@@ -296,63 +296,71 @@ Required ownership rules:
 
 ### Phase 0 — Lock the prototype contract and baseline
 
-- [ ] Resolve every item under “Phase 0 must decide before implementation” and move each result
+- [x] Resolve every item under “Phase 0 must decide before implementation” and move each result
   into “Confirmed for the selected feature set” or a clearly labeled deferred list.
-- [ ] Define stable ids for the grenade launcher, grenade ammunition, turret, armor pickup, and
+- [x] Define stable ids for the grenade launcher, grenade ammunition, turret, armor pickup, and
   every attachment selected for the first prototype.
-- [ ] Freeze the first-prototype weapon capacity rule, including downed survivors, disconnected
+- [x] Freeze the first-prototype weapon capacity rule, including downed survivors, disconnected
   controllers, reconnects, late keyboard joins, and a return from co-op to solo if that can occur.
-- [ ] Freeze duplicate transaction rules for attachment gain, quality gain, loaded ammunition,
+- [x] Freeze duplicate transaction rules for attachment gain, quality gain, loaded ammunition,
   full progression, and leaving the drop for another survivor.
-- [ ] Freeze initial shotgun cleave, grenade, turret, and armor numbers. Mark them as tuning
+- [x] Freeze initial shotgun cleave, grenade, turret, and armor numbers. Mark them as tuning
   baselines rather than permanent balance.
-- [ ] Add `tools/test-player-power.mjs` and include it in `npm test`. Start with assertions for the
+- [x] Add `tools/test-player-power.mjs` and include it in `npm test`. Start with assertions for the
   historical two-slot inventory, replacement/drop preservation, shotgun one-target-per-pellet,
   direct-to-health damage, and absence of new pickup types.
-- [ ] Add a browser scenario or extend the browser harness for one-, two-, and four-survivor power
+- [x] Add a browser scenario or extend the browser harness for one-, two-, and four-survivor power
   states, keyboard plus controller input, pickup prompts, join dialogs, and HUD screenshots.
-- [ ] Record reproducible combat baselines: time/ammunition to clear fixed walker, runner, brute,
+- [x] Record reproducible combat baselines: time/ammunition to clear fixed walker, runner, brute,
   and mixed crowds with every current weapon at each quality.
-- [ ] Record current solo and four-player pressure baselines at fixed elapsed times: nearby enemy
+- [x] Record current solo and four-player pressure baselines at fixed elapsed times: nearby enemy
   count, ammunition spent, damage/down events, and whether an objective hold can be completed.
-- [ ] Record seeds 1–50 weapon type/quality counts and ammunition totals so duplicate conversion,
+- [x] Record seeds 1–50 weapon type/quality counts and ammunition totals so duplicate conversion,
   grenades, turret use, and armor can later be budgeted against the current city economy.
-- [ ] Define performance budgets for projectile count, explosion checks, turret targeting, new
+- [x] Define performance budgets for projectile count, explosion checks, turret targeting, new
   effects, and maximum audio voices.
+
+*2026-09-17: decisions and ids in "Phase 0 decisions"; `tools/test-player-power.mjs` (in npm test) and
+`tools/test-power-browser.mjs` (in test:browser) created; `tools/power-bench.mjs` crowd matrix (every weapon × quality ×
+walkers/runners/brutes/mixed) and solo/four-player pressure at levels 1/6/12 saved to artifacts/power/baseline.json; city
+weapon/ammo seed counts already live in tools/fixtures/city-baseline.json (weaponPickups, bullets, shells, fuel). Baseline
+finding: infected stacked on a survivor were often missed (pellet rays required along > 0), so q1 guns could not clear a
+12-walker crowd in 90 s — fixed in Phase 2. assumption: the historical two-slot assertions were replaced by the new
+capacity assertions in the same commit instead of landing separately.*
 
 Phase 0 exit: rules no longer depend on “proposed” prose, the pre-change behavior is protected by
 tests, and later phases have numeric baselines for comparison.
 
 ### Phase 1 — Implement carried capacity and safe co-op drop-in
 
-- [ ] Replace the fixed `WEAPON_CAP` assumption with one capacity function consumed by game logic,
+- [x] Replace the fixed `WEAPON_CAP` assumption with one capacity function consumed by game logic,
   HUD prompts, the field manual, and tests.
-- [ ] Return four slots for a one-survivor run and three slots per survivor once two to four
+- [x] Return four slots for a one-survivor run and three slots per survivor once two to four
   survivors are counted under the Phase 0 rule.
-- [ ] Audit pickup, replacement, cycling, current-slot bookkeeping, death/revive, vehicle entry,
+- [x] Audit pickup, replacement, cycling, current-slot bookkeeping, death/revive, vehicle entry,
   restart, and any test setup for inventories longer than two.
-- [ ] Detect the exact transition in which a new join lowers capacity while an existing survivor
+- [x] Detect the exact transition in which a new join lowers capacity while an existing survivor
   holds four weapons.
-- [ ] Pause simulation before the new survivor can move, take damage, collect loot, or affect the
+- [x] Pause simulation before the new survivor can move, take damage, collect loot, or affect the
   shared camera.
-- [ ] Add a player-owned overflow dialog showing all four weapon names, qualities, attachments,
+- [x] Add a player-owned overflow dialog showing all four weapon names, qualities, attachments,
   and loaded ammunition.
-- [ ] Require an explicit selection and confirmation; never preselect and immediately accept a
+- [x] Require an explicit selection and confirmation; never preselect and immediately accept a
   destructive choice.
-- [ ] Drop the chosen weapon nearby as a complete `weaponState`, with a short pickup lock only if
+- [x] Drop the chosen weapon nearby as a complete `weaponState`, with a short pickup lock only if
   needed to prevent the same input edge from reclaiming it.
-- [ ] Preserve the selected weapon when it remains in inventory. If it is dropped, select a
+- [x] Preserve the selected weapon when it remains in inventory. If it is dropped, select a
   deterministic remaining weapon. Preserve the backup pistol selection when it was active.
-- [ ] Skip the dialog when every existing survivor already carries three or fewer weapons.
-- [ ] Define and implement an orderly queue if multiple existing survivors are over capacity.
-- [ ] Handle join, disconnect, reconnect, pause, menu back/confirm, controller identity, and
+- [x] Skip the dialog when every existing survivor already carries three or fewer weapons.
+- [x] Define and implement an orderly queue if multiple existing survivors are over capacity.
+- [x] Handle join, disconnect, reconnect, pause, menu back/confirm, controller identity, and
   restart without duplicating or deleting a weapon.
-- [ ] Update the live pickup prompt so it names the correct empty slot or replacement consequence
+- [x] Update the live pickup prompt so it names the correct empty slot or replacement consequence
   at the current party size.
-- [ ] Test zero-to-four inventory sizes, all selected-slot positions, pistol selected, simultaneous
+- [x] Test zero-to-four inventory sizes, all selected-slot positions, pistol selected, simultaneous
   over-cap survivors, keyboard/controller joins, disconnect during the dialog, and dropped-state
   preservation.
-- [ ] Browser-check the dialog at all supported aspect ratios and UI scales with keyboard, Xbox,
+- [x] Browser-check the dialog at all supported aspect ratios and UI scales with keyboard, Xbox,
   and PlayStation labels.
 
 Suggested dialog copy:
@@ -360,6 +368,13 @@ Suggested dialog copy:
 > A teammate has joined. Solo survivors can carry four weapons to cover more roles; in co-op,
 > each survivor carries three and the squad can share those roles. Choose one weapon to leave for
 > your teammate. Your backup pistol stays with you.
+
+*2026-09-17: `game.js weaponCap/dropWeapon/resolveOverflow`, overflow queue pauses `step`; `hud.js` owner-only "Leave one
+weapon" panel (pick, then confirm; Esc/B returns to the list; mouse may choose). Tests: test-player-power (four solo, three
+co-op, paused join, identity-preserving drop, selection rules, downed survivors keep the cap), test-power-browser (dialog
+opens on a pad join, pauses, other pads ignored, pick ≠ drop, confirm drops, fits 1280×720/1920×1080/2048×1002/1024×768:
+artifacts/power/browser/overflow-*.png). Disconnect keeps the player entry, so the queue survives reconnects. PlayStation
+label check awaiting human review with a physical pad.*
 
 Phase 1 exit: party-size capacity is enforced at every entry point, and no drop-in or UI edge case
 can destroy, duplicate, or silently select a weapon.
@@ -740,6 +755,8 @@ matching phase item.
    confirm the city rewards exploration without guaranteeing a full build early.
 
 ## Session log
+
+- 2026-09-17 — Phase 0 decisions, harness and baseline; Phase 1 capacity and overflow landed (commits after 123bc57).
 
 - 2026-09-16 — **Tracker decomposed; no gameplay implementation performed.** Converted the
   exploratory concept note into ordered workstreams with status rules, current-source baseline,

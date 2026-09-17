@@ -57,16 +57,16 @@ test('two carried slots cycle in order with the permanent pistol and retain maga
 });
 test('full inventory replaces selected gun and passes its loaded rounds to a teammate',()=>{
   const s=G.create(302);G.addPlayer(s);G.addPlayer(s,'pad');s.mode='play';const [p,q]=s.players;
-  takeGun(s,p,'ar',2,7);takeGun(s,p,'shotgun',3,4);cycle(s);cycle(s);
+  takeGun(s,p,'ar',2,7);takeGun(s,p,'shotgun',3,4);takeGun(s,p,'rifle',1,5);cycle(s);cycle(s); // co-op capacity is three (PLAYER_POWER Phase 1)
   const reserve={...s.ammo};takeGun(s,p,'smg',1,12);
-  assert.equal(p.weaponInventory.length,2);assert.equal(p.weaponInventory[1].weapon,'shotgun');
+  assert.equal(p.weaponInventory.length,3);assert.equal(p.weaponInventory[1].weapon,'shotgun');
   const drop=s.loot.find(w=>w.type==='weapon'&&w.lock===1);assert.ok(drop);
   assert.equal(drop.weapon,'ar');assert.equal(drop.mag,7);assert.equal(drop.quality,2);
   G.collect(s,q,drop);assert.equal(q.weapon,'ar');assert.equal(q.mag,7);assert.equal(q.quality,2);
   assert.deepEqual({...s.ammo},reserve);assert.equal(G.collect(s,q,drop),false);
   // While the pistol is selected, replacement targets the last carried slot.
-  cycle(s);cycle(s);assert.equal(p.backup,true);takeGun(s,p,'rifle',1,0);
-  assert.equal(p.weaponInventory[0].weapon,'smg');assert.equal(p.weaponInventory[1].weapon,'rifle');
+  cycle(s);cycle(s);cycle(s);assert.equal(p.backup,true);takeGun(s,p,'rifle',1,0);
+  assert.equal(p.weaponInventory[0].weapon,'smg');assert.equal(p.weaponInventory[2].weapon,'rifle');assert.equal(p.weaponInventory[2].mag,0);
   assert.equal(p.backup,false);assert.equal(p.mag,0);assert.deepEqual({...s.ammo},reserve);
 });
 test('identical gun types occupy distinct slots and switching cannot finish a reload for free',()=>{

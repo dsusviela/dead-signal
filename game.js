@@ -1,7 +1,10 @@
 (function (root) {
   'use strict';
   const W = () => root.DSWorld;
-  const MEDKIT_HEAL=50, MEDKIT_CAP=3, WEAPON_CAP=2;
+  const MEDKIT_HEAL=50, MEDKIT_CAP=3, WEAPON_CAP=3;
+  // PLAYER_POWER Phase 1: a lone survivor carries four weapons; from the second joined survivor on, three each.
+  // Player entries are never removed mid-run, so downs and disconnects never widen capacity again.
+  function weaponCap(s){return s&&s.players&&s.players.length<=1?4:3;}
   const MASS={walker:3.2,runner:2.4,band:2,carrier:5,brute:14};
   // seat offsets along/across the car: both rows sit under the roof and glass, not on the hood (city_v2 car review)
   const SEATS=[[-18,-11],[-18,11],[6,-11],[6,11]];
@@ -80,7 +83,27 @@
     const p={id,source,name:'SURVIVOR '+(id+1),x:anchor.x+(id?22:0),y:anchor.y+(id?22:0),r:10,hp:100,maxHp:100,dead:false,color:COLORS[id],angle:-Math.PI/2,auto:false,backup:true,weapon:null,quality:1,mag:0,reload:0,shotCd:0,damage:1,speed:105,invuln:2,revive:0,upgrades:Math.max(0,s.level-1),choice:0,kills:0,medkits:1,stamina:100,maxStamina:100,staminaDelay:0,upgradeBag:[],offers:[],offerHistory:[],weaponInventory:[],weaponSlot:0};
     if(W().blocked(s.world,p.x,p.y,10)){p.x=anchor.x;p.y=anchor.y;}
     p.vehicle=null;p.exitCd=0;p.refuel=null;
-    rollUpgrades(s,p);s.players.push(p); return id;
+    rollUpgrades(s,p);s.players.push(p);
+    // a join that lowers capacity queues every survivor above it for an explicit, paused drop choice
+    const cap=weaponCap(s);for(const q of s.players)if(q.weaponInventory.length>cap&&!(s.overflowQueue||[]).includes(q.id))(s.overflowQueue||(s.overflowQueue=[])).push(q.id);
+    return id;
+  }
+  // Leave one carried weapon beside its survivor as a complete weaponState (type, quality, loaded rounds, attachments).
+  function dropWeapon(s,p,slot){
+    saveWeapon(p);const w=p.weaponInventory[slot];if(!w)return false;
+    const wasSelected=!p.backup&&(p.weaponSlot??0)===slot;
+    p.weaponInventory.splice(slot,1);
+    s.loot.push({id:s.nextId++,x:p.x+22,y:p.y+18,type:'weapon',weapon:w.weapon,quality:w.quality||1,mag:w.mag,attachments:(w.attachments||[]).slice(),amount:1,label:WEAPONS[w.weapon].name,lock:1});
+    if(!p.weaponInventory.length){p.weapon=null;p.backup=true;p.weaponSlot=0;p.mag=0;p.attachments=[];}
+    else if(wasSelected){p.backup=false;p.weaponSlot=0;const n=p.weaponInventory[0];Object.assign(p,n);p.attachments=(n.attachments||[]).slice();p.reload=0;}
+    else if(!p.backup&&(p.weaponSlot??0)>slot)p.weaponSlot--;
+    emit(s,'pickup','drop');effect(s,p.x,p.y-26,'LEFT '+WEAPONS[w.weapon].name,'#edc37c');
+    return true;
+  }
+  // resolve the head of the overflow queue: that survivor drops the chosen slot; the run resumes when nobody is over
+  function resolveOverflow(s,playerId,slot){
+    const q=s.overflowQueue||[];if(q[0]!==playerId)return false;const p=s.players.find(x=>x.id===playerId);if(!p||!dropWeapon(s,p,slot))return false;
+    if(p.weaponInventory.length<=weaponCap(s))q.shift();return true;
   }
   function emit(s,type,detail){if(s.audioEvents.length<64)s.audioEvents.push({type,detail});}
   // World-space sound, independent of audio/mute. Future doors and windows use this too.
@@ -246,12 +269,12 @@
   }
   // Combat fields describe the last selected carried gun, even while using the pistol.
   function saveWeapon(p){
-    if(p.weapon){const slot=p.weaponSlot??0;p.weaponSlot=slot;Object.assign(p.weaponInventory[slot]||(p.weaponInventory[slot]={}),{weapon:p.weapon,quality:p.quality,mag:p.mag});}
+    if(p.weapon){const slot=p.weaponSlot??0;p.weaponSlot=slot;Object.assign(p.weaponInventory[slot]||(p.weaponInventory[slot]={}),{weapon:p.weapon,quality:p.quality,mag:p.mag,attachments:(p.attachments||[]).slice()});}
   }
   function selectWeapon(s,p,slot){
     saveWeapon(p);
     p.backup=slot<0;
-    if(!p.backup){p.weaponSlot=slot;Object.assign(p,p.weaponInventory[slot]);}
+    if(!p.backup){p.weaponSlot=slot;const w=p.weaponInventory[slot];Object.assign(p,w);p.attachments=(w.attachments||[]).slice();}
     // Switching cancels an unfinished reload; it never refills a magazine.
     p.reload=0;p.reloadWeapon=null;p.shotCd=Math.max(p.shotCd,.25);makeNoise(s,p,'equip');
   }
@@ -324,13 +347,13 @@
     else if(item.type==='heal'){if(s.players.every(q=>q.dead||q.hp>=q.maxHp))return false;s.players.forEach(q=>{if(!q.dead)q.hp=Math.min(q.maxHp,q.hp+item.amount);});makeNoise(s,p,'heal');effect(s,item.x,item.y,'SQUAD +'+item.amount+' HP','#79e2cf');}
     else if(item.type==='weapon'){
       saveWeapon(p);
-      const slot=p.weaponInventory.length<WEAPON_CAP?p.weaponInventory.length:(p.weaponSlot??0),previous=p.weaponInventory[slot];
+      const slot=p.weaponInventory.length<weaponCap(s)?p.weaponInventory.length:(p.weaponSlot??0),previous=p.weaponInventory[slot];
       const def=WEAPONS[item.weapon];
       // Dropped guns carry their loaded rounds; fresh loot loads from the squad reserve.
       const mag=item.mag??Math.min(def.mag,s.ammo[def.ammo]);
       if(item.mag==null)s.ammo[def.ammo]-=mag;
       if(previous)s.loot.push({id:s.nextId++,x:p.x+25,y:p.y+20,type:'weapon',...previous,amount:1,label:WEAPONS[previous.weapon].name,lock:1});
-      p.weaponSlot=slot;p.weapon=item.weapon;p.quality=item.quality||1;p.mag=mag;
+      p.weaponSlot=slot;p.weapon=item.weapon;p.quality=item.quality||1;p.mag=mag;p.attachments=(item.attachments||[]).slice();
       saveWeapon(p);selectWeapon(s,p,slot);
       effect(s,p.x,p.y-25,def.name,'#edc37c');
     }
@@ -984,7 +1007,7 @@
     c.x+=((minx+maxx)/2+lookX-c.x)*Math.min(1,dt*rate);c.y+=((miny+maxy)/2+lookY-c.y)*Math.min(1,dt*rate);c.w+=(width-c.w)*Math.min(1,dt*3);c.h=c.w/aspect;
   }
   function step(s,dt,inputs={},aspect=16/9){
-    if(s.mode!=='play'||s.paused)return;dt=Math.min(.05,Math.max(0,dt));s.time+=dt;s.elapsed+=dt;s.bannerT=Math.max(0,s.bannerT-dt);
+    if(s.mode!=='play'||s.paused||s.overflowQueue&&s.overflowQueue.length)return;dt=Math.min(.05,Math.max(0,dt));s.time+=dt;s.elapsed+=dt;s.bannerT=Math.max(0,s.bannerT-dt);
     s.noise=s.noise.filter(n=>{n.audible-=dt;return (n.life-=dt)>0;});s.fx=s.fx.filter(f=>(f.life-=dt)>0);s.shots=s.shots.filter(f=>(f.life-=dt)>0);
     for(const l of s.loot)if(l.lock)l.lock-=dt;
     const ins={};for(const p of s.players)ins[p.id]=conditionInput(p,inputs[p.id]||{});inputs=ins;
@@ -1001,5 +1024,5 @@
     if(s.players.length&&s.players.every(p=>p.dead)){s.mode='lost';s.paused=false;}
     camera(s,dt,aspect);
   }
-  root.DSGame={BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
+  root.DSGame={weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
 })(typeof window!=='undefined'?window:globalThis);

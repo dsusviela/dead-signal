@@ -12,7 +12,7 @@
   // district cards read the world's canonical table, in the order the campaign chain visits them
   const CHAIN=['checkpoint','industry','ruins','hospital','quarantine','northline'];
   const districtCards=()=>root.DSWorld.DISTRICTS.filter(d=>d.card).sort((a,b)=>CHAIN.indexOf(a.id)-CHAIN.indexOf(b.id)).map(d=>[d.id,d.mapLabel,d.card.role,d.card.note,d.mapPalette?d.mapPalette.light:d.color]);
-  const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The gate needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry two weapons plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.']];
+  const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The gate needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry four weapons solo, three each in co-op, plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.']];
   const SHORT={pistol:'PISTOL',ar:'AR',shotgun:'SHOTGUN',smg:'SMG',rifle:'RIFLE',flame:'FLAMER'};
   const ui={menu:null,focus:0,stack:[],pointer:{x:-1,y:-1},items:[],hover:null,upgradeFor:null,objective:null,location:null,arrive:0,panels:[]};
   let k=1,u=1,W=0,H=0,bindings={state:()=>null,restart:()=>{},resume:()=>{},toTitle:()=>{}};
@@ -163,7 +163,7 @@
     // a survivor down outranks every stash, vehicle or door hint
     const down=s.players.find(p=>p.dead);
     if(down&&living.length){const helper=living.some(q=>Math.hypot(q.x-down.x,q.y-down.y)<48);message=tag(down)+'DOWN · '+(helper?'REVIVING '+Math.round(down.revive/3*100)+'%':'NEEDS A TEAMMATE');sub=helper?'Stay beside them':'Stand beside them for three seconds to revive';return {message,sub,alert:true};}
-    for(const p of living){if(p.vehicle!=null)continue;const it=G.nearestInteract(s,p);if(it){const def=G.WEAPONS[it.weapon];message=tag(p)+key(p,'interact')+def.name+' '+('*'.repeat(it.quality||1));sub=(p.weaponInventory.length<G.WEAPON_CAP?'Equip slot '+(p.weaponInventory.length+1):'Replace '+G.WEAPONS[p.weapon].name)+' · '+def.ammo.toUpperCase();break;}}
+    for(const p of living){if(p.vehicle!=null)continue;const it=G.nearestInteract(s,p);if(it){const def=G.WEAPONS[it.weapon];message=tag(p)+key(p,'interact')+def.name+' '+('*'.repeat(it.quality||1));sub=(p.weaponInventory.length<G.weaponCap(s)?'Equip slot '+(p.weaponInventory.length+1):'Replace '+G.WEAPONS[p.weapon].name)+' · '+def.ammo.toUpperCase();break;}}
     // refuelling first: pouring a jerrycan or fuelling the chapel generator (one press, stay beside it)
     if(!message)for(const p of living){const sup=s.supplies;
       if(p.refuel){const r=p.refuel;message=tag(p)+(r.kind==='generator'?'FUELLING THE GENERATOR · ':'POURING FUEL · ')+Math.floor(r.progress/r.time*100)+'%';sub='Stay beside it · moving away stops the pour, nothing is lost';break;}
@@ -262,6 +262,9 @@
     item(id,x,y,w,h,run);
   }
   function upgradePlayer(s){return s&&s.players.find(p=>p.id===ui.upgradeFor)||null;}
+  function overflowPlayer(s){const id=s&&s.overflowQueue&&s.overflowQueue[0];return id==null?null:s.players.find(p=>p.id===id)||null;}
+  // one line for a carried weapon instance: name, quality stars, attachments earned, loaded rounds
+  function weaponLine(w){const G=root.DSGame,def=G.WEAPONS[w.weapon];return def.name+' '+'*'.repeat(w.quality||1)+(w.attachments&&w.attachments.length?' · +'+w.attachments.length+' MOD':'')+' · '+(def.ammo?w.mag+'/'+(G.magFor?G.magFor(w):def.mag):'∞');}
   function menuItems(name,s){
     if(name==='pause'){
       const list=[{id:'resume',label:'BACK TO THE STREETS',run:()=>{close();bindings.resume();}}];
@@ -271,6 +274,9 @@
     }
     if(name==='upgrade'){const p=upgradePlayer(s);if(!p)return [{id:'back',label:'BACK',run:()=>back()}];
       return [...p.offers.map((id,j)=>({id:'offer:'+j,label:root.DSGame.UPGRADES.find(x=>x.id===id).name,run:src=>chooseUpgrade(p,j,src)})),{id:'back',label:'BACK TO PAUSE',quiet:true,run:()=>back()}];}
+    if(name==='overflow'){const p=overflowPlayer(s);if(!p)return [];
+      if(ui.overflowPick!=null&&p.weaponInventory[ui.overflowPick])return [{id:'confirm-drop',label:'LEAVE '+root.DSGame.WEAPONS[p.weaponInventory[ui.overflowPick].weapon].name+' HERE',run:src=>overflowDrop(p,src)},{id:'change',label:'CHOOSE ANOTHER',quiet:true,run:src=>{if(!src||src===p.source){ui.overflowPick=null;ui.focus=0;}}}];
+      return p.weaponInventory.map((w,j)=>({id:'drop:'+j,label:weaponLine(w),quiet:true,run:src=>{if(!src||src===p.source){ui.overflowPick=j;ui.focus=0;}}}));}
     if(name==='controls')return [{id:'back',label:'BACK TO PAUSE',quiet:true,run:()=>back()}];
     if(name==='options')return [
       {id:'driving-style',label:'DRIVING · '+(s.settings.drivingStyle==='directional'?'DIRECTIONAL':'CAR-RELATIVE'),
@@ -293,6 +299,8 @@
     if(!root.DSGame.upgrade(s,p,j))return false;
     if(p.upgrades<=0)back();else ui.focus=Math.min(ui.focus,p.offers.length-1);return true;
   }
+  function overflowDrop(p,src){const s=state();if(!s||src&&src!==p.source)return false;const ok=root.DSGame.resolveOverflow(s,p.id,ui.overflowPick);ui.overflowPick=null;ui.focus=0;
+    if(!(s.overflowQueue&&s.overflowQueue.length)){ui.menu=null;ui.stack=[];}return ok;}
   function openUpgrade(id){const s=state();if(!s||s.mode!=='play')return;if(!ui.menu)open('pause');ui.upgradeFor=id;open('upgrade');}
   function drawMenu(g,s){
     const name=ui.menu,items=menuItems(name,s);
@@ -310,6 +318,13 @@
       if(name==='pause'){const tier=s.boss&&s.boss.difficulty?s.boss.difficulty.tier:s.threat;text(g,'OUTBREAK '+tier+' · '+(s.boss?'DIFFICULTY LOCKED':'ESCALATES IN '+clock(90-s.time%90))+' · the outbreak clock is paused',d.x+34*k,y+4*k,8,COL.muted,'left','normal');y+=22*k;}
       if(name==='end'){y+=10*k;let sx=d.x+34*k;for(const [v,l] of [[clock(s.time),'SURVIVED'],[String(s.kills),'INFECTED KILLED'],[String(s.opened),'SUPPLIES FOUND']]){text(g,v,sx,y,12,COL.orange);text(g,l,sx,y+16*k,7,COL.muted,'left','normal');sx+=Math.max(measure(g,l,7,'normal'),measure(g,v,12))+24*k;}y+=40*k;}
       y+=12*k;items.forEach((it,i)=>{const bh=it.quiet?30*k:44*k;button(g,it.id,it.label,d.x+34*k,y,w-68*k,bh,ui.focus===i,it.quiet,it.run);if(it.id.startsWith('upgrade:')){const p=s.players.find(q=>'upgrade:'+q.id===it.id);g.fillStyle=p.color;g.fillRect(d.x+34*k,y+6*k,3*k,bh-12*k);}y+=bh+8*k;});
+    }else if(name==='overflow'){
+      const p=overflowPlayer(s);if(!p){ui.menu=null;return;}
+      const w=Math.min(620*k,W-32*k),h=(170+items.length*40+60)*k,d=dialog(g,w,h),x=d.x+28*k,inner=w-56*k;
+      text(g,'P'+(p.id+1)+' · A TEAMMATE HAS JOINED · THE SQUAD IS PAUSED',x,d.y+22*k,8,p.color);display(g,'Leave one weapon.',x,d.y+42*k,30,COL.paper);
+      let ly=d.y+84*k;for(const line of wrap(g,'Solo survivors carry four weapons to cover more roles; in co-op each survivor carries three and the squad shares those roles. Choose one weapon to leave for your teammate. Your backup pistol stays with you.',8,inner)){text(g,line,x,ly,8,COL.muted,'left','normal');ly+=12*k;}
+      text(g,'Only P'+(p.id+1)+' chooses: stick or arrows to move, '+L(p,'confirm')+' to pick, then confirm.',x,ly+4*k,8,COL.gold,'left','normal');
+      let y=ly+24*k;items.forEach((it,i)=>{button(g,it.id,it.label,x,y,inner,34*k,ui.focus===i,it.quiet,it.run);y+=40*k;});
     }else if(name==='upgrade'){
       const p=upgradePlayer(s),w=Math.min(620*k,W-32*k),d=dialog(g,w,300*k),x=d.x+28*k,inner=w-56*k;
       if(!p){ui.menu='pause';return;}
@@ -376,11 +391,15 @@
   function back(){const s=state();if(ui.stack.length){ui.menu=ui.stack.pop();ui.focus=0;if(ui.menu!=='upgrade')ui.upgradeFor=null;return;}if(ui.menu==='end')return;if(ui.menu==='manual'&&s&&s.mode==='title'){ui.menu=null;bindings.toTitle();return;}close();}
   function toggle(name){if(ui.menu===name)close();else if(!ui.menu)open(name);}
   const PAUSED_MENUS=['pause','manual','options','upgrade','controls'];
-  function togglePause(){const s=state();if(!s||s.mode!=='play')return;if(PAUSED_MENUS.includes(ui.menu))close();else if(!ui.menu||ui.menu==='fullmap'){ui.menu=null;ui.stack=[];open('pause');}}
+  function togglePause(){const s=state();if(!s||s.mode!=='play'||ui.menu==='overflow')return;if(PAUSED_MENUS.includes(ui.menu))close();else if(!ui.menu||ui.menu==='fullmap'){ui.menu=null;ui.stack=[];open('pause');}}
   // source: 'keyboard' / 'pad:N' for a device press, undefined for the pointer or automation
   function press(action,source){
     const s=state();
     if(action==='pause'){togglePause();return true;}
+    if(ui.menu==='overflow'){const p=overflowPlayer(s),owner=!source||p&&p.source===source,its=menuItems('overflow',s);if(!owner||!its.length)return true;
+      if(action==='up')ui.focus=(ui.focus+its.length-1)%its.length;else if(action==='down')ui.focus=(ui.focus+1)%its.length;
+      else if(action==='confirm'){const it=its[ui.focus];if(it)it.run(source);}else if(action==='back'&&ui.overflowPick!=null){ui.overflowPick=null;ui.focus=0;}
+      return true;}
     if(action==='map'){if(!s||s.mode!=='play')return false;if(ui.menu==='fullmap')back();else if(!ui.menu||ui.menu==='pause')open('fullmap');return true;}
     if(!ui.menu)return false;
     const items=menuItems(ui.menu,s);
@@ -411,6 +430,7 @@
     g.save();g.textBaseline='top';
     if(s.mode!=='title'){trackObjective(s);drawTop(g,s);const below=drawBoss(g,s);drawMinimap(g,s);drawNotices(g,s,below);drawPrompt(g,s);drawDock(g,s);}
     if((s.mode==='won'||s.mode==='lost')&&ui.menu!=='end'){ui.menu='end';ui.stack=[];ui.focus=0;}
+    if(s.mode==='play'&&s.overflowQueue&&s.overflowQueue.length&&ui.menu!=='overflow'){ui.menu='overflow';ui.stack=[];ui.focus=0;ui.overflowPick=null;}
     if(ui.menu){ui.items=[];drawMenu(g,s);}
     g.restore();
   }
