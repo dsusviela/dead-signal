@@ -12,7 +12,7 @@
   // district cards read the world's canonical table, in the order the campaign chain visits them
   const CHAIN=['checkpoint','industry','ruins','hospital','quarantine','northline'];
   const districtCards=()=>root.DSWorld.DISTRICTS.filter(d=>d.card).sort((a,b)=>CHAIN.indexOf(a.id)-CHAIN.indexOf(b.id)).map(d=>[d.id,d.mapLabel,d.card.role,d.card.note,d.mapPalette?d.mapPalette.light:d.color]);
-  const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The gate needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry four weapons solo, three each in co-op, plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.'],['05 / UPGRADES AND GRENADES','Taking a weapon you already carry adds its next attachment instead (three per gun: +N on your strip). The grenade launcher fires shared GREN rounds that burst on arrival and stagger infected; it never hurts the squad. The shotgun and pierce rounds hit several infected in a line.'],['06 / TURRETS AND ARMOR','One turret each, outside your slots. T / LB deploys it after standing still; T / LB beside it packs it up with its rounds. E / A beside any turret loads it from squad bullets. Infected wear it down. Armor vests soak damage before health, up to 50; armor never regenerates and medkits do not restore it.']];
+  const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The gate needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way; the Journal in Pause lists what you have learned needs doing and keeps every record you have read. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry four weapons solo, three each in co-op, plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.'],['05 / UPGRADES AND GRENADES','Taking a weapon you already carry adds its next attachment instead (three per gun: +N on your strip). The grenade launcher fires shared GREN rounds that burst on arrival and stagger infected; it never hurts the squad. The shotgun and pierce rounds hit several infected in a line.'],['06 / TURRETS AND ARMOR','One turret each, outside your slots. T / LB deploys it after standing still; T / LB beside it packs it up with its rounds. E / A beside any turret loads it from squad bullets. Infected wear it down. Armor vests soak damage before health, up to 50; armor never regenerates and medkits do not restore it.']];
   const SHORT={pistol:'PISTOL',ar:'AR',shotgun:'SHOTGUN',smg:'SMG',rifle:'RIFLE',flame:'FLAMER',launcher:'LAUNCHER'};
   const ui={menu:null,focus:0,stack:[],pointer:{x:-1,y:-1},items:[],hover:null,upgradeFor:null,objective:null,location:null,arrive:0,panels:[]};
   let k=1,u=1,W=0,H=0,bindings={state:()=>null,restart:()=>{},resume:()=>{},toTitle:()=>{}};
@@ -118,26 +118,13 @@
     bar(g,x+8*u,y+18*u,w-16*u,7*u,b.hp/b.maxHp,COL.red,'#3a1218');bar(g,x+8*u,y+27*u,w-16*u,3*u,b.castProgress||0,COL.orange,'#10170e');
     return h+4*u;
   }
-  // The objective is no longer a permanent card: a change is announced once, and the current one lives in Pause.
-  function objectiveText(s,boss){
-    const c=s.campaign||{},knows=id=>(c.known||[]).includes(id)||Object.values(c.evidence||{}).some(Boolean)&&id==='patient-furnace';
-    if(boss)return ['CONTAIN PATIENT FURNACE','Read the tells. Keep your squad alive.'];
-    if(c.escaped)return ['OUT OF THE CITY','The Linden Street group is with you.'];
-    if(c.gateOpen)return ['GET EVERYONE SOUTH','The barrier is open. Nobody is left behind.'];
-    if(c.transmitted&&c.override&&s.circuit?.emergency)return ['OPEN CHECKPOINT NINE','Power, override and the call are ready.'];
-    if(c.transmitted)return ['SOMEONE ANSWERED','A civilian group waits at Checkpoint Nine.'];
-    if(c.payload&&c.prepared)return ['SEND THE EVIDENCE','Blackglass is prepared. Hold the transmitter.'];
-    if(c.payload)return ['A BAND AND A RECORD','The payload needs a working transmitter.'];
-    if(c.bossDown)return ['THE FURNACE IS SILENT','The command post is no longer sealed.'];
-    if(c.evidence?.furnaceClue||c.evidence?.patientRecords)return ['THE SUBJECT IN THE YARD','Records point to Central Quarantine.'];
-    if(s.circuit?.emergency)return ['EMERGENCY CIRCUIT LIVE','Blackglass and the checkpoint have power.'];
-    if(knows('chapel'))return ['NO POWER, NO WAY OUT','The chapel generator runs the emergency circuit.'];
-    return ['GET THE CITY OUT','Scavenge. Read what the evacuation left behind.'];
-  }
+  // The objective is no longer a permanent card and there is no waypoint: the pause menu's JOURNAL holds a to-do list
+  // of what the squad has learned (DSGame.journal) and every record it has read. A newly learned task is announced once.
   function trackObjective(s){
-    const [title]=objectiveText(s,s.boss&&s.boss.active);
-    if(ui.objective&&ui.objective!==title&&root.DSGame&&s.mode==='play')root.DSGame.announce(s,'OBJECTIVE · '+title);
-    ui.objective=title;
+    if(!s.campaign||s.mode!=='play')return;
+    const ids=root.DSGame.journal(s).tasks.map(q=>q.id);
+    if(ui.journalRun!==s){ui.journalRun=s;ui.journalKnown=new Set(ids);return;}
+    for(const q of root.DSGame.journal(s).tasks)if(!ui.journalKnown.has(q.id)){ui.journalKnown.add(q.id);if(!q.done)root.DSGame.announce(s,'JOURNAL · NEW TASK · '+q.title.toUpperCase());}
   }
   // one short-lived notice slot under the top edge, plus the last document read (readable evidence)
   function drawNotices(g,s,below){
@@ -284,7 +271,7 @@
     if(name==='pause'){
       const list=[{id:'resume',label:'BACK TO THE STREETS',run:()=>{close();bindings.resume();}}];
       for(const p of s?s.players:[])if(p.upgrades>0)list.push({id:'upgrade:'+p.id,label:'P'+(p.id+1)+' · CHOOSE '+(p.upgrades>1?p.upgrades+' UPGRADES':'AN UPGRADE'),quiet:true,run:()=>openUpgrade(p.id)});
-      list.push({id:'options',label:'OPTIONS',quiet:true,run:()=>open('options')},{id:'fullmap',label:'CITY MAP · TAB / VIEW',quiet:true,run:()=>open('fullmap')},{id:'controls',label:'CONTROLS',quiet:true,run:()=>open('controls')},{id:'manual',label:'FIELD MANUAL',quiet:true,run:()=>open('manual')},{id:'restart',label:'NEW EXPEDITION',quiet:true,run:()=>{ui.menu=null;ui.stack=[];bindings.restart();}});
+      list.push({id:'journal',label:'JOURNAL · TO DO AND RECORDS',quiet:true,run:()=>open('journal')},{id:'options',label:'OPTIONS',quiet:true,run:()=>open('options')},{id:'fullmap',label:'CITY MAP · TAB / VIEW',quiet:true,run:()=>open('fullmap')},{id:'controls',label:'CONTROLS',quiet:true,run:()=>open('controls')},{id:'manual',label:'FIELD MANUAL',quiet:true,run:()=>open('manual')},{id:'restart',label:'NEW EXPEDITION',quiet:true,run:()=>{ui.menu=null;ui.stack=[];bindings.restart();}});
       return list;
     }
     if(name==='upgrade'){const p=upgradePlayer(s);if(!p)return [{id:'back',label:'BACK',run:()=>back()}];
@@ -303,6 +290,11 @@
       {id:'minimap',label:'LOCAL MAP · '+(prefs.minimap?'SHOWN':'HIDDEN'),description:'The corner map. The city map stays on Tab / View.',run:()=>{prefs.minimap=!prefs.minimap;savePrefs();}},
       {id:'back',label:'BACK TO PAUSE',quiet:true,run:()=>back()}
     ];
+    if(name==='journal'){
+      const recs=s&&s.campaign?root.DSGame.journal(s).records:[];
+      return [...recs.map((r,j)=>({id:'record:'+j,label:r.title,quiet:true,run:()=>{ui.record=j;}})),
+        {id:'journal-map',label:'CITY MAP',quiet:true,run:()=>open('fullmap')},{id:'back',label:'BACK TO PAUSE',quiet:true,run:()=>back()}];
+    }
     if(name==='end')return [{id:'restart',label:'ANOTHER EXPEDITION',run:()=>{ui.menu=null;ui.stack=[];bindings.restart();}}];
     if(name==='manual')return [{id:'close',label:'UNDERSTOOD',run:()=>back()}];
     if(name==='fullmap')return [{id:'close',label:'CLOSE · TAB',quiet:true,run:()=>back()}];
@@ -319,12 +311,12 @@
   function openUpgrade(id){const s=state();if(!s||s.mode!=='play')return;if(!ui.menu)open('pause');ui.upgradeFor=id;open('upgrade');}
   function drawMenu(g,s){
     const name=ui.menu,items=menuItems(name,s);
-    if(name==='pause'||name==='options')k=Math.min(k,(H-32)/(name==='pause'?360+items.length*38:520));
+    if(name==='pause'||name==='options')k=Math.min(k,(H-32)/(name==='pause'?360+items.length*38:88+items.length*72));
     if(name==='pause'||name==='end'){
       const won=s.mode==='won',w=Math.min(460*k,W-40*k);
       const heading=name==='pause'?['Take a breath.']:won?['Out.','On foot.']:['The city','keeps its dead.'];
-      const [otitle,osub]=objectiveText(s,s.boss&&s.boss.active);
-      const body=name==='pause'?otitle+' · '+osub:won?'The squad restored the circuit, sent the evidence and walked the Linden Street group out through Checkpoint Nine. Nobody came for you; the city behind you is still infected.':'The outbreak overwhelmed your squad. Try a different route, conserve supplies, and return stronger.';
+      const J=s.campaign?root.DSGame.journal(s):{tasks:[]},jd=J.tasks.filter(q=>q.done).length;
+      const body=name==='pause'?(s.boss&&s.boss.active?'CONTAIN PATIENT FURNACE · Read the tells. Keep your squad alive.':(J.tasks.length?'JOURNAL · '+jd+' of '+J.tasks.length+' known tasks done':'JOURNAL · nothing learned yet. Notices and records around the city fill it in')+(J.records&&J.records.length?' · '+J.records.length+(J.records.length===1?' record':' records')+' read':'')+'.'):won?'The squad restored the circuit, sent the evidence and walked the Linden Street group out through Checkpoint Nine. Nobody came for you; the city behind you is still infected.':'The outbreak overwhelmed your squad. Try a different route, conserve supplies, and return stronger.';
       const bodyLines=wrap(g,body,9,w-68*k),itemsH=items.reduce((n,it)=>n+(it.quiet?30:44)*k+8*k,0);
       const h=(30+22+heading.length*32+8)*k+bodyLines.length*15*k+(name==='pause'?22*k:0)+(name==='end'?50*k:0)+12*k+itemsH+16*k,d=dialog(g,w,h);let y=d.y+30*k;
       text(g,name==='pause'?'TRANSMISSION HELD':won?'CHECKPOINT NINE OPEN':'TRANSMISSION LOST',d.x+34*k,y,8,COL.orange);y+=22*k;
@@ -351,6 +343,37 @@
         text(g,String(j+1),cx+12*k,cy+10*k,9,sel?COL.gold:COL.muted);for(const [li,line] of wrap(g,it.label,12,cw-24*k).entries())text(g,line,cx+12*k,cy+36*k+li*18*k,12,sel?COL.gold:COL.paper);
         item(it.id,cx,cy,cw,ch,()=>it.run());});
       button(g,'back',items[3].label,x,d.y+240*k,inner,34*k,ui.focus===3,true,items[3].run);
+    }else if(name==='journal'){
+      const J=s.campaign?root.DSGame.journal(s):{goal:'',tasks:[],unknown:0,records:[]},w=Math.min(960*k,W-32*k);
+      const gap=28*k,colL=(w-56*k-gap)*.54,colR=w-56*k-gap-colL;
+      const taskLines=J.tasks.map(q=>wrap(g,q.note,8,colL-26*k));
+      const leftH=J.tasks.reduce((n,q,i)=>n+18*k+taskLines[i].length*13*k+10*k,0)+(J.unknown?40*k:0)+(J.tasks.length?0:30*k);
+      const nRec=J.records.length,sel=items[ui.focus]&&items[ui.focus].id.startsWith('record:')?ui.focus:Math.min(ui.record??nRec-1,nRec-1);
+      const bodyLines=sel>=0?wrap(g,J.records[sel].body,8,colR-24*k):[];
+      const rightH=nRec*26*k+(sel>=0?30*k+bodyLines.length*13*k+20*k:40*k);
+      const h=Math.min(H-24*k,(110+48)*k+Math.max(leftH,rightH)+50*k),d=dialog(g,w,h),x=d.x+28*k,xr=x+colL+gap;
+      text(g,'PAUSED / JOURNAL',x,d.y+22*k,8,COL.orange);display(g,'What the squad knows.',x,d.y+40*k,26,COL.paper);
+      text(g,J.goal,x,d.y+78*k,8,COL.muted,'left','normal');
+      let y=d.y+104*k;g.fillStyle=COL.line;g.fillRect(x,y-6*k,w-56*k,1);
+      text(g,'TO DO',x,y,8,COL.gold);text(g,'RECORDS · '+nRec,xr,y,8,COL.gold);y+=22*k;
+      let ly=y;
+      if(!J.tasks.length){for(const line of wrap(g,'Nothing yet. Read notices and records around the city to learn what the barrier needs.',8,colL))  {text(g,line,x,ly,8,COL.muted,'left','normal');ly+=13*k;}}
+      J.tasks.forEach((q,i)=>{
+        const bx=x,by=ly+1*k,bs=11*k;g.strokeStyle=q.done?COL.mint:COL.paper;g.lineWidth=1;g.strokeRect(Math.round(bx)+.5,Math.round(by)+.5,Math.round(bs),Math.round(bs));
+        if(q.done){g.fillStyle=COL.mint;g.fillRect(Math.round(bx+3*k),Math.round(by+3*k),Math.round(bs-5*k),Math.round(bs-5*k));}
+        text(g,q.title,x+20*k,ly,9,q.done?COL.muted:COL.paper);
+        if(q.done){const tw=measure(g,q.title,9);g.fillStyle=COL.muted;g.fillRect(Math.round(x+20*k),Math.round(ly+4*k),Math.round(tw),Math.max(1,Math.round(k)));}
+        ly+=18*k;for(const line of taskLines[i]){text(g,line,x+20*k,ly,8,q.done?COL.dim:COL.muted,'left','normal');ly+=13*k;}ly+=10*k;
+      });
+      if(J.unknown){for(const line of wrap(g,'More to learn. Notices, records and the places themselves fill this in.',8,colL-20*k)){text(g,line,x+20*k,ly,8,COL.dim,'left','normal');ly+=13*k;}}
+      let ry=y;
+      if(!nRec)text(g,'No records read yet.',xr,ry,8,COL.muted,'left','normal');
+      J.records.forEach((r,j)=>{button(g,'record:'+j,r.title,xr,ry,colR,22*k,ui.focus===j||sel===j,true,items[j].run);ry+=26*k;});
+      if(sel>=0){ry+=6*k;const bh=bodyLines.length*13*k+22*k;g.fillStyle='#091115';g.fillRect(xr,ry,colR,bh);g.fillStyle=COL.gold;g.fillRect(xr,ry,2*k,bh);
+        let by=ry+11*k;for(const line of bodyLines){text(g,line,xr+12*k,by,8,COL.paper,'left','normal');by+=13*k;}}
+      const fy=d.y+h-44*k,bw=(w-56*k-12*k)/2;
+      button(g,'journal-map','CITY MAP',x,fy,bw,32*k,ui.focus===nRec,true,items[nRec].run);
+      button(g,'back','BACK TO PAUSE',x+bw+12*k,fy,bw,32*k,ui.focus===nRec+1,true,items[nRec+1].run);
     }else if(name==='controls'){
       const w=Math.min(760*k,W-32*k),rowsN=13,d=dialog(g,w,(150+rowsN*20)*k),x=d.x+28*k;
       text(g,'PAUSED / CONTROLS',x,d.y+22*k,8,COL.orange);display(g,'Every survivor, their own buttons.',x,d.y+42*k,24,COL.paper);
@@ -396,17 +419,17 @@
       g.fillStyle=COL.red;g.beginPath();g.arc(mx+size/2,my+size/2,6,0,Math.PI*2);g.fill();{const tw=measure(g,'PATIENT FURNACE',8);g.fillStyle='#0a0f12d0';g.fillRect(mx+size/2-tw/2-3,my+size/2+10,tw+6,14*k);}text(g,'PATIENT FURNACE',mx+size/2,my+size/2+12,8,'#ffb3a8','center');
       const ly=my+size+10*k,cards=districtCards(),lw=size/cards.length;cards.forEach(([id,name,role,note,col],i)=>{const lx=mx+i*lw;g.fillStyle='#081014';g.fillRect(lx,ly,lw-3*k,20*k);g.fillStyle=col;g.fillRect(lx,ly,lw-3*k,2*k);text(g,name,lx+(lw-3*k)/2,ly+7*k,6,col,'center');});
       root.DSWorld.drawMapLegend(g,mx+size+16*k,my,160*k,k);
-      const [ot]=objectiveText(s,s.boss&&s.boss.active),tier=s.boss&&s.boss.difficulty?s.boss.difficulty.tier:s.threat;
-      text(g,(s.paused?'PAUSED':'LIVE')+' · '+ot+' · OUTBREAK '+tier+' · Icons: what a place supplies. Amber rings: noise.',mx,ly+30*k,7,COL.muted,'left','normal');
+      const tier=s.boss&&s.boss.difficulty?s.boss.difficulty.tier:s.threat;
+      text(g,(s.paused?'PAUSED':'LIVE')+' · OUTBREAK '+tier+' · Icons: what a place supplies. Amber rings: noise.',mx,ly+30*k,7,COL.muted,'left','normal');
     }
   }
 
   // ---- state machine ----
-  function open(name){if(ui.menu&&ui.menu!==name)ui.stack.push(ui.menu);ui.menu=name;ui.focus=0;ui.hover=null;const s=state();if(s&&s.mode==='play'&&(name==='pause'||name==='manual'||name==='options'||name==='upgrade'||name==='controls'))s.paused=true;}
+  function open(name){if(ui.menu&&ui.menu!==name)ui.stack.push(ui.menu);ui.menu=name;ui.focus=0;ui.hover=null;const s=state();if(s&&s.mode==='play'&&(name==='pause'||name==='manual'||name==='options'||name==='upgrade'||name==='controls'||name==='journal'))s.paused=true;}
   function close(){ui.menu=null;ui.stack=[];ui.focus=0;ui.upgradeFor=null;const s=state();if(s&&s.mode==='play'&&s.paused)bindings.resume();}
   function back(){const s=state();if(ui.stack.length){ui.menu=ui.stack.pop();ui.focus=0;if(ui.menu!=='upgrade')ui.upgradeFor=null;return;}if(ui.menu==='end')return;if(ui.menu==='manual'&&s&&s.mode==='title'){ui.menu=null;bindings.toTitle();return;}close();}
   function toggle(name){if(ui.menu===name)close();else if(!ui.menu)open(name);}
-  const PAUSED_MENUS=['pause','manual','options','upgrade','controls'];
+  const PAUSED_MENUS=['pause','manual','options','upgrade','controls','journal'];
   function togglePause(){const s=state();if(!s||s.mode!=='play'||ui.menu==='overflow')return;if(PAUSED_MENUS.includes(ui.menu))close();else if(!ui.menu||ui.menu==='fullmap'){ui.menu=null;ui.stack=[];open('pause');}}
   // source: 'keyboard' / 'pad:N' for a device press, undefined for the pointer or automation
   function press(action,source){

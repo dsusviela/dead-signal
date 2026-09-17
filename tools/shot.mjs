@@ -2,7 +2,7 @@
 // covers HUD text, menus, glows and the vignette). Run the server first.
 //
 //   node tools/shot.mjs [scene|all] [--url http://127.0.0.1:4177] [--w 1920] [--h 1080] [--seed 12345] [--out artifacts]
-// Scenes: street house barricade radio boss pause map manual end lost compact car night
+// Scenes: street house barricade radio boss pause map manual end lost compact car night journal
 // PLAYWRIGHT_PATH points at a playwright-core index.mjs; a default is tried.
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -67,6 +67,8 @@ const SCENES={
   barricade:{setup:PARTY+`const b=(s.world.setpieces||[]).find(p=>p.kind==='barricade');if(!b)throw new Error('no barricades');for(const p of s.players){p.x=b.x+(p.id-1.5)*30;p.y=b.y+120;}s.camera.x=b.x;s.camera.y=b.y;`,settle:1200},
   radio:{setup:PARTY+`const r=s.world.landmarks.find(l=>l.id==='radio');for(const p of s.players){p.x=r.x+(p.id-1.5)*30;p.y=r.y+70;}s.camera.x=r.x;s.camera.y=r.y;s.radio.active=true;s.radio.progress=18;`,settle:1200},
   boss:{setup:PARTY+`for(const p of s.players){p.x=(p.id-1.5)*40;p.y=140;}s.enemies=[];DSBoss.start(s,DSGame.api(s));s.boss.hp=s.boss.maxHp*.3;s.camera.x=0;s.camera.y=0;`,settle:3500},
+  // the pause journal mid-campaign: power restored, Blackglass ready, the payload still sealed; records read along the way
+  journal:{setup:PARTY+`s.spawnAcc=-1e9;s.enemies=[];for(const kind of ['refugeLedger','patientRecords','furnaceClue']){const it=s.loot.find(i=>i.evidence===kind);const p=s.players[0];p.x=it.x;p.y=it.y;DSGame.step(s,1/60,{});}const n=s.world.props.find(p=>p.notice&&p.locationId==='checkpoint-nine');s.players[0].x=n.x;s.players[0].y=n.y+30;DSGame.step(s,1/60,{});s.document=null;s.circuit.emergency=true;s.campaign.prepared=true;DeadSignal.ui&&DeadSignal.ui.open('pause');DeadSignal.ui&&DeadSignal.ui.open('journal');`,settle:600},
   pause:{setup:`DeadSignal.ui?DeadSignal.ui.open('pause'):(DeadSignal.state.paused=true);`,settle:400,keyboard:'Escape'},
   options:{setup:`DeadSignal.ui.open('pause');DeadSignal.ui.open('options');`,settle:400},
   map:{setup:`DeadSignal.ui&&DeadSignal.ui.open('fullmap');`,settle:400,keyboard:'Tab'},

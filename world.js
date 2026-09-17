@@ -940,7 +940,7 @@
     solid(w,'barricade/sandbagWall',-170,2990,85,20,'barrier',400,{protected:true,locationId:'checkpoint-nine'});solid(w,'barricade/sandbagWall',85,2990,85,20,'barrier',400,{protected:true,locationId:'checkpoint-nine'});
     prop(w,'quarantine/evacBarrier',0,3000,{locationId:'checkpoint-nine',evacGate:true});prop(w,'props/circuitBox',110,2975,{locationId:'checkpoint-nine',circuitBox:true});
     // South Blocks notices: evacuation paperwork that points at the rest of the chain without a waypoint
-    prop(w,'lots/refugeNotice',-150,2620,{flat:true,locationId:'checkpoint-nine',notice:{title:'EVACUATION SUSPENDED · DAY 6',body:'The south barrier needs emergency power and a command override. Emergency power runs from the St. Aubin Chapel generator (Old Quarter). Fuel: Ashworks.',reveals:['chapel','machine-shop']}});
+    prop(w,'lots/refugeNotice',-150,2620,{flat:true,locationId:'checkpoint-nine',notice:{learns:['power','override','gate'],title:'EVACUATION SUSPENDED · DAY 6',body:'The south barrier needs emergency power and a command override. Emergency power runs from the St. Aubin Chapel generator (Old Quarter). Fuel: Ashworks.',reveals:['chapel','machine-shop']}});
     prop(w,'lots/refugeNotice',-560,1560,{flat:true,locationId:'crossroads-supermarket',notice:{title:'CIVIC NOTICE',body:'St. Orison (Civic Ward) takes casualties. Blackglass Radio (Northline) relays civilian traffic. Central Quarantine is closed to the public.',reveals:['st-orison','blackglass-radio','patient-furnace']}});
     // Blackglass mast yard: mast base and generator are solid; the pallet space south of the base stays open
     var M=RADIO_MAST;w.setpieces.push({id:'radio',kind:'radio',x:M.x,y:M.y,locationId:'blackglass-radio'});

@@ -173,5 +173,26 @@ test('long runs: unowned drops compact at 700 while authored and campaign loot i
   assert.equal(s.loot.filter(i => i.type === 'xp' && !i.siteId).reduce((n, i) => n + i.amount, 0), xpBefore + 1400, 'no experience lost');
 });
 
+test('the journal lists only what the squad has learned, ticks tasks off, and keeps every record read', () => {
+  const s = game(), ids = () => G.journal(s).tasks.map(q => q.id), done = id => G.journal(s).tasks.find(q => q.id === id)?.done;
+  assert.deepEqual(ids(), [], 'a fresh run knows nothing');
+  const notice = s.world.props.find(p => p.notice && p.locationId === 'checkpoint-nine'); put(s.players[0], notice, 30); run(s, .1);
+  assert.deepEqual(ids(), ['power', 'override', 'gate'], 'the evacuation notice names power, the override and the barrier');
+  assert.equal(G.journal(s).records.length, 1); assert.match(G.journal(s).records[0].title, /EVACUATION/);
+  put(s.players[0], notice, 30); run(s, .1); assert.equal(G.journal(s).records.length, 1, 'rereading does not duplicate a record');
+  // a refusal teaches its prerequisites
+  const pt = G.holdPoint(s, 'transmit'); put(s.players[0], pt, 8); run(s, .05, press(s, [s.players[0].id]));
+  assert.ok(['prepare', 'payload', 'transmit'].every(id => ids().includes(id)), 'refused transmit adds the station and the payload: ' + ids());
+  assert.ok(!G.journal(s).tasks.find(q => q.id === 'transmit').note.includes('Blackglass is ready'), 'the transmit task says what it waits on');
+  takeAllEvidence(s); assert.ok(ids().includes('subject')); assert.equal(G.journal(s).records.length, 1 + Object.keys(G.EVIDENCE).length);
+  fuelGenerator(s); assert.equal(done('power'), true);
+  hold(s, 'prepare', 13); assert.equal(done('prepare'), true);
+  killBoss(s); run(s, .1); assert.equal(done('subject'), true); takeItem(s, 'payload'); takeItem(s, 'override');
+  hold(s, 'transmit', 42); assert.equal(done('transmit'), true); assert.ok(ids().includes('escape'));
+  assert.ok(G.journal(s).records.some(r => /REPLY/.test(r.title)), 'the reply is kept as a record');
+  assert.deepEqual(ids(), ['power', 'prepare', 'subject', 'payload', 'transmit', 'override', 'gate', 'escape'], 'tasks keep the chain order');
+  assert.equal(G.journal(s).unknown, 0);
+});
+
 console.log(results.join('\n'));
 if (results.some(r => r.startsWith('FAIL'))) process.exit(1);

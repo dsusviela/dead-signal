@@ -12,7 +12,7 @@ try{
   assert.equal(await page.evaluate(()=>DeadSignal.state.settings.drivingStyle),'steering');
   assert.ok(!await page.evaluate(()=>DeadSignal.ui.rects().some(r=>r.id==='sound')),'no sound control remains on the HUD');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>DeadSignal.menu==='pause');
-  await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await page.waitForFunction(()=>DeadSignal.menu==='options');
+  await page.keyboard.press('ArrowDown');await page.waitForTimeout(80);await page.keyboard.press('ArrowDown');await page.waitForTimeout(80);await page.keyboard.press('Enter');await page.waitForFunction(()=>DeadSignal.menu==='options');
   const pausedAt=await page.evaluate(()=>DeadSignal.state.time);
   await page.keyboard.press('ArrowRight');await page.waitForFunction(()=>DeadSignal.state.settings.drivingStyle==='directional');
   await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await page.waitForFunction(()=>DSAudio.musicMuted);
@@ -36,7 +36,7 @@ try{
   assert.deepEqual(await page.evaluate(()=>[DeadSignal.state.settings.drivingStyle,DSAudio.musicMuted,DSAudio.muted]),['directional',true,true]);
   await page.reload();await page.getByRole('button',{name:'ENTER THE CITY'}).click();
   assert.deepEqual(await page.evaluate(()=>[DeadSignal.state.settings.drivingStyle,DSAudio.musicMuted,DSAudio.muted]),['directional',true,true],'preferences survive reload');
-  await page.keyboard.press('Escape');await page.waitForFunction(()=>DeadSignal.menu==='pause');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await page.waitForFunction(()=>DeadSignal.menu==='options');
+  await page.keyboard.press('Escape');await page.waitForFunction(()=>DeadSignal.menu==='pause');await page.keyboard.press('ArrowDown');await page.waitForTimeout(80);await page.keyboard.press('ArrowDown');await page.waitForTimeout(80);await page.keyboard.press('Enter');await page.waitForFunction(()=>DeadSignal.menu==='options');
   const driving=await page.evaluate(()=>DeadSignal.ui.rects().find(r=>r.id==='driving-style'));
   await page.mouse.click(driving.x+driving.w/2,driving.y+driving.h/2);await page.waitForFunction(()=>DeadSignal.state.settings.drivingStyle==='steering');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>DeadSignal.menu==='pause');

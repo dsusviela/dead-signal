@@ -817,7 +817,7 @@
   function generatorAnchor(s){for(const b of s.world.buildings||[])for(const a of b.anchors||[])if(a.kind==='chapelGenerator')return a;return null;}
   function startRefuel(s,p,t){
     const st=s.supplies;
-    if(t.kind==='generator'){if(st.vehicleFuel<FUEL.generatorCharge){announce(s,'THE GENERATOR NEEDS '+FUEL.generatorCharge+' L · you carry '+st.vehicleFuel);emit(s,'reject','generator');return false;}}
+    if(t.kind==='generator'){if(st.vehicleFuel<FUEL.generatorCharge){announce(s,'THE GENERATOR NEEDS '+FUEL.generatorCharge+' L · you carry '+st.vehicleFuel);learn(s,['power']);emit(s,'reject','generator');return false;}}
     else{if(pourable(s)<=0){announce(s,st.vehicleFuel>0?'LAST '+FUEL.reserve+' L RESERVED FOR THE CHAPEL GENERATOR':'NO VEHICLE FUEL · find a jerrycan');emit(s,'reject','vehicle');return false;}}
     makeNoise(s,p,'pour');p.refuel={kind:t.kind,vehicleId:t.vehicle?.id??null,progress:0,time:t.kind==='generator'?3:1.5};emit(s,'pour',t.kind);return true;
   }
@@ -1088,16 +1088,16 @@
   // Facts, not an act counter: each is set once by a physical action and never unset. The squad may visit any
   // district in any order; only interactions whose physical prerequisites are missing refuse (with the reason).
   const EVIDENCE={
-    patientRecords:{title:'ST. ORISON · PATIENT RECORDS',body:'Transfer 9-114: the subject moved to Central Quarantine, Block C. Disposition: pending incineration review.',reveals:['patient-furnace','holding-building']},
-    trialEvidence:{title:'RESTRICTED TRIAL · EAST WING',body:'Thermal suppression failed. Core temperature above 900 C. The subject draws the infected toward it. Containment moved it to the disposal yard.',reveals:['inner-arena']},
-    furnaceClue:{title:'MEMO · COMMAND LIAISON',body:'The command post holds the transmitter payload and the Checkpoint Nine override. Both stay sealed while the subject in the yard is active.',reveals:['command-post','checkpoint-nine']},
-    refugeLedger:{title:'ST. AUBIN REFUGE LEDGER',body:'Generator dry. It needs 30 L of vehicle fuel (Ashworks machine shop). It feeds the emergency circuit to Blackglass Radio and the checkpoint gate.',reveals:['machine-shop','fuel-store','blackglass-radio']},
-    intakeManifest:{title:'HOLDING · INTAKE MANIFEST',body:'Day 3: 212 names. Day 7: all remaining transferred to disposal. Override logged with the command post.',reveals:['command-post']}
+    patientRecords:{learns:['subject'],title:'ST. ORISON · PATIENT RECORDS',body:'Transfer 9-114: the subject moved to Central Quarantine, Block C. Disposition: pending incineration review.',reveals:['patient-furnace','holding-building']},
+    trialEvidence:{learns:['subject'],title:'RESTRICTED TRIAL · EAST WING',body:'Thermal suppression failed. Core temperature above 900 C. The subject draws the infected toward it. Containment moved it to the disposal yard.',reveals:['inner-arena']},
+    furnaceClue:{learns:['subject','payload','override'],title:'MEMO · COMMAND LIAISON',body:'The command post holds the transmitter payload and the Checkpoint Nine override. Both stay sealed while the subject in the yard is active.',reveals:['command-post','checkpoint-nine']},
+    refugeLedger:{learns:['power','prepare'],title:'ST. AUBIN REFUGE LEDGER',body:'Generator dry. It needs 30 L of vehicle fuel (Ashworks machine shop). It feeds the emergency circuit to Blackglass Radio and the checkpoint gate.',reveals:['machine-shop','fuel-store','blackglass-radio']},
+    intakeManifest:{learns:['override'],title:'HOLDING · INTAKE MANIFEST',body:'Day 3: 212 names. Day 7: all remaining transferred to disposal. Override logged with the command post.',reveals:['command-post']}
   };
-  const HOLDS={prepare:12,transmit:40,gate:8},REPLY={title:'REPLY · LINDEN STREET GROUP',body:'Blackglass, we hear you. Nobody is coming for us either. We are behind the south barrier at Checkpoint Nine. Open it and we run with you.'};
+  const HOLDS={prepare:12,transmit:40,gate:8},REPLY={learns:['gate','escape'],title:'REPLY · LINDEN STREET GROUP',body:'Blackglass, we hear you. Nobody is coming for us either. We are behind the south barrier at Checkpoint Nine. Open it and we run with you.'};
   const EXIT={x:0,y:3160,w:300,h:260};
   function campaignInit(s){
-    const w=s.world;s.campaign=Object.assign(s.campaign||{},{evidence:{},known:[],generator:false,prepared:false,prepareProgress:0,payload:false,override:false,
+    const w=s.world;s.campaign=Object.assign(s.campaign||{},{evidence:{},known:[],learned:{},read:[],generator:false,prepared:false,prepareProgress:0,payload:false,override:false,
       transmitted:false,transmitProgress:0,gateOpen:false,gateProgress:0,escaped:false,palletDropped:false,payloadSpawned:false,holding:null});
     for(const b of w.buildings||[])for(const a of b.anchors||[])if(EVIDENCE[a.kind])s.loot.push({id:'evidence-'+a.kind,x:a.x,y:a.y,type:'evidence',evidence:a.kind,amount:1,label:'records',interior:true});
     // the waiting civilians: behind the south evacuation barrier, safe until the gate opens
@@ -1106,7 +1106,7 @@
   }
   function anchorOf(s,kind){for(const b of s.world.buildings||[])for(const a of b.anchors||[])if(a.kind===kind)return a;return null;}
   function reveal(s,ids){for(const id of ids||[]){const st=s.locationState?.[id];if(st)st.discovered=true;if(!s.campaign.known.includes(id))s.campaign.known.push(id);}}
-  function showDocument(s,doc){s.document={title:doc.title,body:doc.body,t:9};emit(s,'paper');}
+  function showDocument(s,doc){s.document={title:doc.title,body:doc.body,t:9};emit(s,'paper');const c=s.campaign;if(c){c.read=c.read||[];if(!c.read.some(r=>r.title===doc.title))c.read.push({title:doc.title,body:doc.body});learn(s,doc.learns);}}
   function collectEvidence(s,item){const c=s.campaign;if(c.evidence[item.evidence])return;c.evidence[item.evidence]=true;const e=EVIDENCE[item.evidence];reveal(s,e.reveals);showDocument(s,e);effect(s,item.x,item.y-20,'RECORDS TAKEN','#d8dbc8');}
   // what still blocks an interaction, in words; empty when it can start
   function missing(s,action){
@@ -1115,6 +1115,36 @@
     if(action==='transmit'){if(!c.prepared)out.push('the station is not prepared');if(!c.payload)out.push('no transmitter payload (command post)');}
     if(action==='gate'){if(!s.circuit.emergency)out.push('no emergency power');if(!c.override)out.push('no Checkpoint override');if(!c.transmitted)out.push('the distress call is not sent');}
     return out;
+  }
+  // The journal (pause menu): a to-do list of only what the squad has LEARNED it needs, never a route. A task appears
+  // when a record or notice names it, when a place makes it obvious, when a refusal spells out a prerequisite, or when
+  // the physical fact is already true; each shows what is known about it and whether it is done.
+  const TASKS=['power','prepare','subject','payload','transmit','override','gate','escape'];
+  const LEARNS={prepare:['power'],transmit:['prepare','payload'],gate:['power','override','transmit']};
+  function learn(s,keys){const c=s.campaign;if(!c)return;c.learned=c.learned||{};for(const k of keys||[])c.learned[k]=true;}
+  function journal(s){
+    const c=s.campaign||{},L=c.learned||{},ev=c.evidence||{},sup=s.supplies||{},visited=id=>!!s.locationState?.[id]?.visited,power=!!s.circuit?.emergency;
+    const wait=action=>{const why=missing(s,action);return why.length?'Waiting on: '+why.join('; ')+'.':null;};
+    const tasks={
+      power:{title:'Restore emergency power',done:power,known:L.power||power||ev.refugeLedger,
+        note:power?'The chapel generator is running the emergency circuit.':ev.refugeLedger?'The St. Aubin Chapel generator (Old Quarter) takes '+FUEL.generatorCharge+' L of vehicle fuel. You carry '+(sup.vehicleFuel||0)+' L; Ashworks has fuel.':'Emergency power runs from the St. Aubin Chapel generator (Old Quarter). Fuel: Ashworks.'},
+      prepare:{title:'Ready Blackglass Radio',done:!!c.prepared,known:L.prepare||c.prepared||ev.refugeLedger||visited('blackglass-radio'),
+        note:c.prepared?'The station is ready to transmit.':!power?'Blackglass (Northline) is dark. It needs the emergency circuit.':'Power reaches Blackglass. Someone has to stay in the control room while it warms up.'},
+      subject:{title:'Deal with the subject in the disposal yard',done:!!c.bossDown,known:L.subject||c.bossDown||ev.patientRecords||ev.trialEvidence||ev.furnaceClue,
+        note:c.bossDown?'The furnace is silent.':(ev.trialEvidence?'It runs above 900 C and draws the infected to it. ':'')+'Central Quarantine. Entering the yard seals its gates behind the squad.'},
+      payload:{title:'Recover the transmitter payload',done:!!c.payload,known:L.payload||c.payload||c.bossDown||ev.furnaceClue,
+        note:c.payload?'The squad carries it.':c.payloadUnlocked?'The command post in Central Quarantine is open.':'Held in the command post (Central Quarantine), sealed while the subject is active.'},
+      transmit:{title:'Send the distress call',done:!!c.transmitted,known:L.transmit||c.transmitted||c.payload||visited('blackglass-radio')&&c.prepared,
+        note:c.transmitted?'Someone answered.':wait('transmit')||'Blackglass is ready. The transmitter room has to be held while it sends, and it is loud.'},
+      override:{title:'Recover the checkpoint override',done:!!c.override,known:L.override||c.override||ev.intakeManifest||ev.furnaceClue||c.bossDown,
+        note:c.override?'The squad carries it.':c.payloadUnlocked?'The command post in Central Quarantine is open.':ev.furnaceClue?'Held in the command post (Central Quarantine), sealed while the subject is active.':'The command post logged it. Central Quarantine.'},
+      gate:{title:'Open the barrier at Checkpoint Nine',done:!!c.gateOpen,known:L.gate||c.gateOpen||c.transmitted||visited('checkpoint-nine'),
+        note:c.gateOpen?'The barrier is open.':wait('gate')||'Everything is ready. The barrier has to be held while it opens.'},
+      escape:{title:'Get the Linden Street group out',done:!!c.escaped,known:L.escape||c.transmitted||c.gateOpen,
+        note:c.escaped?'Out of the city.':c.gateOpen?'Walk them south through the barrier. Nobody is left behind.':'They wait behind the south barrier at Checkpoint Nine.'}
+    };
+    const list=TASKS.map(id=>({id,...tasks[id],known:!!tasks[id].known})).filter(q=>q.known);
+    return {goal:'Get everyone out of the city through Checkpoint Nine.',tasks:list,unknown:TASKS.length-list.length,records:(c.read||[]).slice()};
   }
   function holdPoint(s,action){
     if(action==='prepare')return anchorOf(s,'radioPrepare');if(action==='transmit')return anchorOf(s,'radioTransmit');
@@ -1135,7 +1165,7 @@
       const done=action==='prepare'?c.prepared:action==='transmit'?c.transmitted:c.gateOpen,pt=holdPoint(s,action);if(done||!pt)continue;
       const key=action+'Progress',present=living.filter(p=>dist(p,pt)<REACH[action]);
       const pressed=present.some(p=>inputs[p.id]?.interact&&p.nearItem===null&&p.nearVehicle===null&&!p.nearRefuel&&p.nearDoor===null);
-      if(pressed&&c.holding!==action){const why=missing(s,action);if(why.length){announce(s,why.join(' · ').toUpperCase());emit(s,'reject',action);}else{c.holding=action;emit(s,'hold',action);announce(s,action==='prepare'?'PREPARING THE STATION · stay in the control room':action==='transmit'?'TRANSMITTING · hold the transmitter room':'OPENING THE EVACUATION GATE · hold the barrier');}}
+      if(pressed&&c.holding!==action){const why=missing(s,action);if(why.length){announce(s,why.join(' · ').toUpperCase());emit(s,'reject',action);learn(s,[action,...LEARNS[action]]);}else{c.holding=action;emit(s,'hold',action);announce(s,action==='prepare'?'PREPARING THE STATION · stay in the control room':action==='transmit'?'TRANSMITTING · hold the transmitter room':'OPENING THE EVACUATION GATE · hold the barrier');}}
       if(c.holding!==action||!present.length)continue;
       c[key]+=dt;
       if(action!=='prepare'){s.spawnAcc+=dt*(action==='transmit'?1.4:2);if(s.time>=(c.nextNoise||0)){makeNoise(s,pt,action==='transmit'?'radio':'gate');c.nextNoise=s.time+1;}}
@@ -1211,5 +1241,5 @@
     if(s.players.length&&s.players.every(p=>p.dead)){s.mode='lost';s.paused=false;}
     camera(s,dt,aspect);
   }
-  root.DSGame={spawnBudget,pressure,squadPower,campaignSteps,PRESSURE,waveTick,ARMOR,TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
+  root.DSGame={spawnBudget,pressure,squadPower,campaignSteps,PRESSURE,waveTick,ARMOR,TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,journal,learn,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
 })(typeof window!=='undefined'?window:globalThis);

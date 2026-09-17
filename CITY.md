@@ -1526,6 +1526,15 @@ vehicle, campaign/boss, and audio suites, all wired into validation scripts:
   - Phase 13 · *12A listening, prompts, non-colour map states, visual equivalents*: queue B1–B2.
   - Phase 13 exit gate (six districts pass the street read): queue A2 and C5.
   Every other tracker item is `[x]`.
+- 2026-09-17 — **Pause journal instead of guidance arrows.** A player at a prepared Blackglass with no
+  payload had no idea what came next. A trial edge-of-screen "go here" marker was rejected by the user
+  ("a todo list and in the pause menu to be able to read and explore, not an arrow"), so the invariant
+  above stands. `DSGame.journal(s)` derives a to-do list of only what the squad has *learned* it needs
+  (records, notices, visited places, and the prerequisites a refusal spells out), each with what is
+  known and a tick when the fact is true; `campaign.read` keeps every record and notice read. Pause →
+  JOURNAL shows the list and lets the player reread any record, with the city map one button away. A
+  newly learned task is announced once ("JOURNAL · NEW TASK"). Evidence: `test-campaign` journal test,
+  `shot.mjs journal`.
 
 ## Human review queue
 
