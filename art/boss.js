@@ -372,12 +372,135 @@
     return toRows(g);
   }
 
+  // =====================================================================
+  // containment 112x104, anchor feet, drawn at (0,52) so the vault is centred
+  // on the disposal-yard pivot. The dormant furnace sealed in a riveted drum on
+  // a concrete plinth: lid seen from above with a wheel hatch, two restraint
+  // bands chained to a pylon either side, clamps bolted into the slab and a
+  // hazard band on the plinth face. Heat lives only in the grated viewport and
+  // three leaks under the lid lip; frame 1 breathes those texels one step up
+  // the ramp and nothing else changes (rule 51).
+  // =====================================================================
+  function line(g,x0,y0,x1,y1,ch){
+    var dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,e=dx+dy,e2;
+    for(;;){put(g,x0,y0,ch);if(x0===x1&&y0===y1)break;e2=2*e;if(e2>=dy){e+=dy;x0+=sx;}if(e2<=dx){e+=dx;y0+=sy;}}
+  }
+  // a chain: links alternate lit and dark along a 2-texel run
+  function chain(g,x0,y0,x1,y1){
+    var n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0)),i,x,y;
+    for(i=0;i<=n;i++){x=Math.round(x0+(x1-x0)*i/n);y=Math.round(y0+(y1-y0)*i/n);
+      put(g,x,y,i%4<2?'M':'K');put(g,x,y+1,i%4<2?'K':'D');}
+  }
+  function makeContainment(f){
+    var g=mkGrid(112,104),i,x,y,u,s,rim,bot,rows=[];
+    function sx(px,rx){var q=(px+.5-56)/rx;return Math.sqrt(Math.max(0,1-q*q));}
+    function rimAt(px){return Math.round(20+13*sx(px,38));}
+    function botAt(px){return Math.round(62+13*sx(px,38));}
+
+    // ---- plinth: a poured octagonal slab, hazard paint on the face -------
+    rect(g,0,58,111,89,'S');rect(g,0,58,111,59,'U');
+    rect(g,0,90,111,101,'C');rect(g,0,90,111,90,'K');
+    for(y=92;y<=96;y++)for(x=5;x<=106;x++)put(g,x,y,((x+y)%10)<5?'A':'K');
+    rect(g,5,91,106,91,'K');rect(g,5,97,106,97,'K');
+    rect(g,0,100,111,101,'K');
+    corners(g,0,58,111,101,9);
+    line(g,8,80,16,84,'C');line(g,16,84,21,83,'C');line(g,93,86,101,80,'C');line(g,101,80,104,81,'C');
+
+    // ---- pylons: the restraint anchors either side -----------------------
+    for(i=0;i<2;i++){
+      x=i?98:1;
+      rect(g,x-1,74,x+13,86,'C');rect(g,x-1,74,x+13,75,'S');rect(g,x-1,86,x+13,86,'K');
+      rect(g,x+1,10,x+11,80,'D');
+      rect(g,x+1,10,x+3,80,'M');rect(g,x+10,10,x+11,80,'K');
+      rect(g,x,5,x+12,11,'M');rect(g,x,5,x+12,6,'L');rect(g,x,11,x+12,11,'K');
+      rivets(g,x+2,x+11,8,3,'K');
+      rect(g,x+4,23,x+8,27,'K');rect(g,x+5,24,x+7,26,'M');put(g,x+6,25,'K');   // chain eyes
+      rect(g,x+4,51,x+8,55,'K');rect(g,x+5,52,x+7,54,'M');put(g,x+6,53,'K');
+      rect(g,x+1,40,x+11,41,'K');rect(g,x+1,66,x+11,67,'K');
+    }
+
+    // ---- the drum: a cylinder, lit left, shadowed right -------------------
+    for(x=18;x<=93;x++){
+      u=(x+.5-56)/38;rim=rimAt(x);bot=botAt(x);
+      rect(g,x,rim,x,bot,u<-.74?'M':u>.8?'K':'D');
+      put(g,x,bot,'K');put(g,x,bot-1,'K');
+    }
+    for(i=0;i<4;i++){x=[29,41,70,82][i];
+      rect(g,x,rimAt(x)+3,x,botAt(x)-3,'M');rect(g,x+1,rimAt(x+1)+3,x+1,botAt(x+1)-3,'K');}
+    // collar skirt where the drum meets the slab
+    for(x=15;x<=96;x++){y=Math.round(62+14*sx(x,41));
+      rect(g,x,y-2,x,y+3,'D');put(g,x,y-2,'M');put(g,x,y-1,'M');put(g,x,y+3,'K');}
+    // clamps bolted into the slab
+    for(i=0;i<4;i++){x=[20,38,66,84][i];y=Math.round(62+14*sx(x+4,41));
+      rect(g,x,y-5,x+7,y+9,'D');rect(g,x,y-5,x+7,y-4,'M');rect(g,x+6,y-3,x+7,y+9,'K');
+      rect(g,x-2,y+7,x+9,y+10,'M');rect(g,x-2,y+10,x+9,y+10,'K');put(g,x-1,y+8,'K');put(g,x+8,y+8,'K');
+      rect(g,x+2,y-1,x+4,y+1,'K');
+    }
+    // restraint bands, following the curve of the drum
+    for(i=0;i<2;i++){var off=i?31:9;
+      for(x=17;x<=94;x++){y=rimAt(Math.min(93,Math.max(18,x)))+off;
+        rect(g,x,y,x,y+4,'D');put(g,x,y,'L');put(g,x,y+4,'K');
+        if(x%6===2)put(g,x,y+2,'K');}
+      y=rimAt(55)+off;
+      rect(g,51,y-2,60,y+6,'M');ringRect(g,51,y-2,60,y+6,'K');rect(g,53,y+1,58,y+3,'K');rect(g,54,y+2,57,y+2,'D');
+    }
+    // chains from the pylon eyes to the band ends
+    chain(g,9,25,17,rimAt(18)+10);chain(g,103,25,95,rimAt(93)+10);
+    chain(g,9,53,17,rimAt(18)+32);chain(g,103,53,95,rimAt(93)+32);
+
+    // ---- lid, seen from above --------------------------------------------
+    for(x=18;x<=93;x++){s=sx(x,38);y=Math.round(20-13*s);rim=rimAt(x);
+      rect(g,x,y,x,rim,'M');if(Math.abs((x+.5-56)/38)<.7)put(g,x,y,'L');
+      put(g,x,rim-1,'L');put(g,x,rim,'L');put(g,x,rim+1,'K');}
+    for(x=26;x<=85;x++){s=sx(x,30);                      // the bolted inner ring
+      put(g,x,Math.round(20-9*s),'D');put(g,x,Math.round(20+9*s),'D');
+      if(x%6===1){put(g,x,Math.round(20-9*s)+1,'K');put(g,x,Math.round(20+9*s)-1,'K');}}
+    // wheel hatch
+    rect(g,43,13,68,27,'D');corners(g,43,13,68,27,4);
+    ringRect(g,45,14,66,26,'K');corners(g,43,13,68,27,4);
+    rect(g,46,15,65,15,'L');
+    rect(g,50,15,61,25,'K');rect(g,51,16,60,24,'M');rect(g,53,18,58,22,'D');
+    rect(g,55,15,56,25,'L');rect(g,50,20,61,20,'L');rect(g,54,19,57,21,'K');
+    put(g,47,17,'L');put(g,64,17,'L');put(g,47,23,'L');put(g,64,23,'L');
+
+    // ---- the front: stencil, placard, viewport ---------------------------
+    rect(g,26,49,33,50,'U');rect(g,26,49,27,58,'U');rect(g,26,57,33,58,'U');   // quarantine C
+    put(g,31,50,'D');put(g,27,54,'D');
+    rect(g,75,48,84,57,'L');ringRect(g,75,48,84,57,'K');
+    rect(g,77,50,82,50,'K');rect(g,77,52,80,52,'K');rect(g,77,54,82,54,'K');
+    rect(g,39,47,72,60,'M');ringRect(g,39,47,72,60,'K');
+    rect(g,40,48,71,48,'L');
+    rivets(g,41,71,59,5,'K');
+    rect(g,42,50,69,57,'E');
+    var hot=f?['G','O','T']:['F','G','O'];
+    rect(g,43,55,68,57,hot[0]);rect(g,47,56,64,57,hot[1]);rect(g,52,57,59,57,hot[2]);
+    if(f)rect(g,45,54,66,54,'F');
+    for(x=45;x<=67;x+=4)rect(g,x,50,x,57,'K');
+    rect(g,42,50,69,50,'K');
+
+    // ---- seams: three leaks under the lid lip ----------------------------
+    for(i=0;i<3;i++){x=[30,62,78][i];y=rimAt(x+2)+2;rect(g,x,y,x+4,y,f?'G':'F');put(g,x+2,y,f?'O':'G');}
+
+    // ---- cables off the collar down onto the slab ------------------------
+    line(g,30,76,22,82,'K');line(g,22,82,16,87,'K');line(g,23,82,17,87,'M');
+    line(g,82,76,90,82,'K');line(g,90,82,95,87,'K');line(g,89,82,94,87,'M');
+
+    // ---- weathering: dark rust only, so nothing reads as a lamp ------------
+    put(g,23,40,'R');put(g,24,40,'R');put(g,24,41,'R');
+    put(g,88,63,'R');put(g,87,64,'R');put(g,62,30,'R');put(g,63,30,'R');
+
+    outline(g,'K','OTYWA');
+    return toRows(g);
+  }
+
   // ---- palette: iron + rust shell, ember for everything hot -------------
   var pal={
     K:MAT.iron.K, D:MAT.iron.D, M:MAT.iron.M, L:MAT.iron.L, H:MAT.iron.H,
     R:MAT.rust.D, X:MAT.rust.M, V:MAT.rust.L,
     E:MAT.ember.K, F:MAT.ember.D, G:MAT.ember.M,
-    O:MAT.ember.L, T:MAT.ember.O, Y:MAT.ember.Y, W:MAT.ember.W
+    O:MAT.ember.L, T:MAT.ember.O, Y:MAT.ember.Y, W:MAT.ember.W,
+    // containment only: the concrete slab and the plinth hazard paint
+    C:MAT.concrete.D, S:MAT.concrete.M, U:MAT.concrete.L, A:'#9c7a34'
   };
 
   A.define('boss',{
@@ -392,6 +515,8 @@
     maulHead:{variants:[makeHead(0),makeHead(1),makeHead(2)],pal:pal,anchor:{x:.5,y:.35},
       note:'40x28 sledge head, pivot (20,10) where the haft enters. [0] cold iron, [1] the burn cast, [2] phase 3 split with white heat in the crack.'},
     armRight:{variants:[makeArmRight(0),makeArmRight(1)],pal:pal,anchor:{x:.5,y:0},
-      note:'20x48 spare arm hung from the right gantry at (33,-18); static. [0] dead and shut, [1] phase 3, the mid seam has burst open.'}
+      note:'20x48 spare arm hung from the right gantry at (33,-18); static. [0] dead and shut, [1] phase 3, the mid seam has burst open.'},
+    containment:{frames:{down:[makeContainment(0),makeContainment(1)]},fps:2,pal:pal,anchor:'feet',
+      note:'112x104 dormant vault, drawn at (0,52) by render.js containment() before the breach. Riveted drum on a concrete plinth, lid with wheel hatch, two restraint bands chained to side pylons, hazard band on the slab face. Two frames: only the viewport coals and the three lid-seam leaks change.'}
   });
 })();

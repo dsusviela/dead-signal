@@ -108,6 +108,13 @@
       hurt(api, p, hpDamage(p, fraction, b), Math.cos(a) * (knock || 0), Math.sin(a) * (knock || 0));
     });
   }
+  // angular openings in a ring: a survivor whose bearing from the ring's centre lies inside one is untouched
+  function inGap(f, x, y) {
+    if (!f.gaps) return false;
+    var a = Math.atan2(y - f.y, x - f.x);
+    for (var i = 0; i < f.gaps.length; i++) if (Math.abs(Math.atan2(Math.sin(a - f.gaps[i]), Math.cos(a - f.gaps[i]))) < f.gapHalf) return true;
+    return false;
+  }
   function damageRing(s, api, b, f, previous, current) {
     // width is the visual band width; use half on each side so the first
     // outward tick does not reach through the advertised inner safe disc.
@@ -116,7 +123,7 @@
     (s.players || []).forEach(function (p, i) {
       if (!p || p.dead) return;
       var d = dist(p.x, p.y, f.x, f.y), k = livingKey(p, i);
-      if (d >= lo && d <= hi && !f.hit[k]) {
+      if (d >= lo && d <= hi && !f.hit[k] && !inGap(f, p.x, p.y)) {
         f.hit[k] = 1;
         var a = Math.atan2(p.y - f.y, p.x - f.x);
         hurt(api, p, hpDamage(p, f.fraction || 0.12, b), Math.cos(a) * (f.knock || 0), Math.sin(a) * (f.knock || 0));
@@ -161,6 +168,28 @@
       }
     });
   }
+  function tickAdds(s, api, b, dt) {
+    (s.enemies || []).forEach(function (e) {
+      if (!e || e.dead || e.hp <= 0 || !e.bossOwned || e.bossCarrier || e.bossId !== b.id) return;
+      var p = null, bd = Infinity;
+      alivePlayers(s).forEach(function (q) { var d = dist(q.x, q.y, e.x, e.y); if (d < bd) { bd = d; p = q; } });
+      e.hitCd = Math.max(0, (e.hitCd || 0) - dt); e.flash = Math.max(0, (e.flash || 0) - dt);
+      if (!p) return;
+      var reach = (e.r || 10) + (p.r || 10) + 2, dx = p.x - e.x, dy = p.y - e.y;
+      e.angle = Math.atan2(dy, dx); e.state = 'chase'; e.alert = true;
+      if (bd > reach - 2) {
+        var st = Math.min(bd - reach + 2, (e.speed || 48) * dt), ux = dx / bd, uy = dy / bd, ox = e.x, oy = e.y;
+        moveEntity(api, e, ux * st, uy * st);
+        // blocked by the yard's cover: slide along it, keeping one side until the way ahead opens
+        if (Math.hypot(e.x - ox, e.y - oy) < st * 0.3) {
+          e.slide = e.slide || ((e.id || 0) % 2 ? 1 : -1);
+          moveEntity(api, e, -uy * st * e.slide, ux * st * e.slide);
+          if (Math.hypot(e.x - ox, e.y - oy) < st * 0.3) e.slide = -e.slide;
+        } else e.slide = 0;
+      }
+      if (bd < reach && e.hitCd <= 0) { hurt(api, p, e.damage || 5, 0, 0); e.hitCd = 0.8; }
+    });
+  }
   function phaseColor(b) { return b.phase >= 3 ? COLORS.danger : b.phase === 2 ? COLORS.hot : COLORS.ember; }
 
   function phaseTransition(b, api, phase) {
@@ -191,9 +220,10 @@
     announce(api, 'HEAT PULSE OUTWARD — CLOSE IN ON THE SUBJECT');
   }
   function startInnerRing(b, api, duration) {
-    var r = 346;
-    cast(b, 'innerRing', 'INWARD CINDER RING', duration, { r: r });
-    tell(b, 'innerTell', b.x, b.y, r, duration, COLORS.warning);
+    var r = 346, n = b.phase === 3 ? 2 : 3, off = random(api) * TAU, gaps = [], i;
+    for (i = 0; i < n; i++) gaps.push(off + i * TAU / n);
+    cast(b, 'innerRing', 'INWARD CINDER RING', duration, { r: r, gaps: gaps, gapHalf: 0.3, cx: b.x, cy: b.y });
+    var t = tell(b, 'innerTell', b.x, b.y, r, duration, COLORS.warning); t.gaps = gaps; t.gapHalf = 0.3;
     announce(api, 'HEAT PULSE INWARD — MOVE THROUGH THE GAPS');
   }
   function startVent(b, api) {
@@ -209,17 +239,22 @@
       var p = findPlayer(s, id);
       if (p) tell(b, 'mark', p.x, p.y, 38, 2.65, COLORS.danger).target = id;
     });
-    announce(api, 'THERMAL MARKERS — SPREAD OUT');
+    announce(api, 'THERMAL MARKERS — SPREAD OUT, STEP OFF WHEN THEY LOCK');
   }
   function startBurn(b, api, s) {
     var count = Math.min(3, Math.max(1, alivePlayers(s).length));
     var targets = randomTargets(s, api, count).map(function (p) { return playerKey(s, p); });
-    cast(b, 'burn', 'BURNING CHANNEL', 3.6, { targets: targets, pulse: 0.45 });
+    cast(b, 'burn', 'BURNING CHANNEL', 3.6, { targets: targets });
     targets.forEach(function (id) {
       var p = findPlayer(s, id);
       if (p) tell(b, 'burnTell', p.x, p.y, 26, 3.6, COLORS.danger).target = id;
     });
-    announce(api, 'INCINERATION CHANNEL — BREAK LINE OF CONTACT');
+    announce(api, 'INCINERATION CHANNEL — LEAVE THE CIRCLE WHEN IT LOCKS');
+  }
+  // the telegraph circle a targeted cast resolves on (it followed its survivor, then locked in place)
+  function lockedTell(b, kind, id) {
+    for (var i = 0; i < b.fx.length; i++) if (b.fx[i] && b.fx[i].kind === kind && b.fx[i].target === id) return b.fx[i];
+    return null;
   }
   function resolveCast(s, api, b, c) {
     var ps = alivePlayers(s), i;
@@ -234,7 +269,7 @@
       // Let the ring finish before another mandatory cast starts.
       b.ai.timer = (ARENA_R + 18 - c.r) / 104 + 0.3;
     } else if (c.key === 'innerRing') {
-      addFx(b, { kind: 'ring', x: b.x, y: b.y, r: c.r, previous: c.r, max: 24, speed: 75, width: 14, fraction: 0.13, knock: 0, dir: -1, hit: {}, life: (c.r - 24) / 75 + 0.35, dur: (c.r - 24) / 75 + 0.35, color: COLORS.warning });
+      addFx(b, { kind: 'ring', x: c.cx, y: c.cy, r: c.r, previous: c.r, max: 24, speed: 75, width: 14, fraction: 0.13, knock: 0, dir: -1, hit: {}, gaps: c.gaps, gapHalf: c.gapHalf, life: (c.r - 24) / 75 + 0.35, dur: (c.r - 24) / 75 + 0.35, color: COLORS.warning });
       b.ai.timer = (c.r - 24) / 75 + 0.35;
     } else if (c.key === 'vent') {
       for (i = 0; i < Math.min(8, 3 + ps.length * 2); i++) {
@@ -249,17 +284,17 @@
       b.ai.timer = 1.4;
     } else if (c.key === 'marks') {
       (c.targets || []).forEach(function (id) {
-        var p = findPlayer(s, id); if (!p || p.dead) return;
-        addFx(b, { kind: 'pool', x: p.x, y: p.y, r: 40, life: 8, dur: 8, tick: 0, fraction: 0.055, color: COLORS.danger });
-        damageCircle(s, api, b, p.x, p.y, 42, 0.16, 0);
-        effect(api, p.x, p.y, 'EMBER', COLORS.danger);
+        var m = lockedTell(b, 'mark', id); if (!m) return;
+        addFx(b, { kind: 'pool', x: m.x, y: m.y, r: 40, life: 8, dur: 8, tick: 0.5, fraction: 0.055, color: COLORS.danger });
+        damageCircle(s, api, b, m.x, m.y, 42, 0.16, 0);
+        effect(api, m.x, m.y, 'EMBER', COLORS.danger);
       });
       b.ai.timer = 1.1;
     } else if (c.key === 'burn') {
       (c.targets || []).forEach(function (id) {
-        var p = findPlayer(s, id); if (!p || p.dead) return;
-        addFx(b, { kind: 'pool', x: p.x, y: p.y, r: 30, life: 6, dur: 6, tick: 0, fraction: 0.06, color: COLORS.danger });
-        damageCircle(s, api, b, p.x, p.y, 34, 0.17, 42);
+        var m = lockedTell(b, 'burnTell', id); if (!m) return;
+        addFx(b, { kind: 'pool', x: m.x, y: m.y, r: 30, life: 6, dur: 6, tick: 0.5, fraction: 0.06, color: COLORS.danger });
+        damageCircle(s, api, b, m.x, m.y, 34, 0.17, 42);
       });
       effect(api, b.x, b.y, 'CHANNEL BROKEN', COLORS.white);
       b.ai.timer = 0.9;
@@ -288,14 +323,15 @@
         }
       } else if (f.kind === 'burnTell') {
         p = findPlayer(s, f.target);
-        if (p) { f.x = p.x; f.y = p.y; }
+        f.locked = f.life <= f.dur * 0.55;
+        if (p && !f.locked) { f.x = p.x; f.y = p.y; }
         f.pulse = (f.pulse || 0) - dt;
-        if (f.pulse <= 0) {
+        if (f.locked && f.pulse <= 0) {
           f.pulse = 0.7;
-          if (p && !p.dead) hurt(api, p, hpDamage(p, 0.045, b), 0, 0);
+          damageCircle(s, api, b, f.x, f.y, f.r, 0.045, 0);
         }
       } else if (f.kind === 'mark') {
-        p = findPlayer(s, f.target); if (p && f.life > f.dur * 0.48) { f.x = p.x; f.y = p.y; }
+        p = findPlayer(s, f.target); f.locked = f.life <= f.dur * 0.48; if (p && !f.locked) { f.x = p.x; f.y = p.y; }
       }
       f.life -= dt;
       if (f.life > 0) keep.push(f);
@@ -320,7 +356,7 @@
     var p = targetNearest(s, b), d = p ? dist(p.x, p.y, b.x, b.y) : 999;
     a.cycle = (a.cycle || 0) + 1;
     if (b.phase === 1) {
-      if (p && d > 105) { moveBoss(b, api, p.x, p.y, 62, 0.25); a.timer = 0.25; return; }
+      if (p && d > 105) { a.cycle--; return; }
       if (a.next === 'slam') { startSlam(b, api, a.cycle === 1 ? 2.05 : 1.6); a.next = 'outer'; }
       else { startOuterRing(b, api, 2.5); a.next = 'slam'; }
     } else if (b.phase === 2) {
@@ -343,6 +379,7 @@
     dt = clamp(Number(dt) || 0, 0, 0.1);
     tickFx(s, api, b, dt);
     tickCarriers(s, api, b, dt);
+    tickAdds(s, api, b, dt);
     if (b.hp <= 0) { defeat(s, api); return; }
     var ratio = b.hp / b.maxHp;
     if (b.phase === 1 && ratio <= 0.66) phaseTransition(b, api, 2);
@@ -364,22 +401,16 @@
     if (b.ai.cast) {
       var c = b.ai.cast;
       c.t -= dt; b.castProgress = clamp(1 - c.t / c.dur, 0, 1);
-      if (c.key === 'burn' && c.t > 0) {
-        c.pulse = (c.pulse || 0) - dt;
-        if (c.pulse <= 0) {
-          c.pulse = 0.72;
-          (c.targets || []).forEach(function (id) { var p = findPlayer(s, id); if (p && !p.dead) hurt(api, p, hpDamage(p, 0.04, b), 0, 0); });
-        }
-      }
       if (c.t <= 0) resolveCast(s, api, b, c);
       return;
     }
     b.ai.timer -= dt;
+    b.moving = false;
     if (b.phase === 1 || b.phase === 3) {
       var target = targetNearest(s, b);
       if (target) {
         var distance = dist(target.x, target.y, b.x, b.y);
-        if (distance > 96 || (b.phase === 3 && b.ai.timer > 0)) moveBoss(b, api, target.x, target.y, b.phase === 3 ? 48 : 55, dt);
+        if (distance > 96 || (b.phase === 3 && b.ai.timer > 0)) { moveBoss(b, api, target.x, target.y, b.phase === 3 ? 48 : 55, dt); b.moving = true; b.walkT = (b.walkT || 0) + dt; }
       }
     }
     if (b.phase >= 2) {
@@ -454,6 +485,37 @@
     if (api && typeof api.bossDefeated === 'function') api.bossDefeated();
   }
 
+  // a ring stroked everywhere except its safe gaps
+  function gappedArc(ctx, f, r) {
+    if (r <= 0) return;
+    if (!f.gaps) { ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, TAU); ctx.stroke(); return; }
+    var g = f.gaps.slice().sort(function (a, c) { return a - c; });
+    for (var i = 0; i < g.length; i++) {
+      var a0 = g[i] + f.gapHalf, a1 = (i + 1 < g.length ? g[i + 1] : g[0] + TAU) - f.gapHalf;
+      if (a1 > a0) { ctx.beginPath(); ctx.arc(f.x, f.y, r, a0, a1); ctx.stroke(); }
+    }
+  }
+  function safeWedges(ctx, f, r, alpha, edges) {
+    if (!f.gaps) return;
+    for (var i = 0; i < f.gaps.length; i++) {
+      var a0 = f.gaps[i] - f.gapHalf, a1 = f.gaps[i] + f.gapHalf;
+      ctx.fillStyle = 'rgba(139,214,209,' + alpha + ')'; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.arc(f.x, f.y, r, a0, a1); ctx.closePath(); ctx.fill();
+      if (edges) { ctx.strokeStyle = 'rgba(139,214,209,0.55)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(f.x + Math.cos(a0) * 26, f.y + Math.sin(a0) * 26); ctx.lineTo(f.x + Math.cos(a0) * r, f.y + Math.sin(a0) * r); ctx.moveTo(f.x + Math.cos(a1) * 26, f.y + Math.sin(a1) * 26); ctx.lineTo(f.x + Math.cos(a1) * r, f.y + Math.sin(a1) * r); ctx.stroke(); ctx.setLineDash([]); }
+    }
+  }
+  // inward-pointing chevrons spaced along the hot (non-gap) part of a ring
+  function chevrons(ctx, f, r, alpha) {
+    if (r < 40 || alpha <= 0) return;
+    var n = Math.max(6, Math.round(r * TAU / 70)), i, a, x, y, c, sn;
+    ctx.strokeStyle = COLORS.hot; ctx.lineWidth = 2; ctx.globalAlpha = Math.min(1, alpha);
+    for (i = 0; i < n; i++) {
+      a = i * TAU / n; x = f.x + Math.cos(a) * r; y = f.y + Math.sin(a) * r;
+      if (inGap(f, x, y)) continue;
+      c = Math.cos(a); sn = Math.sin(a);
+      ctx.beginPath(); ctx.moveTo(x + c * 6 - sn * 6, y + sn * 6 + c * 6); ctx.lineTo(x - c * 3, y - sn * 3); ctx.lineTo(x + c * 6 + sn * 6, y + sn * 6 - c * 6); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
   function drawGround(ctx, s) {
     var b = s && s.boss; if (!b || !ctx) return;
     var f, i, p;
@@ -470,17 +532,33 @@
       } else if (f.kind === 'safeDisc') {
         ctx.fillStyle = 'rgba(139,214,209,0.12)'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,240,189,0.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.stroke();
       } else if (f.kind === 'innerTell') {
-        ctx.strokeStyle = 'rgba(244,191,72,0.7)'; ctx.lineWidth = 3; ctx.setLineDash([12, 8]); ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        // wind-up: the band gathers on the outer edge and thickens, heat waves sweep inward along its path,
+        // and the safe gaps are lit cyan wedges all the way to the centre
+        var charge = 1 - q, blink = Math.floor((s.time || 0) * (charge > 0.7 ? 10 : 5)) % 2;
+        safeWedges(ctx, f, f.r + 10, 0.10 + 0.08 * pulse, true);
+        for (var w = 0; w < 3; w++) {
+          var ph = (((s.time || 0) * 0.9 + w / 3) % 1), wr = f.r - ph * (f.r - 30);
+          ctx.globalAlpha = 0.35 * (1 - ph) * (0.4 + 0.6 * charge); ctx.strokeStyle = COLORS.hot; ctx.lineWidth = 3; gappedArc(ctx, f, wr); ctx.globalAlpha = 1;
+          chevrons(ctx, f, wr, 0.5 * (1 - ph) * (0.4 + 0.6 * charge));
+        }
+        ctx.globalAlpha = 0.35 + 0.5 * charge; ctx.strokeStyle = blink ? COLORS.danger : COLORS.warning; ctx.lineWidth = 3 + 11 * charge; gappedArc(ctx, f, f.r); ctx.globalAlpha = 1;
+        ctx.fillStyle = COLORS.white; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+        if (charge > 0.15) ctx.fillText('INWARD IN ' + Math.max(0, f.life).toFixed(1), f.x, f.y - f.r - 14);
       } else if (f.kind === 'ring') {
-        ctx.strokeStyle = f.color || COLORS.warning; ctx.lineWidth = f.width || 12; ctx.globalAlpha = 0.82; ctx.beginPath(); ctx.arc(f.x, f.y, Math.max(0, f.r), 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+        if (f.gaps) safeWedges(ctx, f, Math.max(0, f.r) + 8, 0.08, false);
+        ctx.strokeStyle = f.color || COLORS.warning; ctx.lineWidth = f.width || 12; ctx.globalAlpha = 0.82; if (f.gaps) gappedArc(ctx, f, Math.max(0, f.r)); else { ctx.beginPath(); ctx.arc(f.x, f.y, Math.max(0, f.r), 0, TAU); ctx.stroke(); } ctx.globalAlpha = 1;
+        if (f.gaps && f.dir < 0) chevrons(ctx, f, f.r + 12, 0.7);
       } else if (f.kind === 'pool') {
         ctx.fillStyle = 'rgba(227,76,53,0.22)'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill(); ctx.strokeStyle = f.color || COLORS.ember; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.stroke();
         ctx.fillStyle = 'rgba(255,173,54,0.7)'; for (var k = -1; k <= 1; k++) ctx.fillRect(Math.round(f.x + k * 8), Math.round(f.y - 1), 3, 3);
       } else if (f.kind === 'mark') {
-        ctx.strokeStyle = COLORS.danger; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1.1 - q * 0.2), 0, TAU); ctx.stroke(); ctx.fillStyle = 'rgba(227,76,53,0.18)'; ctx.fillRect(Math.round(f.x - 5), Math.round(f.y - 5), 10, 10);
+        ctx.strokeStyle = COLORS.danger; ctx.lineWidth = 3; if (!f.locked) ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1.1 - q * 0.2), 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        if (f.locked) { ctx.fillStyle = 'rgba(227,76,53,' + (0.18 + 0.2 * pulse) + ')'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1.1 - q * 0.2), 0, TAU); ctx.fill(); }
+        else { ctx.fillStyle = 'rgba(227,76,53,0.18)'; ctx.fillRect(Math.round(f.x - 5), Math.round(f.y - 5), 10, 10); }
       } else if (f.kind === 'burnTell') {
         ctx.strokeStyle = 'rgba(227,76,53,0.5)'; ctx.lineWidth = 3; ctx.setLineDash([5, 7]); ctx.beginPath(); ctx.moveTo(b.x, b.y - 12); ctx.lineTo(f.x, f.y); ctx.stroke(); ctx.setLineDash([]);
-        ctx.strokeStyle = COLORS.danger; ctx.lineWidth = 4; ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.arc(f.x, f.y, f.r + pulse * 4, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = COLORS.danger; ctx.lineWidth = 4; ctx.globalAlpha = 0.7; if (!f.locked) ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.arc(f.x, f.y, f.r + pulse * 4, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+        if (f.locked) { ctx.fillStyle = 'rgba(227,76,53,' + (0.22 + 0.2 * pulse) + ')'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill(); }
         ctx.fillStyle = COLORS.hot; ctx.fillRect(Math.round(f.x - 2), Math.round(f.y - 2), 5, 5);
       } else if (f.kind === 'impact' || f.kind === 'burst') {
         ctx.strokeStyle = f.color || COLORS.hot; ctx.globalAlpha = q; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1.25 - q * 0.25), 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
@@ -507,7 +585,10 @@
     else if (c && c.key === 'vent') { arm = Math.sin(prog * TAU * 2) * 1.8; maul = -1 + Math.sin(prog * TAU * 2) * 0.6; squash = 1 - 0.08 * Math.max(0, Math.sin(prog * TAU * 2)); }
     else if (c && c.key === 'marks') { arm = -0.3; maul = -0.7; lean = -0.04; }
     else if (c && c.key === 'burn') { arm = -0.9 + Math.sin(t * 5) * 0.08; maul = -0.8; lean = 0.02; }
-    var bob = Math.abs(Math.sin(t * 6)) * (b.ai.mode === 'active' && !c ? 2 : 0), x = Math.round(b.x), y = Math.round(b.y - bob);
+    // walking: a slow side-to-side stomp (weight shifts foot to foot, body dips as each lands), still when planted
+    var walking = b.moving && b.ai.mode === 'active' && !c, gait = (b.walkT || 0) * 4.2;
+    if (walking) { lean += Math.sin(gait) * 0.05; squash *= 1 - 0.035 * Math.abs(Math.cos(gait)); arm += Math.sin(gait) * 0.12; }
+    var x = Math.round(b.x), y = Math.round(b.y + (walking ? Math.round(Math.abs(Math.cos(gait))) : 0));
     ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y); ctx.rotate(lean); ctx.scale(1 / Math.sqrt(squash), squash);
     var heat = b.phase >= 3 ? COLORS.danger : (c && c.key === 'burn' ? COLORS.white : COLORS.ember);
     // The body is a true den-2 sprite; articulated arms stay separate so every

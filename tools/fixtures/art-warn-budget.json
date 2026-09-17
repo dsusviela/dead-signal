@@ -16,6 +16,8 @@
  "boss/body[0]": 3,
  "boss/body[1]": 3,
  "boss/body[2]": 3,
+ "boss/containment.down[0]": 3,
+ "boss/containment.down[1]": 3,
  "boss/core.down[0]": 1,
  "boss/core.down[1]": 1,
  "boss/maulHead[0]": 2,

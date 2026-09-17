@@ -2,6 +2,8 @@
   'use strict';
   var MIN=-3600, MAX=3600, ROAD=170, AXES=[-2800,-1400,0,1400,2800];
   function rng(seed){var n=(Number(seed)||1)>>>0;return function(){n=(n*1664525+1013904223)>>>0;return n/4294967296;};}
+  // breakable street rubble stands as a collapse pile; a breakable barrier is a staggered pair of jersey rows (render.js jerseyRun)
+  function wreckArt(o){if(o.type==='rubble'){o.art='props/debrisPile';o.variant=mix(o.x,o.y)*3|0;}else if(o.type==='barrier'){o.art='barricade/jersey';o.jerseyRun=true;}return o;}
   function ob(x,y,w,h,type,hp){var o={x:x,y:y,w:w,h:h,type:type};if(hp!=null){o.hp=hp;o.maxHp=hp;}return o;}
   function it(id,x,y,type,e){var q={id:id,x:x,y:y,type:type,amount:1,quality:1,label:type};for(var k in(e||{}))q[k]=e[k];return q;}
   // The one district table. Every consumer (classification, themes, ground markings,
@@ -568,7 +570,7 @@
       });
       // bulldozer-only piles: no hp, so bullets and ramming cannot open them (Phase 10 clears them)
       (p.debris||[]).forEach(function(d){
-        var r=d.rect,id=p.id+'/'+d.id,o=ob(r[0],r[1],r[2],r[3],'debris');o.art='props/rubbleChunk';o.debris='optional-clear';o.debrisId=id;o.locationId=p.id;w.obstacles.push(o);
+        var r=d.rect,id=p.id+'/'+d.id,o=ob(r[0],r[1],r[2],r[3],'debris');o.art='props/debrisPile';o.variant=mix(r[0],r[1])*3|0;o.debris='optional-clear';o.debrisId=id;o.locationId=p.id;w.obstacles.push(o);
         w.debris.push({id:id,locationId:p.id,tag:'optional-clear',rect:{x:r[0],y:r[1],w:r[2],h:r[3]},note:d.note});
       });
     });
@@ -773,8 +775,10 @@
           r=j?mix(zz,a):mix(a,zz);s=mix(a+5+j,zz)<.5?-1:1;
           if(r<.45)continue;
           if(r<.88){
-            if(j)vehicle(w,'car',zz-48,a+s*55-24,false);else vehicle(w,'car',a+s*55-24,zz-48,true);
-            if(r>=.75){if(j)vehicle(w,'car',zz-48,a-s*55-24,false);else vehicle(w,'car',a-s*55-24,zz-48,true);}
+            // both kerbs: the pair sits wider, over the kerb line, so a car can slip between them at an angle (92 open)
+            var k=r>=.75?70:55;
+            if(j)vehicle(w,'car',zz-48,a+s*k-24,false);else vehicle(w,'car',a+s*k-24,zz-48,true);
+            if(r>=.75){if(j)vehicle(w,'car',zz-48,a-s*k-24,false);else vehicle(w,'car',a-s*k-24,zz-48,true);}
           }else if(r<.96){if(j)vehicle(w,'van',zz-55,a+s*55-26,false);else vehicle(w,'van',a+s*55-26,zz-55,true);}
           else{if(j)vehicle(w,'car',zz-24,s<0?a-85:a-11,true);else vehicle(w,'car',s<0?a-85:a-11,zz-24,false);}
           if(mix(a+j*7,zz+1)<.3){var px=j?zz+90:a+s*55,py=j?a+s*55:zz+90;if(!blocked(w,px,py,8))prop(w,'props/'+(mix(zz,a+j)<.5?'coneTraffic':'trashBags'),px,py,{flat:true,variant:mix(px,py)*2|0});}
@@ -1019,11 +1023,11 @@
     buildBlocks(w);buildPlan(w);dressLots(w);buildFabric(w);
     // Old Quarter wreck field: alternating breakables leave a winding 80px+ route while the x=-2800 avenue stays open.
     // (cars use the 96x48 wrecks footprint; the avenue traffic is placed in dress())
-    [[-3330,-310,105,68,'car',200],[-3180,-205,92,74,'rubble',120],[-3025,-315,86,62,'barrier',140],[-3330,-92,110,62,'rubble',120],[-3160,48,92,70,'car',200],[-3015,150,100,64,'rubble',120],[-3330,210,105,68,'barrier',140],[-3170,310,100,62,'car',200],[-2270,-310,105,68,'barrier',140],[-2420,-205,92,74,'car',200],[-2575,-315,86,62,'rubble',120],[-2270,-92,110,62,'rubble',120],[-2440,48,92,70,'barrier',140],[-2585,150,100,64,'car',200],[-2270,210,105,68,'car',200],[-2430,310,100,62,'rubble',120]].forEach(function(v){var o=ob(v[0],v[1],v[4]==='car'?96:v[2],v[4]==='car'?48:v[3],v[4],v[5]);o.debris='decorative';if(v[4]==='car'){o.kind='car';o.variant=mix(v[1],v[0])*2|0;}w.obstacles.push(o);});
+    [[-3330,-310,105,68,'car',200],[-3180,-205,92,74,'rubble',120],[-3025,-315,86,62,'barrier',140],[-3330,-92,110,62,'rubble',120],[-3160,48,92,70,'car',200],[-3015,150,100,64,'rubble',120],[-3330,210,105,68,'barrier',140],[-3170,310,100,62,'car',200],[-2270,-310,105,68,'barrier',140],[-2420,-205,92,74,'car',200],[-2575,-315,86,62,'rubble',120],[-2270,-92,110,62,'rubble',120],[-2440,48,92,70,'barrier',140],[-2585,150,100,64,'car',200],[-2270,210,105,68,'car',200],[-2430,310,100,62,'rubble',120]].forEach(function(v){var o=ob(v[0],v[1],v[4]==='car'?96:v[2],v[4]==='car'?48:v[3],v[4],v[5]);o.debris='decorative';if(v[4]==='car'){o.kind='car';o.variant=mix(v[1],v[0])*2|0;}else wreckArt(o);w.obstacles.push(o);});
     w.obstacles=w.obstacles.filter(function(o){var nx=Math.max(o.x,Math.min(-2800,o.x+o.w)),ny=Math.max(o.y,Math.min(0,o.y+o.h));return (nx+2800)*(nx+2800)+ny*ny>6400;});
     for(var i=0;i<52;i++){var side=i%4,along=-3200+g()*6400,off=112+g()*28,x=side<2?along:(side===2?-off:off),y=side<2?(side===0?-off:off):along;var rw=70+g()*58,rh=42+g()*42,hp=100+(g()*41|0);
       // the pieces lie on the pavement outboard of the kerb, never across the carriageway
-      if(side===0)y-=rh;if(side===2)x-=rw;if(Math.abs(x)<480&&Math.abs(y)<480||reservedAt(w,x,y,rw,rh,0))continue;var rb=ob(x,y,rw,rh,'rubble',hp);rb.debris='decorative';w.obstacles.push(rb);}
+      if(side===0)y-=rh;if(side===2)x-=rw;if(Math.abs(x)<480&&Math.abs(y)<480||reservedAt(w,x,y,rw,rh,0))continue;var rb=ob(x,y,rw,rh,'rubble',hp);rb.debris='decorative';wreckArt(rb);w.obstacles.push(rb);}
     dress(w,g);signs(w);lotSockets(w);arenaGates(w);streetLife(w);districtPieces(w);
     w.landmarks=LANDMARKS.map(function(k){var c={};for(var key in k)c[key]=k[key];if(k.pallet)c.pallet={x:k.pallet.x,y:k.pallet.y};return c;});
     // the radio story point is Blackglass's transmitter console (the preparation console is a separate room)

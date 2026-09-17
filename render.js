@@ -166,6 +166,10 @@
      }
    }
    if(o.type==='car'&&!o.art){root.DSWorld.legacy.wreck(g,o);if(o.burning)fire(g,o.x+o.w/2,o.y+o.h/2,s,o.x);return;}
+   // a breakable roadblock: two staggered rows of 48x24 jersey segments filling its rect
+   if(o.jerseyRun&&hasArt(o.art,o)){const n=Math.max(1,Math.floor((o.w-12)/48));
+     for(let r=0;r<2;r++){const y=o.y+o.h/2-2+r*(o.h/2-2),x0=o.x+(o.w-n*48)/2+(r?10:-10);for(let i=0;i<n;i++){const x=x0+i*48+24;ART.draw(g,o.art,x,y);cast(o.art,x,y,{},{kind:'low',src:o,occ:true});}}
+     return;}
    if(!hasArt(o.art,o)){if(o.type==='rubble'||o.type==='barrier'){root.DSWorld.legacy.wreck(g,o);return;}placeholder(g,o);return;}
    const sp=ART.spec(o.art),an=ART.anchorOf(sp);
    const vid=o.driveable?((s.vehicles||[]).find(v=>v.obstacle===o)||{}).id:null;
@@ -417,7 +421,9 @@
    ART.glow(g,0,0,245,'#ff543b','20');// the disposal yard floor: a dark square inside the fence, scorched rings around the furnace pit
    rect(g,-367,-367,734,734,'#100f12cc');
    for(const q of [210,292]){g.strokeStyle='#6c3b3155';g.lineWidth=2;g.beginPath();g.arc(0,0,q,0,TAU);g.stroke();}
-   if(!s.boss){ART.shadow(g,0,29,43,.7);rect(g,-37,-33,74,64,'#0b1014');rect(g,-31,-28,62,54,'#29323a');rect(g,-22,-18,44,35,'#4b170f');rect(g,-16,-12,32,24,'#8b2b1d');rect(g,-11,-8,22,16,'#ff6a2a');rect(g,-6,-4,12,8,'#fff0bd');text(g,'CENTRAL QUARANTINE',0,-60,'#ff7b35',10);text(g,'PATIENT FURNACE',0,63,'#ffd249',9);text(g,'[ E / A ] BREACH',0,81,'#d8dbc8',7);}
+   // the sealed vault: 112x104 feet-anchored at y=52 so the drum sits centred on the pivot; labels clear its top and slab face
+   if(!s.boss&&hasArt('boss/containment')){ART.shadow(g,0,46,62,.7);ART.draw(g,'boss/containment',0,52,{frame:Math.floor(s.time*2)%2});text(g,'CENTRAL QUARANTINE',0,-64,'#ff7b35',10);text(g,'PATIENT FURNACE',0,68,'#ffd249',9);text(g,'[ E / A ] BREACH',0,84,'#d8dbc8',7);}
+   else if(!s.boss){ART.shadow(g,0,29,43,.7);rect(g,-37,-33,74,64,'#0b1014');rect(g,-31,-28,62,54,'#29323a');rect(g,-22,-18,44,35,'#4b170f');rect(g,-16,-12,32,24,'#8b2b1d');rect(g,-11,-8,22,16,'#ff6a2a');rect(g,-6,-4,12,8,'#fff0bd');text(g,'CENTRAL QUARANTINE',0,-60,'#ff7b35',10);text(g,'PATIENT FURNACE',0,63,'#ffd249',9);text(g,'[ E / A ] BREACH',0,81,'#d8dbc8',7);}
  }
  function dangerBand(g,s,c,left,top){
    if(!s.band)return;const b=s.band,age=s.time-b.at;g.fillStyle=age<3?'#ff7b3523':'#8b2b1d22';
