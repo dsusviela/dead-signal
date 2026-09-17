@@ -52,7 +52,8 @@ try{
   }
   const boss=await render([],{boss:true});assert.notEqual(boss.signature,baseline.signature);
   assert.equal((await render([{type:'shot',detail:'shotgun'}],{muted:true})).rms,0,'mute silences music and effects');
-  assert.equal((await render([],{paused:true})).rms,0,'pause does not schedule music');
+  assert.ok((await render([],{paused:true})).rms>0,'pause keeps the music playing under the menu');
+  assert.equal((await render([{type:'shot',detail:'shotgun'}],{paused:true,musicMuted:true})).rms,0,'pause silences effects');
   assert.equal((await render([],{musicMuted:true})).rms,0,'music can be silenced independently');
   assert.ok((await render([{type:'shot',detail:'shotgun'}],{musicMuted:true})).rms>0,'combat effects remain audible without music');
   const engineOnly=await render([],{musicMuted:true,car:true,speed:-135});

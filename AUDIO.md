@@ -6,6 +6,10 @@
 
 ## State: rewritten 2026-09-17
 
+2026-09-17, later: the user found the scaling too aggressive. Fight/overrun thresholds rose (table below),
+fight 140 → 132 bpm and overrun 160 → 150, combat layers fade in and sit at .8, and pause keeps the score
+playing softly instead of stopping it.
+
 The five separate beep-pattern songs (explore/prowl/fight/swarm/furnace) were replaced. The user
 found them cheap-sounding and unmusical. They asked for **suspense and near-horror while exploring,
 frantic fights, a different mood in each quarter**, in a **dark ambient horror** style, still fully
@@ -65,16 +69,17 @@ does to it.
 | state | enters when | tempo |
 |---|---|---|
 | calm | nothing below | 60 bpm (16th .25 s) |
-| suspense | any alert or chasing infected, or ≥10 nearby | 83 bpm |
-| fight | ≥3 chasing, or combat in the last 4 s (hurt, explosion, a shot with infected near), or ≥30 nearby | 140 bpm |
-| overrun | ≥45 chasing, ≥60 nearby, or CREST with ≥30 nearby and ≥10 chasing | 160 bpm |
+| suspense | any alert or chasing infected, or ≥15 nearby | 83 bpm |
+| fight | ≥5 chasing, or combat in the last 4 s (hurt, explosion, a shot with ≥3 infected near), or ≥40 nearby | 132 bpm |
+| overrun | ≥60 chasing, ≥80 nearby, or CREST with ≥40 nearby and ≥15 chasing | 150 bpm |
 | boss | `s.boss.active` | 12-step furnace clock |
 
-- **Climbing is immediate**, landing on the next beat and restarting the bar there.
+- **Climbing lands on the next beat** and restarts the bar there. Fight and overrun layers fade in over ~.35 s
+  (not a .03 s slam) and sit at .8 in the mix; only the furnace still cuts in hard.
 - **Falling is one level at a time**, after the danger has been unjustified for `DWELL` =
   overrun 4 s, fight 6 s, suspense 10 s. It lands on a bar line. Holding a state uses thresholds
-  lowered by 6 (and chase ≥1), so a boundary cannot flap.
-- Crossing into fight fires the contact sting (at most every 8 s); falling out of it fires the release.
+  lowered by 6 (and chase ≥2), so a boundary cannot flap.
+- Crossing into fight fires the contact sting (at most every 15 s); falling out of it fires the release.
 - **Quarter** switches need the camera to stay 3 s in the new quarter, then wait for a bar line. The
   drone glides to the new root.
 
@@ -153,7 +158,10 @@ clipping. Hearing is simulation-only: `game.js` never reads `DSAudio`.
 - **Intensity must not drain while the situation is unchanged** (the old score's first bug). Tested
   with a held crowd of 45 for 25 s.
 - **Do not assume intensity means more voices.** Budget peak simultaneity, not scheduling rate.
-- `stopVoices()` (pause, hidden tab, mute, new run) also drops the drone; `droneTo` recreates it.
+- **Pause does not stop the score** (user, 2026-09-17: it used to cut out and restart). While paused the
+  director gets no events, so the arrangement keeps playing in its current state through `pauseBus` at
+  `PAUSED_MUSIC` (.6); only the effects bus drops to 0 (engines and loops keep running silently).
+- `stopVoices()` (hidden tab, end of run, mute, new run) also drops the drone; `droneTo` recreates it.
   Music off calls `droneStop()` every frame, so the drone never holds voices while silent.
 - `DSAudio.musicBus` exposes the layer gains plus the drone bus for the tests and the bench. Don't
   route effects through it.

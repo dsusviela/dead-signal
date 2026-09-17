@@ -4,7 +4,7 @@
   // responses and a handful of periodic waves; bounded voices, short lookahead: no downloads, timers, or audio work
   // in the simulation.
   let ctx=null,master=null,music=null,effects=null,noiseBuffer=null,muted=false,musicMuted=false;
-  let lastState=null,lastMode='',lastBoss=false,lastWave=1,lastDead=0,running=false;
+  let lastState=null,lastMode='',lastBoss=false,lastWave=1,lastDead=0,running=false,held=false,pauseBus=null;
   // the score's mix graph (buildScore) and its one long-lived drone
   let layers=null,droneBus=null,downBus=null,duck=null,echo=null,drone=null,lastDuck=0,hushUntil=0;
   const voices=new Set(),cooldowns=new Map(),engines=new Map(),loops=new Map();
@@ -22,7 +22,7 @@
         ctx=new Audio();master=ctx.createGain();music=ctx.createGain();effects=ctx.createGain();
         const limiter=ctx.createDynamicsCompressor();limiter.threshold.value=-14;limiter.ratio.value=8;
         music.gain.value=musicMuted?0:.48;effects.gain.value=.7;master.gain.value=muted?0:.65;
-        music.connect(master);effects.connect(master);master.connect(limiter);limiter.connect(ctx.destination);
+        pauseBus=ctx.createGain();music.connect(pauseBus);pauseBus.connect(master);effects.connect(master);master.connect(limiter);limiter.connect(ctx.destination);
         noiseBuffer=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
         const data=noiseBuffer.getChannelData(0);let seed=73;
         for(let i=0;i<data.length;i++){seed=(seed*1664525+1013904223)>>>0;data[i]=seed/2147483648-1;}
@@ -374,13 +374,13 @@
   // calm: nothing knows they are here. suspense: something is looking. fight: something has found them, or they are
   // shooting at a crowd. overrun: the horde has arrived. boss: the furnace owns the room.
   const STATES=['calm','suspense','fight','overrun','boss'];
-  const STEP=[.25,.18,.107,.094];            // sixteenth length: 60, 83, 140, 160 bpm
+  const STEP=[.25,.18,.114,.1];               // sixteenth length: 60, 83, 132, 150 bpm
   const DWELL=[0,10,6,4];                    // seconds a state must be unjustified before it steps down ONE level
   const MIX=[
     {bed:1, texture:1, motif:1, pulse:0,combat:0,overrun:0,boss:0,drone:1},
     {bed:.7,texture:.8,motif:.45,pulse:1,combat:0,overrun:0,boss:0,drone:1},
-    {bed:0, texture:0, motif:0, pulse:0,combat:1,overrun:0,boss:0,drone:.75},
-    {bed:0, texture:0, motif:0, pulse:0,combat:1,overrun:1,boss:0,drone:.75},
+    {bed:0, texture:0, motif:0, pulse:0,combat:.8,overrun:0,boss:0,drone:.75},
+    {bed:0, texture:0, motif:0, pulse:0,combat:.8,overrun:.8,boss:0,drone:.75},
     {bed:0, texture:0, motif:0, pulse:0,combat:0,overrun:0,boss:1,drone:1}
   ];
   const cond={};
@@ -410,9 +410,9 @@
   // `hold` lowers every threshold, so a state is easier to keep than to enter and a boundary cannot flap
   function levelFor(c,now,hold,crest){
     const h=hold?6:0,combat=now-cond.combatAt<4;
-    if(!(c.alert||c.chase||combat||c.n>=10-h))return 0;
-    if(!(c.chase>=(hold?1:3)||combat||c.n>=30-h))return 1;
-    if(c.chase>=45-h||c.n>=60-h||crest&&c.n>=30&&c.chase>=10)return 3;
+    if(!(c.alert||c.chase||combat||c.n>=15-h))return 0;
+    if(!(c.chase>=(hold?2:5)||combat||c.n>=40-h))return 1;
+    if(c.chase>=60-h||c.n>=80-h||crest&&c.n>=40&&c.chase>=15)return 3;
     return 2;
   }
   function quarterAt(s){
@@ -431,14 +431,14 @@
     const from=cond.state,M=MIX[st],P=MIX[from];
     for(const k of LAYERS){
       if(k==='sting')continue;
-      const tau=M[k]>P[k]?(st>=2?.03:.9):st===4?.1:from>=2&&st<2?1.2:.5;
+      const tau=M[k]>P[k]?(st===4?.03:st>=2?.35:.9):st===4?.1:from>=2&&st<2?1.2:.5;
       layers[k].gain.setTargetAtTime(M[k],t,tau);
     }
     droneBus.gain.setTargetAtTime(M.drone,t,.6);
     cond.state=st;
     if(st===4)return;
     cond.step=STEP[st]*Q.tempo;echo.delayTime.setTargetAtTime(Math.min(1.9,cond.step*6),t,.4);
-    if(from<2&&st>=2&&t-cond.contactAt>8){cond.contactAt=t;stingContact(Q,t);}
+    if(from<2&&st>=2&&t-cond.contactAt>15){cond.contactAt=t;stingContact(Q,t);}
     else if(from>=2&&from<4&&st<2)stingRelease(Q,t);
     retune(Q,cond.bar,t,st>=2?.15:.8);
   }
@@ -591,7 +591,7 @@
   function score(s,events){
     if(!layers)return;
     const now=ctx.currentTime,c=sense(s),dt=Math.min(.25,Math.max(0,now-cond.lastT)),crest=s.surge==='CREST';cond.lastT=now;
-    for(const e of events)if(e.type==='hurt'||e.type==='explosion'||e.type==='shot'&&c.n>0)cond.combatAt=now;
+    for(const e of events)if(e.type==='hurt'||e.type==='explosion'||e.type==='shot'&&c.n>=3)cond.combatAt=now;
     // intensity: climb at once, fall one level at a time and only after the danger has been gone for a while
     const up=levelFor(c,now,false,crest),hold=levelFor(c,now,true,crest);
     if(up>cond.level){cond.level=up;cond.below=0;}
@@ -773,20 +773,29 @@
     const t=ctx.currentTime;if(t<hushUntil||t-lastDuck<.06)return;lastDuck=t;
     duck.gain.setTargetAtTime(type==='explosion'?.55:.75,t,.015);duck.gain.setTargetAtTime(1,t+.09,.3);
   }
+  const PAUSED_MUSIC=.6;
   function update(s){
     const events=s.audioEvents.splice(0);
     if(s!==lastState){stopVoices();resetScore();lastState=s;lastMode=s.mode;lastBoss=false;lastWave=1;lastDead=0;cooldowns.clear();}
-    const active=s.mode==='play'&&!s.paused&&!document.hidden;
+    // Pause keeps the score playing under the menu, a little softer, with the arrangement frozen in its state (no
+    // events reach the director); only the effects bus goes quiet. A hidden tab or the end of a run still stops everything.
+    const active=s.mode==='play'&&!document.hidden,paused=active&&!!s.paused;
     if(!ctx||ctx.state!=='running')return;
     if(active!==running){running=active;master.gain.setTargetAtTime(muted||!active?0:.65,ctx.currentTime,.035);if(!active)stopVoices();}
+    if(paused!==held){held=paused;const t=ctx.currentTime;effects.gain.setTargetAtTime(paused?0:.7,t,.04);pauseBus.gain.setTargetAtTime(paused?PAUSED_MUSIC:1,t,.25);
+      if(paused){for(const [id,e] of [...engines])stopEngine(id,e);for(const id of [...loops.keys()])stopLoop(id);incidentalNext.clear();}}   // rebuilt on resume
     if(!muted&&active){
-      updateEngines(s);updateLoops(s);updateIncidentals(s);
-      // a survivor going down is gameplay information: it sounds with the music on or off
-      const dead=(s.players||[]).filter(p=>p.dead).length;if(dead>lastDead)stingDown(ctx.currentTime+.03);lastDead=dead;
-      if(!musicMuted)score(s,events);else droneStop();
-      for(const event of events){duckFor(event.type);cue(event.type,event.detail);}
-      if(s.boss?.active&&!lastBoss)cue('boss');
-      if(s.wave>lastWave)cue('wave');
+      if(!paused){
+        updateEngines(s);updateLoops(s);updateIncidentals(s);
+        // a survivor going down is gameplay information: it sounds with the music on or off
+        const dead=(s.players||[]).filter(p=>p.dead).length;if(dead>lastDead)stingDown(ctx.currentTime+.03);lastDead=dead;
+      }
+      if(!musicMuted)score(s,paused?[]:events);else droneStop();
+      if(!paused){
+        for(const event of events){duckFor(event.type);cue(event.type,event.detail);}
+        if(s.boss?.active&&!lastBoss)cue('boss');
+        if(s.wave>lastWave)cue('wave');
+      }
     }
     if(!muted&&s.mode!==lastMode&&(s.mode==='won'||s.mode==='lost')&&!document.hidden){master.gain.setTargetAtTime(.65,ctx.currentTime,.035);cue(s.mode);}
     lastBoss=!!s.boss?.active;lastWave=s.wave;lastMode=s.mode;

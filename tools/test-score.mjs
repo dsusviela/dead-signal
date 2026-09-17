@@ -101,18 +101,18 @@ crowd(0); run(3);
 ok('an empty street is calm', state() === 'calm', state());
 crowd(3, 0, 1); run(1);
 ok('one infected investigating -> suspense', state() === 'suspense', state());
-crowd(3, 3); run(1);
-ok('three chasing -> fight, within a beat', state() === 'fight', state());
+crowd(5, 5); run(1);
+ok('five chasing -> fight, within a beat', state() === 'fight', state());
 crowd(80, 60); run(2);
 ok('a chasing horde -> overrun', state() === 'overrun', state());
 crowd(0); run(3);
 ok('overrun does not drop the moment the horde is gone', state() === 'overrun', state());
 run(30);
 ok('losing the horde walks back down to calm', state() === 'calm', state());
-crowd(12); run(4);
-ok('a dozen unaware infected nearby -> suspense', state() === 'suspense', state());
-crowd(4); run(1); const early = state(); run(12);
-ok('suspense holds on a small crowd inside its margin', early === 'suspense' && state() === 'suspense', `${early} -> ${state()} (4 nearby is inside the hold margin)`);
+crowd(16); run(4);
+ok('sixteen unaware infected nearby -> suspense', state() === 'suspense', state());
+crowd(10); run(1); const early = state(); run(12);
+ok('suspense holds on a small crowd inside its margin', early === 'suspense' && state() === 'suspense', `${early} -> ${state()} (10 nearby is inside the hold margin)`);
 crowd(0); run(16);
 ok('suspense falls to calm after its dwell', state() === 'calm', state());
 crowd(2); run(1);
@@ -121,17 +121,20 @@ ok('taking damage is a fight', state() === 'fight', state());
 crowd(0); run(25);
 crowd(0); st.audioEvents.push({ type: 'shot', detail: 'pistol' }); run(1);
 ok('a shot with nobody near does not start a fight', state() === 'calm', state());
+crowd(0); run(25); crowd(2); st.audioEvents.push({ type: 'shot', detail: 'pistol' }); run(1);
+ok('picking off a straggler or two is not a fight', state() !== 'fight', state());
+crowd(0); run(25);
 
 // the regression the old score had: a held situation must not drain
 crowd(45); run(6); const held = state(); let changed = 0;
 run(25, () => { if (state() !== held) changed++; });
 ok('a held crowd of 45 holds its state', held === 'fight' && changed === 0, `${held}, ${changed} frames changed`);
-// hovering on the 30 boundary must not flap
-crowd(31); run(4); let flips = 0, last = state();
-for (let i = 0; i < 12; i++) { crowd(i % 2 ? 29 : 31); run(1.5); if (state() !== last) { flips++; last = state(); } }
-ok('hovering on the 30 boundary does not flap', flips === 0, `${flips} changes`);
+// hovering on the 40 boundary must not flap
+crowd(41); run(4); let flips = 0, last = state();
+for (let i = 0; i < 12; i++) { crowd(i % 2 ? 39 : 41); run(1.5); if (state() !== last) { flips++; last = state(); } }
+ok('hovering on the 40 boundary does not flap', flips === 0, `${flips} changes`);
 // CREST lifts a real fight into overrun
-crowd(35, 12); st.surge = 'CREST'; run(2);
+crowd(45, 16); st.surge = 'CREST'; run(2);
 ok('CREST over a fight is overrun', state() === 'overrun', state());
 st.surge = 'SWELL'; crowd(0); run(40);
 
@@ -221,9 +224,10 @@ ok('the six quarters are harmonically distinct when calm', new Set(byQ('calm').m
 
 // ---- lifecycle ----
 district = 'checkpoint'; crowd(40, 20); run(4);
-st.paused = true; run(.5);
-ok('pause releases every score voice', A.status.voices === 0, 'voices ' + A.status.voices);
+const beforePause = state(); st.paused = true; run(3);
+ok('pause keeps the score playing in its state (it does not stop and restart)', A.status.voices > 0 && state() === beforePause, `voices ${A.status.voices}, ${beforePause} -> ${state()}`);
 st.paused = false; run(2);
+ok('resuming carries straight on', A.status.voices > 0 && state() === beforePause, `voices ${A.status.voices}, ${state()}`);
 A.toggleMusic(); run(2);
 ok('music off releases the drone and schedules nothing', A.status.voices === 0, 'voices ' + A.status.voices);
 A.toggleMusic();
