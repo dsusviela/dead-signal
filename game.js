@@ -111,7 +111,7 @@
   function addPlayer(s,source='keyboard') {
     if(s.players.length>=4||s.players.some(p=>p.source===source)) return null;
     const anchor=s.players.find(p=>!p.dead)||{x:0,y:2800}, id=s.players.length;
-    const p={id,source,name:'SURVIVOR '+(id+1),x:anchor.x+(id?22:0),y:anchor.y+(id?22:0),r:10,hp:100,maxHp:100,dead:false,color:COLORS[id],angle:-Math.PI/2,auto:false,backup:true,weapon:null,quality:1,mag:0,reload:0,shotCd:0,damage:1,speed:105,invuln:2,revive:0,upgrades:Math.max(0,s.level-1),choice:0,kills:0,medkits:1,stamina:100,maxStamina:100,staminaDelay:0,upgradeBag:[],offers:[],offerHistory:[],weaponInventory:[],weaponSlot:0};
+    const p={id,source,name:'SURVIVOR '+(id+1),x:anchor.x+(id?22:0),y:anchor.y+(id?22:0),r:10,hp:100,maxHp:100,armor:0,dead:false,color:COLORS[id],angle:-Math.PI/2,auto:false,backup:true,weapon:null,quality:1,mag:0,reload:0,shotCd:0,damage:1,speed:105,invuln:2,revive:0,upgrades:Math.max(0,s.level-1),choice:0,kills:0,medkits:1,stamina:100,maxStamina:100,staminaDelay:0,upgradeBag:[],offers:[],offerHistory:[],weaponInventory:[],weaponSlot:0};
     if(W().blocked(s.world,p.x,p.y,10)){p.x=anchor.x;p.y=anchor.y;}
     p.vehicle=null;p.exitCd=0;p.refuel=null;
     rollUpgrades(s,p);s.players.push(p);
@@ -175,13 +175,20 @@
     return out;
   }
   function rearmTriggers(s){for(const p of s.players)p.triggerContext=null;}
+  // Every survivor damage source (infected, the boss, crashes) comes through here. Armor (PLAYER_POWER Phase 7)
+  // soaks first, a breaking hit's remainder reaches health, nothing bypasses it; knockback and the hit invulnerability
+  // apply the same whether armor or health took the hit.
+  const ARMOR={max:50,pickup:25};
   function hurt(s,p,amount,kx=0,ky=0){
     if(p.dead||p.invuln>0)return;
-    emit(s,'hurt');p.hp=Math.max(0,p.hp-amount);p.invuln=.65;p.flash=.2;if(p.deploying){p.deploying=null;notify(s,p,'Deploy interrupted','#ff8c80','turret-cancel');}
+    const soak=Math.min(p.armor||0,amount),rest=amount-soak;
+    if(soak>0){p.armor-=soak;p.armorHit=.35;if(p.armor<=0){p.armor=0;p.armorBroken=1.2;emit(s,'armor','break');effect(s,p.x,p.y-34,'ARMOR BROKEN','#8fb3c9');}else emit(s,'armor','hit');}
+    if(rest>0)emit(s,'hurt');p.hp=Math.max(0,p.hp-rest);p.invuln=.65;p.flash=rest>0?.2:0;amount=rest;
+    if(soak>0)effect(s,p.x+(rest>0?-10:0),p.y-22,'−'+Math.ceil(soak),'#8fb3c9');if(p.deploying){p.deploying=null;notify(s,p,'Deploy interrupted','#ff8c80','turret-cancel');}
     // Split impulses so the same solid geometry used for walking also stops knockback.
     for(let i=0;i<8;i++)W().move(s.world,p,kx/8,ky/8);
-    effect(s,p.x,p.y-22,'−'+Math.ceil(amount),'#ff8c80');
-    if(p.hp>0&&p.medkits>0&&!p.healHinted){p.healHinted=true;notify(s,p,'P'+(p.id+1)+' · '+label(p,'heal')+': heal '+MEDKIT_HEAL+' HP','#79e2cf','hint-heal');}
+    if(amount>0)effect(s,p.x+(soak>0?10:0),p.y-22,'−'+Math.ceil(amount),'#ff8c80');
+    if(amount>0&&p.hp>0&&p.medkits>0&&!p.healHinted){p.healHinted=true;notify(s,p,'P'+(p.id+1)+' · '+label(p,'heal')+': heal '+MEDKIT_HEAL+' HP','#79e2cf','hint-heal');}
     if(p.hp<=0){p.dead=true;if(p.vehicle!=null)exitVehicle(s,p);p.revive=0;announce(s,p.name+' DOWN · stand nearby to revive');}
   }
   function spawn(s,type,x,y,extra={}) {
@@ -478,6 +485,11 @@
       if(!p.kitHinted){p.kitHinted=true;notify(s,p,'Medkit ×'+p.medkits+' · '+label(p,'heal')+' heals '+MEDKIT_HEAL+' HP when hurt','#79e2cf','hint-kit');}}
     else if(item.type==='provision'&&!s.rationHinted){s.rationHinted=true;notify(s,p,'Squad ration · '+label(p,'eat')+' eats one for stamina','#b8d86b','hint-ration');}
     else if(item.type==='xp')xp(s,item.amount);
+    else if(item.type==='armor'){const room=ARMOR.max-(p.armor||0),take=Math.min(room,item.amount??ARMOR.pickup);
+      if(take<=0){if(!(p.armorRefusedT>s.time)){p.armorRefusedT=s.time+2;notify(s,p,'Armor full · '+ARMOR.max+'/'+ARMOR.max,'#8a9a94','armor-full');}return false;}
+      p.armor=(p.armor||0)+take;p.armorPickup=.6;effect(s,item.x,item.y,'+'+take+' ARMOR','#8fb3c9');emit(s,'armor','pickup');
+      if(!p.armorHinted){p.armorHinted=true;notify(s,p,'Armor soaks damage before health · it never regenerates','#8fb3c9','hint-armor');}
+      if(take<(item.amount??ARMOR.pickup)){item.amount=(item.amount??ARMOR.pickup)-take;return true;}}
     else if(item.type==='turret'){if(p.turret||ownTurret(s,p)){notify(s,p,'One turret per survivor · leave it for a teammate','#8a9a94','turret-one');return false;}
       p.turret={id:item.turretId??s.nextId++,ammo:item.ammo??TURRET.start,durability:item.durability??TURRET.durability};effect(s,item.x,item.y,'TURRET','#a8b9b8');
       if(!p.turretHinted){p.turretHinted=true;notify(s,p,'Turret · '+label(p,'deploy')+' deploys it · '+label(p,'interact')+' beside it reloads from BUL','#a8b9b8','hint-turret');}}
@@ -825,7 +837,7 @@
     selectWeapon(s,p,next<p.weaponInventory.length?next:-1);
   }
   function playerTick(s,p,input,dt){
-    p.invuln=Math.max(0,p.invuln-dt);p.flash=Math.max(0,(p.flash||0)-dt);p.muzzle=Math.max(0,(p.muzzle||0)-dt);
+    p.invuln=Math.max(0,p.invuln-dt);p.flash=Math.max(0,(p.flash||0)-dt);if(p.armorHit)p.armorHit=Math.max(0,p.armorHit-dt);if(p.armorBroken)p.armorBroken=Math.max(0,p.armorBroken-dt);if(p.armorPickup)p.armorPickup=Math.max(0,p.armorPickup-dt);p.muzzle=Math.max(0,(p.muzzle||0)-dt);
     p.exitCd=Math.max(0,p.exitCd-dt);
     if(p.notice&&(p.notice.t-=dt)<=0)p.notice=null;
     // upgrades are chosen only in the owner's paused panel (hud.js), so no live press can spend one
@@ -1174,5 +1186,5 @@
     if(s.players.length&&s.players.every(p=>p.dead)){s.mode='lost';s.paused=false;}
     camera(s,dt,aspect);
   }
-  root.DSGame={TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
+  root.DSGame={ARMOR,TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
 })(typeof window!=='undefined'?window:globalThis);

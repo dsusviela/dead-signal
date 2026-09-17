@@ -286,10 +286,27 @@
     rect(g,4,9,17,10,'Y');rect(g,6,9,7,10,'D');rect(g,11,9,12,10,'D');rect(g,15,9,16,10,'D'); // hazard stencil band
     return toRows(g);
   }
+  // armorVest 20x18: a steel-blue plate carrier laid flat -- shoulder straps, a scooped neck, one lit trauma plate
+  // and a row of dark pouches. Steel blue is armor's own colour (HUD plate, hit glint), clear of heal/ammo/fuel/signal.
+  var ARMOR_PAL={K:'#0b1216',D:'#1d2b35',M:'#3e5a6b',L:'#8fb3c9',H:'#d4e5ee'};
+  function makeArmorVest(){
+    var g=mkGrid(20,18),x,y,c,copy,at;
+    rect(g,3,0,5,4,'M');rect(g,14,0,16,4,'M');       // shoulder straps
+    rect(g,3,4,16,16,'M');rect(g,2,8,17,16,'M');      // body, flaring below the armholes
+    rect(g,7,4,12,5,'.');rect(g,8,6,11,6,'.');        // neck scoop
+    rect(g,2,17,17,17,'.');rect(g,4,17,15,17,'M');    // hem
+    copy=g.map(function(r){return r.slice();});at=function(px,py){return px<0||py<0||px>=20||py>=18?'.':copy[py][px];};
+    for(y=0;y<18;y++)for(x=0;x<20;x++){c=copy[y][x];if(c==='.')continue;if(at(x-1,y)==='.'||at(x+1,y)==='.'||at(x,y-1)==='.'||at(x,y+1)==='.')g[y][x]='K';}
+    rect(g,6,8,13,13,'D');rect(g,7,9,12,12,'L');rect(g,7,9,9,9,'H');setclip(g,7,10,'H'); // trauma plate, lit top-left
+    rect(g,4,14,15,15,'D');[6,10,14].forEach(function(px){setclip(g,px,14,'K');setclip(g,px,15,'K');}); // pouch row
+    setclip(g,4,1,'L');setclip(g,15,1,'D');setclip(g,4,5,'L');
+    return toRows(g);
+  }
   A.define('loot',{
     medkit:{rows:makeMedkit(),pal:'MAT.loot',anchor:'feet',note:'20x18, white case double outline, green cross, red latch'},
     ammoBullets:{rows:makeAmmoBullets(),pal:'MAT.loot',anchor:'feet',note:'20x16, olive/gold box with a bullet icon'},
     ammoGrenades:{rows:makeAmmoGrenades(),pal:'MAT.loot',anchor:'feet',note:'20x16, olive ammo can with two brass-banded grenade rounds'},
+    armorVest:{rows:makeArmorVest(),pal:ARMOR_PAL,anchor:'feet',note:'20x18, steel-blue plate carrier: straps, scooped neck, lit trauma plate, pouch row'},
     turretCase:{rows:makeTurretCase(),pal:'MAT.loot',anchor:'feet',note:'24x16, olive carry case with a folded sentry turret, handle, yellow stencil band'},
     ammoShells:{rows:makeAmmoShells(),pal:'MAT.loot',anchor:'feet',note:'20x16, red shell box, two shells poking out'},
     fuelCan:{rows:makeFuelCan(),pal:'MAT.loot',anchor:'feet',note:'18x22, orange jerry can, cap, dark handle'},

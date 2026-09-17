@@ -602,28 +602,45 @@ ammunition, a permanent autonomous clear, or an interaction trap.
 
 ### Phase 7 — Implement armor layers
 
-- [ ] Add personal armor state clamped from 0 to the confirmed maximum of 50.
-- [ ] Route every survivor damage source through one armor-aware damage function before health,
+- [x] Add personal armor state clamped from 0 to the confirmed maximum of 50.
+  Evidence: `p.armor` (0 on join), `DSGame.ARMOR {max:50,pickup:25}`; pickups clamp at 50, hits at 0.
+- [x] Route every survivor damage source through one armor-aware damage function before health,
   downing, knockback, invulnerability, and feedback are resolved.
-- [ ] Implement the Phase 0 overflow rule for a hit that breaks the remaining armor.
-- [ ] Implement and test the selected bypass rules by damage source rather than scattered caller
-  exceptions.
-- [ ] Keep knockback and hit invulnerability behavior deliberate when armor absorbs all health
-  damage.
-- [ ] Add armor pickups with the decided restore amount and personal ownership rule.
-- [ ] Refuse a pickup at full armor without consuming it so another survivor can use it.
-- [ ] Decide and implement partial-pickup behavior when the restore amount exceeds missing armor.
-- [ ] Show armor separately from health on every player strip, with readable full, damaged, low,
+  Evidence: `hurt()` is the only survivor damage path (infected contact, vehicle crashes, boss via `api.hurt`);
+  grep shows no other `p.hp` subtraction. Napalm and grenades never hurt survivors (Phase 4).
+- [x] Implement the Phase 0 overflow rule for a hit that breaks the remaining armor.
+  Evidence: soak = min(armor, hit), remainder to health; test "a breaking hit carries the rest to health".
+- [x] Implement and test the selected bypass rules by damage source rather than scattered caller
+  exceptions. Evidence: Phase 0 selected no bypass; test "armor counts against infected, vehicle crashes and the
+  boss alike".
+- [x] Keep knockback and hit invulnerability behavior deliberate when armor absorbs all health
+  damage. Evidence: both apply unchanged; the red flash and 'hurt' cue play only when health is lost.
+- [x] Add armor pickups with the decided restore amount and personal ownership rule.
+  Evidence: loot type `armor` (amount 25, walk over), restores the collector only; art loot/armorVest.
+- [x] Refuse a pickup at full armor without consuming it so another survivor can use it.
+  Evidence: `collect` returns false, throttled "Armor full" notice; test.
+- [x] Decide and implement partial-pickup behavior when the restore amount exceeds missing armor.
+  Evidence: the survivor takes the missing amount and the vest stays with the remainder; test and
+  artifacts/power/browser/armor-partial-pickup.png.
+- [x] Show armor separately from health on every player strip, with readable full, damaged, low,
   hit, broken, pickup, and refused states.
-- [ ] Add distinct armor-hit and break feedback that remains understandable with sound muted and
-  in four-player overlap.
-- [ ] Keep medkit behavior unchanged: it restores health only and remains useful after armor is
-  lost.
-- [ ] Preserve armor through vehicle entry/exit, down/revive, district travel, menus, and normal
+  Evidence: segmented steel-blue plate under the HP bar (5 segments); low < 30% darkens, hit/pickup flash pale,
+  broken blinks red for 1.2 s; refused is a player notice. armor-strips-{1280x720,1920x1080,1024x768}.png.
+- [x] Add distinct armor-hit and break feedback that remains understandable with sound muted and
+  in four-player overlap. Evidence: steel-blue damage numbers (red only for health), a pale ring around the
+  survivor on a soaked hit, a dashed red ring plus "ARMOR BROKEN" on break; distinct 'armor' hit/break/pickup cues.
+- [x] Keep medkit behavior unchanged: it restores health only and remains useful after armor is
+  lost. Evidence: test "medkits restore health only".
+- [x] Preserve armor through vehicle entry/exit, down/revive, district travel, menus, and normal
   play; reset it under the same new-run rules as health/inventory.
-- [ ] Test exact absorption, overflow, bypass, invulnerability, simultaneous damage, downing,
+  Evidence: armor lives on the player object, which persists across the one-world city, seats and menus; a new run
+  creates new players with 0. A downed survivor necessarily has 0 (health is only reached after armor).
+- [x] Test exact absorption, overflow, bypass, invulnerability, simultaneous damage, downing,
   revive, full/partial pickups, medkits, vehicle crashes, boss attacks, hazards, and restart.
-- [ ] Browser-check each armor state for all four player colors and supported HUD scales.
+  Evidence: five Phase 7 tests in tools/test-player-power.mjs (crash and boss share `hurt`).
+- [~] Browser-check each armor state for all four player colors and supported HUD scales.
+  Automated captures above (four players, three viewports). **Awaiting human review**: confirm the thin plate
+  reads at arm's length on a TV and that P4's red blink is not confused with low health.
 
 Phase 7 exit: every damage source has an explicit armor result, while health loss, downing, and
 medkits continue to matter.
@@ -804,6 +821,8 @@ matching phase item.
 - 2026-09-17 — Phases 3–5: attachment framework, duplicate upgrades, grenade launcher, full catalog.
 - 2026-09-17 — Phase 6: carryable turrets (deploy binding, placement, targeting, resupply, wear, art, HUD, audio,
   sim + browser tests). Human review of defensive lanes queued.
+- 2026-09-17 — Phase 7: armor (single hurt path, overflow, pickups with remainder, HUD plate, feedback, vest art,
+  tests, four-strip captures). Fixed a render crash on loot labels for non-ammo pickups.
 
 - 2026-09-17 — Phase 2 shotgun cleave and point-blank hit fix landed.
 

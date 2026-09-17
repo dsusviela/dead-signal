@@ -125,6 +125,8 @@
       noise(.02,.06,5200,t,effects,'highpass');tone(520,.05,.06,'triangle',t+.03);
     }else if(type==='explosion'){
       noise(.55,.34,420,t);tone(58,.5,.22,'sine',t,effects,28);noise(.18,.16,2600,t+.02,effects,'highpass');
+    }else if(type==='armor'){
+      if(detail==='break'){noise(.25,.14,3200,t,effects,'highpass');tone(440,.12,.07,'square',t,effects,180);}else if(detail==='pickup'){tone(392,.06,.06,'triangle',t);tone(587,.08,.06,'triangle',t+.06);noise(.06,.05,2600,t+.02,effects,'bandpass');}else{noise(.05,.09,2200,t,effects,'bandpass');tone(620,.05,.04,'square',t,effects,480);}
     }else if(type==='turret'){
       if(detail==='break'){noise(.4,.2,900,t);tone(80,.35,.1,'sawtooth',t,effects,30);}else{[detail==='deploy'?220:330,detail==='deploy'?330:220].forEach((f,i)=>tone(f,.06,.06,'square',t+i*.09));noise(.05,.05,3000,t+.02,effects,'highpass');}
     }else if(type==='attachment'){

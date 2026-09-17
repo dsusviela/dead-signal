@@ -218,5 +218,38 @@ test('four turrets in a 300-infected crowd bound search work', () => {
   assert.ok(ms < 2, 'turret tick ' + ms.toFixed(3) + ' ms'); assert.ok(s.shots.length <= 4 * 60);
 });
 
+// ---- Phase 7: armor ----
+test('armor soaks every hit first; a breaking hit carries the rest to health; knockback and invulnerability unchanged', () => {
+  const { s, p } = field(); p.invuln = 0; p.armor = 30; const hp = p.hp;
+  G.hurt(s, p, 12); assert.deepEqual([p.armor, p.hp], [18, hp], 'fully absorbed'); assert.ok(p.invuln > 0, 'the hit still grants invulnerability'); assert.ok(p.armorHit > 0);
+  G.hurt(s, p, 50); assert.deepEqual([p.armor, p.hp], [18, hp], 'invulnerable hits change nothing');
+  p.invuln = 0; const x = p.x; G.hurt(s, p, 25, 30, 0); assert.deepEqual([p.armor, p.hp], [0, hp - 7], 'overflow reaches health'); assert.ok(p.x > x, 'knockback applies'); assert.ok(p.armorBroken > 0);
+  assert.ok(s.fx.some(f => f.text === 'ARMOR BROKEN'));
+  p.invuln = 0; G.hurt(s, p, 10); assert.equal(p.hp, hp - 17, 'no armor, health takes it all');
+  for (let i = 0; i < 600; i++) G.step(s, 1 / 30, { 0: {} }); assert.equal(p.armor, 0, 'armor never regenerates');
+});
+test('armor counts against infected, vehicle crashes and the boss alike; a downed survivor revives with none', () => {
+  const { s, p } = field(); p.invuln = 0; p.armor = 50; const hp = p.hp;
+  const e = G.spawn(s, 'walker', p.x + 5, p.y); e.damage = 9; G.step(s, 1 / 30, { 0: {} }); assert.equal(p.armor, 41); assert.equal(p.hp, hp);
+  e.dead = true; p.invuln = 0; G.api ? G.api(s).hurt(p, 20) : G.hurt(s, p, 20); assert.equal(p.armor, 21, 'boss api damage goes through the same path');
+  p.invuln = 0; G.hurt(s, p, 21 + p.hp); assert.ok(p.dead); assert.equal(p.armor, 0);
+});
+test('armor pickups restore 25 to a 50 cap, leave the remainder on the ground, and are refused at full', () => {
+  const { s, p } = field(); const item = { id: 'a1', x: p.x, y: p.y, type: 'armor', amount: 25 }; s.loot.push(item);
+  assert.ok(G.collect(s, p, item)); assert.equal(p.armor, 25); assert.ok(item.taken);
+  p.armor = 40; const b = { id: 'a2', x: p.x, y: p.y, type: 'armor', amount: 25 }; s.loot.push(b);
+  assert.ok(G.collect(s, p, b)); assert.equal(p.armor, 50); assert.equal(b.amount, 15); assert.ok(!b.taken, 'the remainder stays for a teammate');
+  p.notice = null; assert.equal(G.collect(s, p, b), false); assert.equal(b.amount, 15); assert.match(p.notice.text, /Armor full/);
+});
+test('medkits restore health only and still matter after armor is gone', () => {
+  const { s, p } = field(); p.invuln = 0; p.armor = 10; p.medkits = 1; G.hurt(s, p, 40); assert.equal(p.hp, 70); assert.equal(p.armor, 0);
+  G.step(s, 1 / 30, { 0: { heal: true } }); assert.equal(p.hp, 100); assert.equal(p.armor, 0);
+});
+test('armor survives vehicle seats and simultaneous hits in one frame resolve once per invulnerability window', () => {
+  const { s, p } = field(); p.invuln = 0; p.armor = 30;
+  const a = G.spawn(s, 'walker', p.x + 4, p.y), b = G.spawn(s, 'walker', p.x - 4, p.y); a.damage = b.damage = 9; G.step(s, 1 / 30, { 0: {} });
+  assert.equal(p.armor, 21, 'the second hit landed inside the invulnerability window');
+});
+
 console.log(results.join('\n'));
 if (failed) { console.log(failed + ' player-power tests failed'); process.exitCode = 1; } else console.log('player-power tests passed');

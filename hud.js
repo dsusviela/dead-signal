@@ -240,6 +240,10 @@
       utext(g,chip,cx+4*u,ry,12,can?COL.mint:p.medkits?COL.muted:COL.dim);
       const bx=lx+tagW,bwid=Math.max(20*u,cx-6*u-hw-bx);bar(g,bx,ry+3*u,bwid,8*u,p.hp/p.maxHp,p.hp/p.maxHp<.35?COL.red:p.color,'#180b08');
       utext(g,hpT,bx+bwid+hw,ry,12,p.hp/p.maxHp<.35?COL.red:COL.paper,'right');
+      // armor (PLAYER_POWER Phase 7): its own steel-blue plate under the health bar, flashing on hit, pickup and break
+      if((p.armor||0)>0||p.armorBroken>0){const A=G.ARMOR.max,q=(p.armor||0)/A,ay=ry+12*u,col=p.armorBroken>0?(Math.floor(p.armorBroken*8)%2?COL.red:'#3a2320'):p.armorHit>0?'#e8f1f5':p.armorPickup>0?'#c9e6f5':q<.3?'#56707f':'#8fb3c9';
+        g.fillStyle='#0a1216';g.fillRect(bx,ay,bwid,3*u);g.fillStyle=col;g.fillRect(bx,ay,p.armorBroken>0&&!p.armor?bwid:Math.max(1,Math.round(bwid*q)),3*u);
+        for(let k=1;k<5;k++){g.fillStyle='#0a1216';g.fillRect(Math.round(bx+bwid*k/5),ay,1,3*u);}}
     }
     // row B: weapon and magazine, fire state
     ry=y+19*u;

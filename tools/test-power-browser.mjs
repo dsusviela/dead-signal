@@ -67,6 +67,18 @@ try {
   assert.ok(loaded.bullets < bul && loaded.ammo > 0, 'E loads from the squad reserve'); await page.screenshot({ path: out + '/turret-loading.png' }); pass('E beside the turret loads bullets from the shared reserve');
   await page.waitForTimeout(3500); await page.keyboard.press('t'); await page.waitForFunction(() => !(DeadSignal.state.turrets || []).length && DeadSignal.state.players[0].turret, null, { polling: 50, timeout: 3000 });
   pass('T beside your own turret packs it up with its rounds');
+  // Phase 7: armor plate states on four strips (full, damaged, low, broken) across HUD sizes; captures reviewed by hand
+  await page.evaluate(() => { const blank = i => ({ id: 'mock-' + i, index: i, connected: true, mapping: 'standard', axes: [0, 0], buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })) }); window.__pads = [window.__pads[0], blank(1), blank(2)]; });
+  for (const i of [1, 2]) { await page.evaluate(i => { window.__pads[i].buttons[0] = { pressed: true, value: 1 }; }, i); await page.waitForTimeout(80); await page.evaluate(i => { window.__pads[i].buttons[0] = { pressed: false, value: 0 }; }, i); await page.waitForTimeout(80); }
+  await page.waitForFunction(() => DeadSignal.state.players.length === 4, null, { polling: 50, timeout: 4000 });
+  if (await page.evaluate(() => DeadSignal.menu === 'overflow')) throw new Error('unexpected overflow');
+  await page.evaluate(() => { const s = DeadSignal.state; s.enemies = []; s.players.forEach((p, i) => { p.invuln = 1e9; p.x = i * 70; p.y = 2400; p.armor = [50, 30, 8, 0][i]; p.hp = [100, 80, 55, 30][i]; });
+    const q = s.players[3]; q.armorBroken = 1.2; s.players[1].armorHit = .35; });
+  for (const [w, h] of [[1280, 720], [1920, 1080], [1024, 768]]) { await page.setViewportSize({ width: w, height: h }); await page.evaluate(() => { const s = DeadSignal.state; s.players[3].armorBroken = 1.2; s.players[1].armorHit = .35; }); await page.waitForTimeout(90); await page.screenshot({ path: `${out}/armor-strips-${w}x${h}.png` }); }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.evaluate(() => { const s = DeadSignal.state, p = s.players[0]; p.armor = 40; p.notice = null; s.loot.push({ id: 'vest', x: p.x + 6, y: p.y, type: 'armor', amount: 25, label: 'armor' }); });
+  await page.waitForFunction(() => DeadSignal.state.players[0].armor === 50 && DeadSignal.state.loot.some(l => l.id === 'vest' && !l.taken && l.amount === 15), null, { polling: 50, timeout: 3000 });
+  await page.screenshot({ path: out + '/armor-partial-pickup.png' }); pass('armor shows on four strips; a partial pickup leaves the remainder');
   assert.deepEqual(errors, []);
   console.log(results.join('\n')); console.log('power browser checks passed');
 } finally { await browser.close(); }
