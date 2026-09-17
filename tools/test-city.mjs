@@ -215,9 +215,16 @@ test('every required place exists once in its district with its archetype or lot
   }
 });
 
+test('Ashworks and Quarantine fabric is district-specific: workshops, sheds and offices, not a home/shop default', () => {
+  const inD = (b, id) => W.district(centre(b.rect).x, centre(b.rect).y).id === id && !c.DSCity.PLACES[b.locationId];
+  const ash = world.buildings.filter(b => inD(b, 'industry')), q = world.buildings.filter(b => inD(b, 'quarantine'));
+  assert.ok(ash.filter(b => ['workshop', 'storageShed', 'dispatchOffice'].includes(b.archetypeId)).length > ash.length / 2, 'Ashworks ordinary buildings are mostly industrial: ' + ash.map(b => b.archetypeId));
+  assert.ok(q.some(b => ['requisitionOffice', 'stagingDepot'].includes(b.archetypeId)), 'Quarantine support blocks hold requisitioned buildings: ' + q.map(b => b.archetypeId));
+});
+
 test('ordinary interiors and sealed facades surround civic places in every district', () => {
   for (const d of W.DISTRICTS.filter(d => d.id !== 'quarantine')) {
-    const fabric = world.buildings.filter(b => !c.DSCity.PLACES[b.locationId] && W.district(centre(b.rect).x, centre(b.rect).y) === d && ['home', 'shop', 'clinic'].includes(b.archetypeId));
+    const fabric = world.buildings.filter(b => !c.DSCity.PLACES[b.locationId] && W.district(centre(b.rect).x, centre(b.rect).y) === d && c.DSCity.ARCHETYPES[b.archetypeId].placement === 'fabric');
     assert.ok(fabric.length >= 3, `${d.id} has ${fabric.length} ordinary interiors`);
     const sealed = world.obstacles.filter(o => o.type === 'building' && W.district(o.x + o.w / 2, o.y + o.h / 2) === d);
     assert.ok(sealed.length >= 2, `${d.id} keeps background masses`);
@@ -232,6 +239,7 @@ test('boundary parcels blend the neighbouring district across the street', () =>
   for (const p of world.parcels) {
     const b = blocks.get(p.blockId), col = b.col + (p.side === 'e' ? 1 : p.side === 'w' ? -1 : 0), row = b.row + (p.side === 's' ? 1 : p.side === 'n' ? -1 : 0);
     const nb = world.blocks[row * 6 + col], own = W.districtById(b.districtId).fabric;
+    if (p.authored) continue; // authored pilot parcels choose their own archetypes
     if (nb && nb.districtId !== b.districtId) { assert.notDeepEqual({ ...p.weights }, { ...own }, `${p.id} blends`); blended++; }
     else assert.deepEqual({ ...p.weights }, { ...own }, `${p.id} keeps its district`);
   }

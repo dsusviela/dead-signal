@@ -268,65 +268,209 @@
   }
 
   // =====================================================================
-  // civilian 32x32, anchor feet, frames:{down:[idle,step,cower]}: an
-  // unarmed civilian in muted grey/brown winter clothes (MAT.sandbag —
-  // deliberately not the 'survivor' ramp, so the tint never reads as a
-  // squad member), hood up, no weapon. Built as its own simple silhouette
-  // rather than reusing the player's jacket/gear system.
+  // civilian 32x32, anchor feet. frames:{down:[walkA,walkB,cower, ...]}:
+  // the Linden Street evacuees. Frames come in groups of three per person —
+  // 0-1 walking toward the camera, 2 cowering — so render.js keeps reading
+  // frames 0/1/2 and may add 3*k to pick person k (ART.draw wraps frames).
+  //
+  // They are ordinary people who left in a hurry on Day 9: coats over
+  // indoor clothes, a bag grabbed on the way out, no weapons, no tint. Each
+  // person is a different build (tall/thin, stout, broad, slight) and a
+  // different coat hue, so a group of four reads as four people, and skin is
+  // kept to the face and hands so nobody reads as a bare flesh-toned block.
+  // Fear is carried by pose: shoulders hunched up to the jaw, an open mouth,
+  // a bag clutched to the chest, arms wrapped round the body, and a crouch
+  // with both forearms over the head.
+  //
+  // Palette: one shared outline K and shoe/deep-shadow D; coat ramps are
+  // hue-shifted ramp.mjs steps (blue-grey 240, plum 10, olive 120, camel 70),
+  // skin from the 55/45/40 ramps, all well above the night ground's value.
   // =====================================================================
-  var CIV_HOOD=[[0,14,17],[1,13,18]];
-  var CIV_TORSO=[
-    [2,12,19],[3,11,20],[4,11,20],[5,11,20],[6,11,20],[7,11,20],[8,11,20],[9,12,19],[10,12,19],
-    [11,9,22],[12,8,23],[13,7,24],[14,7,24],[15,7,24],[16,7,24],[17,7,24],[18,7,24],
-    [19,8,23],[20,8,23],[21,9,22],[22,9,22],[23,9,22]];
-  function civHeadFace(g){
-    pin(g,13,2,18,3,'D');       // hood peak, dark
-    pin(g,13,4,18,4,'M');
-    pin(g,14,5,17,9,'L');       // face under the hood
-    pin(g,14,5,15,5,'H');
-    setclip(g,15,7,'K');setclip(g,16,7,'K'); // eyes
-    pin(g,13,10,18,10,'D');     // collar
+  var CIV_PAL={
+    K:'#0f0f11',D:'#1d1f28',
+    A:'#24374b',B:'#335166',E:'#4c6b7a',          // blue-grey parka
+    F:'#4b202f',G:'#6c343e',I:'#83504f',          // plum wool coat
+    J:'#2c3b1e',N:'#49522b',P:'#686946',          // olive field jacket
+    Q:'#533319',U:'#6e4e27',X:'#826d47',          // camel hoodie / leather bag
+    j:'#2f3a40',c:'#333235',                      // denim, charcoal trousers
+    s:'#b6774a',h:'#c79867',                      // skin, light
+    m:'#81462b',n:'#916241',                      // skin, brown
+    d:'#562a1a',e:'#65412b',                      // skin, dark
+    b:'#28231d',g:'#8f9394',o:'#68696c'           // dark hair, grey hair + shade
+  };
+  // one person: coat [shade,mid,light], trousers, skin [mid,light], hair,
+  // head half-width hh, torso half-width th, arm width aw (outline incl.),
+  // leg width lw, head top row t, coat hem row, flare (hem widening), style, carry
+  var CIVS=[
+    {coat:'ABE',legs:'j',skin:'sh',hair:'b',hh:4,th:3,aw:3,lw:4,t:1,hem:21,flare:0,style:'hair',carry:'pack'},
+    {coat:'FGI',legs:'c',skin:'hs',hair:'g',hh:5,th:5,aw:3,lw:5,t:4,hem:26,flare:1,style:'bun',carry:'clutch'},
+    {coat:'JNP',legs:'U',skin:'mn',hair:'b',hh:5,th:4,aw:4,lw:5,t:2,hem:21,flare:0,style:'beanie',carry:'case'},
+    {coat:'QUX',legs:'j',skin:'de',hair:'b',hh:4,th:3,aw:3,lw:4,t:6,hem:23,flare:0,style:'hood',carry:'hug'}
+  ];
+  // head silhouette rows t..t+8, rounded one texel at top and bottom
+  function civHeadSil(g,cx,t,hh){
+    var y;for(y=0;y<9;y++){var w=(y===0||y===8)?hh-1:hh;rect(g,cx-w,t+y,cx+w-1,t+y,'x');}
   }
-  function makeCivIdle(){
-    var g=mkGrid(32,32);
-    spans(g,CIV_HOOD.concat(CIV_TORSO),0,'M');
-    rect(g,10,24,14,31,'M');rect(g,17,24,21,31,'M');
+  // face and hair inside a head whose top outline row is t
+  function civFace(g,cx,t,hh,p,look){
+    var sk=p.skin[0],li=p.skin[1],x0=cx-hh+1,x1=cx+hh-2;
+    pin(g,x0,t+1,x1,t+7,sk);
+    pin(g,x0,t+3,cx-1,t+3,li);                   // lit brow, top-left light
+    pin(g,x1,t+5,x1,t+7,'D');                    // jaw side in shadow
+    var ex=look||0;
+    if(p.style==='hair'||p.style==='bun'){
+      var hc=p.hair,hs=p.hair==='g'?'o':'D';
+      pin(g,x0,t+1,x1,t+2,hc);
+      pin(g,x0,t+3,x0,t+5,hc);pin(g,x1,t+3,x1,t+4,hs);
+      pin(g,cx,t+1,x1,t+1,hs);                   // parting, shade side
+      if(p.style==='bun'){pin(g,x0,t+3,x0,t+6,hc);}
+    }else if(p.style==='beanie'){
+      pin(g,x0,t+1,x1,t+2,'c');                  // charcoal knit cap
+      pin(g,x0,t+3,x1,t+3,'o');                  // rolled brim
+      pin(g,x0,t+1,cx-2,t+1,'o');
+      pin(g,x1,t+4,x1,t+5,p.hair);
+    }else if(p.style==='hood'){
+      pin(g,x0,t+1,x1,t+2,p.coat[1]);            // hood up, drawn close round the face
+      pin(g,x0,t+1,cx-1,t+1,p.coat[2]);
+      pin(g,x0,t+3,x0,t+7,p.coat[1]);pin(g,x1,t+3,x1,t+7,p.coat[0]);
+      pin(g,x0+1,t+3,x1-1,t+3,p.hair);           // fringe under the hood
+    }
+    setclip(g,cx-2+ex,t+5,'K');setclip(g,cx+1+ex,t+5,'K');   // eyes
+    pin(g,cx-1+ex,t+7,cx+ex,t+7,'K');            // open mouth
+  }
+  // coat body shading: light on the near (left) shoulder, shade down the right
+  function civCoat(g,cx,p,y0,y1,th){
+    var sh=p.coat[0],md=p.coat[1],lt=p.coat[2];
+    pin(g,cx-th+1,y0,cx+th-2,y1,md);
+    pin(g,cx-th+1,y0,cx-1,y0,lt);
+    pin(g,cx+th-2,y0+2,cx+th-2,y1-1,sh);
+    if(p.carry!=='hug')pin(g,cx-1,y0+1,cx-1,y1-2,sh);   // zip / button line
+    pin(g,cx-th+2,y1,cx+th-2,y1,sh);             // hem shadow
+  }
+  function makeCivWalk(p,f){
+    var g=mkGrid(32,32),cx=16,t=p.t,hh=p.hh,th=p.th,aw=p.aw,sh=th+aw;
+    var sy=t+9,arm0=sy+1,hand=sy+10,hem=p.hem;
+    var handL=hand+(f?1:0),handR=hand+(f?0:1);
+    var legL=f?29:31,legR=f?31:29;                // the lifted foot is the stepping one
+    var lw=p.lw;                                  // leg width with outline
+    civHeadSil(g,cx,t,hh);
+    rect(g,cx-sh+1,sy,cx+sh-2,sy,'x');            // hunched shoulders tight under the jaw
+    rect(g,cx-sh,sy+1,cx+sh-1,sy+2,'x');
+    rect(g,cx-th,sy+1,cx+th-1,hem,'x');           // coat
+    if(p.flare)rect(g,cx-th-1,hem-3,cx+th,hem,'x');
+    var clutch=p.carry==='clutch',hug=p.carry==='hug';
+    // arms: hanging (with a swing) unless the pose holds something to the body
+    if(hug){handL=sy+6;handR=sy+6;}
+    if(clutch)handR=sy+7;
+    rect(g,cx-sh,arm0,cx-th-1,handL,'x');
+    rect(g,cx+th,arm0,cx+sh-1,handR,'x');
+    rect(g,cx-1-lw,hem+1,cx-2,legL,'x');          // two legs with a 2-texel gap of daylight
+    rect(g,cx+1,hem+1,cx+lw,legR,'x');
+    if(p.carry==='pack'){rect(g,cx-sh-1,sy-2,cx-sh+1,sy+3,'x');rect(g,cx+sh-2,sy-2,cx+sh,sy+3,'x');}
+    if(p.carry==='case')rect(g,cx+sh-1,handR+1,cx+sh+4,handR+6,'x');
+    if(clutch)rect(g,cx-3,sy+4,cx+2,sy+9,'x');
     outlineFromFill(g,'K');
-    pin(g,10,30,14,31,'D');pin(g,17,30,21,31,'D'); // boots
-    civHeadFace(g);
-    pin(g,15,14,16,20,'D');     // coat seam
-    pin(g,9,22,22,23,'D');      // hem shadow
+    // seams: a K line between each hanging arm and the coat (rule 16)
+    if(!hug){
+      pin(g,cx-th,sy+3,cx-th,Math.min(handL,hem),'K');
+      if(!clutch)pin(g,cx+th-1,sy+3,cx+th-1,Math.min(handR,hem),'K');
+    }
+    civCoat(g,cx,p,sy,hem,th);
+    // sleeves
+    var md=p.coat[1],lt=p.coat[2],sd=p.coat[0];
+    pin(g,cx-sh+1,arm0,cx-th-1,handL-3,md);
+    pin(g,cx-sh+1,arm0,cx-sh+1,handL-4,lt);
+    pin(g,cx+th,arm0,cx+sh-2,handR-3,sd);
+    pin(g,cx-sh+1,sy,cx-th,sy,lt);               // lit shoulder
+    // hands
+    pin(g,cx-sh+1,handL-2,cx-th-1,handL-1,p.skin[0]);
+    pin(g,cx+th,handR-2,cx+sh-2,handR-1,p.skin[0]);
+    pin(g,cx-sh+1,handL-2,cx-sh+1,handL-2,p.skin[1]);
+    // legs and shoes
+    pin(g,cx-lw,hem+1,cx-3,legL-2,p.legs);
+    pin(g,cx+2,hem+1,cx+lw-1,legR-2,p.legs);
+    pin(g,cx+lw-1,hem+2,cx+lw-1,legR-3,'D');      // shade side of the far leg
+    pin(g,cx-lw,legL-1,cx-3,legL-1,'D');          // shoes
+    pin(g,cx+2,legR-1,cx+lw-1,legR-1,'D');
+    // carried things
+    if(p.carry==='pack'){                          // backpack peeking over both shoulders, straps down the front
+      pin(g,cx-sh,sy-1,cx-sh,sy+2,'U');pin(g,cx+sh-1,sy-1,cx+sh-1,sy+2,'Q');   // canvas pack, not hair
+      pin(g,cx-th+1,sy+1,cx-th+1,sy+5,'D');pin(g,cx+th-2,sy+1,cx+th-2,sy+5,'D');
+    }
+    if(p.carry==='case'){                          // a suitcase grabbed on the way out
+      pin(g,cx+sh,handR+2,cx+sh+3,handR+5,'c');
+      pin(g,cx+sh,handR+2,cx+sh+2,handR+2,'o');   // lit lid edge
+      pin(g,cx+sh,handR+5,cx+sh+3,handR+5,'D');
+      pin(g,cx+sh+1,handR+3,cx+sh+2,handR+3,'D');   // latch strap
+    }
+    if(clutch){                                    // handbag hugged to the chest with both hands
+      pin(g,cx-2,sy+5,cx+1,sy+8,'Q');
+      pin(g,cx-2,sy+5,cx,sy+5,'X');
+      pin(g,cx-2,sy+7,cx-2,sy+8,p.skin[0]);        // fingers over the bag
+      pin(g,cx+1,sy+6,cx+1,sy+7,p.skin[0]);
+    }
+    if(hug){                                       // arms wrapped round the body
+      pin(g,cx-th,sy+4,cx+th-1,sy+5,sd);
+      pin(g,cx-th,sy+4,cx-1,sy+4,md);
+      pin(g,cx-sh+1,sy+4,cx-th-1,sy+5,p.skin[0]);
+      pin(g,cx+th,sy+4,cx+sh-2,sy+5,p.skin[0]);
+    }
+    civHeadSil2(g,cx,t,hh);
+    civFace(g,cx,t,hh,p,f&&p.carry==='pack'?-1:0);
+    civFill(g);
     return toRows(g);
   }
-  function makeCivStep(){
-    var g=mkGrid(32,32);
-    spans(g,CIV_HOOD.concat(CIV_TORSO),0,'M');
-    rect(g,9,24,13,31,'M');rect(g,18,24,22,29,'M'); // one leg trails
-    outlineFromFill(g,'K');
-    pin(g,9,30,13,31,'D');pin(g,18,28,22,29,'D');
-    civHeadFace(g);
-    pin(g,15,14,16,20,'D');
-    pin(g,9,22,22,23,'D');
+  // collar shadow on the chin row reads the head off the hunched shoulders
+  function civHeadSil2(g,cx,t,hh){pin(g,cx-hh+1,t+8,cx+hh-2,t+8,'D');}
+  function civFill(g){g.forEach(function(r){for(var i=0;i<r.length;i++)if(r[i]==='x')r[i]='D';});}
+  // cower: crouched into a ball with the head bowed, hands clasped on the
+  // crown and both forearms making a roof down to the elbows, knees and
+  // shoes under the folded body. Authored as the left half (rows 11-31) and
+  // mirrored, swapping light for shade on the right; roles are mapped per
+  // person: 1 coat mid, 3 coat light, 2 coat shade, h hair/hood/cap,
+  // s skin, l lit skin, t trousers. Broad builds widen the body a texel a side.
+  var CIV_COWER=[
+    '.............KKK',
+    '...........KKlss',
+    '.........KK31Kss',
+    '........K311Khhh',
+    '.......K311Khhhh',
+    '......K311Khhhhh',
+    '......K311Khhhhh',
+    '......K311KDhhhh',
+    '......K211KDsKss',
+    '.......K21KKDDDD',
+    '........K3111111',
+    '........K3111111',
+    '........K1111111',
+    '........K1111111',
+    '........K1111112',
+    '.......KK2222222',
+    '.......KttttttKD',
+    '.......KttttttKD',
+    '......KKttttttKD',
+    '......KDDDDDDDKD',
+    '......KKKKKKKKKK'];
+  function makeCivCower(p){
+    var wide=p.th>=4,out=[],y;
+    var hair=p.style==='hood'?p.coat[0]:p.style==='beanie'?'c':p.hair;
+    var hairShade=p.hair==='g'&&p.style!=='hood'?'o':(p.style==='hood'?'D':'D');
+    function mapL(ch){return ({'1':p.coat[1],'2':p.coat[0],'3':p.coat[2],h:hair,s:p.skin[0],l:p.skin[1],t:p.legs})[ch]||ch;}
+    for(y=0;y<11;y++)out.push(Array(33).join('.'));
+    CIV_COWER.forEach(function(L,i){
+      if(wide&&i>=10)L=L.slice(1)+L[15];
+      var R=L.split('').reverse().map(function(ch){return ch==='3'?'2':ch==='l'?'s':ch;}).join('');
+      out.push((L+R).split('').map(mapL).join(''));
+    });
+    var g=out.map(function(r){return r.split('');});
+    pin(g,17,15,19,17,hair===p.hair?hairShade:p.coat[0]);   // crown in shade on the right
+    if(hair!==p.hair)pin(g,13,18,18,18,p.hair);   // fringe under a hood or cap
     return toRows(g);
   }
-  function makeCivCower(){
-    var g=mkGrid(32,32),head=[
-      [9,13,18],[10,12,19],[11,12,19],[12,12,19],[13,12,19],[14,12,19],[15,12,19],[16,13,18]];
-    var torso=[
-      [17,10,21],[18,9,22],[19,9,22],[20,9,22],[21,9,22],[22,9,22],[23,9,22],[24,9,22],
-      [25,10,21],[26,10,21],[27,11,20]];
-    spans(g,head.concat(torso),0,'M');
-    rect(g,9,28,14,31,'M');rect(g,17,28,22,31,'M');   // bent legs, wide crouch stance
-    rect(g,7,9,9,17,'M');rect(g,22,9,24,17,'M');      // arms raised beside the head
-    rect(g,6,7,10,9,'M');rect(g,21,7,25,9,'M');       // mitts, raised above head height
-    outlineFromFill(g,'K');
-    pin(g,9,30,14,31,'D');pin(g,17,30,22,31,'D');     // boots
-    pin(g,6,7,10,8,'D');pin(g,21,7,25,8,'D');         // gloves
-    pin(g,13,10,18,15,'D');     // hood, head tucked low between the raised arms
-    pin(g,14,11,17,14,'L');
-    setclip(g,15,12,'K');setclip(g,16,12,'K');
-    pin(g,10,27,21,27,'D');     // hem
-    return toRows(g);
+  function civFrames(){
+    var out=[];
+    CIVS.forEach(function(p){out.push(makeCivWalk(p,0),makeCivWalk(p,1),makeCivCower(p));});
+    return out;
   }
 
   // =====================================================================
@@ -482,8 +626,8 @@
       note:'32x32 idle, feet planted, 1-texel breathing lift'},
     downed:{rows:makeDowned(),pal:'survivor',anchor:{x:.5,y:.68},
       note:'32x20 sprawled toward the camera, jacket tint still reads'},
-    civilian:{frames:{down:[makeCivIdle(),makeCivStep(),makeCivCower()]},pal:'MAT.sandbag',anchor:'feet',
-      note:'32x32, unarmed hooded civilian in muted sandbag-tan winter clothes, no jacket tint; frame 2 crouches with arms up'},
+    civilian:{frames:{down:civFrames()},pal:CIV_PAL,anchor:'feet',
+      note:'32x32, four evacuees x [walkA, walkB, cower]; frame 3k+i is person k (tall parka + pack, stout plum coat + bag, broad olive jacket + case, slight camel hood hugging herself)'},
     wpn_pistol:{rows:makePistol(),pal:IRON,anchor:{x:.4,y:.5},note:'20x10 sidearm, muzzle on the right edge'},
     wpn_smg:{rows:makeSmg(),pal:IRON,anchor:{x:.4,y:.5},note:'26x12 folding-stock SMG, box mag'},
     wpn_ar:{rows:makeAr(),pal:IRON,anchor:{x:.4,y:.5},note:'34x12 assault rifle, curved mag, iron sights'},

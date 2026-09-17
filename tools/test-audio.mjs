@@ -16,7 +16,7 @@ try{
     });
     await page.addScriptTag({path:new URL('../audio.js',import.meta.url).pathname.replace(/^\/([A-Z]:)/,'$1')});
     return page.evaluate(async({events,options})=>{
-      if(options.musicMuted)DSAudio.toggleMusic();DSAudio.unlock();if(options.muted)DSAudio.toggleMute();
+      if(options.musicMuted)DSAudio.toggleMusic();DSAudio.unlock();if(options.muted)DSAudio.toggleMute();if(options.prime)DSAudio.primeIncidentals();
       const s={mode:'play',paused:!!options.paused,audioEvents:events,wave:1,threat:1,boss:options.boss?{active:true}:null,
         vehicles:options.vehicles||(options.car?[{id:'car',driver:0,fuel:100,dead:false,speed:options.speed||0,x:0,y:0}]:[]),
         camera:{x:0,y:0},world:options.world||null,circuit:options.circuit||null,campaign:options.campaign||null,players:options.players||[]};
@@ -31,7 +31,7 @@ try{
       const remainingLoops=DSAudio.status.loops,remainingEngines=DSAudio.status.engines,voices=DSAudio.status.voices,buffer=await testAudioContext.startRendering(),data=buffer.getChannelData(0);
       let energy=0,peak=0,signature=0;
       for(let i=0;i<data.length;i++){energy+=data[i]*data[i];peak=Math.max(peak,Math.abs(data[i]));signature+=data[i]*(i%97);}
-      return {rms:Math.sqrt(energy/data.length),peak,signature,voices,engines,remainingEngines,loops,remainingLoops};
+      return {rms:Math.sqrt(energy/data.length),peak,signature,voices,engines,remainingEngines,loops,remainingLoops,incidentals:DSAudio.status.incidentals};
     },{events,options});
   }
   const baseline=await render();assert.ok(baseline.rms>.001,'music generates audible samples');assert.ok(baseline.peak<1);
@@ -80,6 +80,16 @@ try{
   assert.ok(heavy.voices<=48&&heavy.peak<1,'peak voices '+heavy.voices);assert.equal(heavy.engines,3);
   assert.ok((await render([{type:'step',detail:'wood'}],{musicMuted:true,world,circuit:{emergency:true},players})).rms>0,'music off keeps effects and loops');
   assert.equal((await render([{type:'step',detail:'wood'}],{muted:true,world,circuit:{emergency:true},players})).rms,0,'all sound off silences everything');
+  // ---- city_v2 Section 5: sparse, source-bound incidental one-shots, never a bed ----
+  const sources={obstacles:[{collapsed:true,type:'building',x:40,y:0,w:100,h:80},{burning:true,hp:100,x:-60,y:40,w:96,h:48},{type:'fence',x:0,y:-60,w:120,h:8}],
+    props:[{art:'props/dumpster',x:20,y:30},{locationId:'utility-yard',x:-30,y:0}],buildings:[{archetypeId:'hospital',x:10,y:10,w:80,h:60,anchors:[]}],setpieces:[{kind:'radio',x:0,y:90}]};
+  const lit=await render([],{musicMuted:true,prime:true,world:sources,circuit:{emergency:true},players});
+  assert.equal(lit.incidentals,7,'every district incidental plays once beside its real source ('+lit.incidentals+')');assert.ok(lit.rms>0&&lit.peak<1&&lit.voices<=48);
+  const unpowered=await render([],{musicMuted:true,prime:true,world:sources,circuit:{emergency:false},players});
+  assert.equal(unpowered.incidentals,6,'the transformer is silent without a live circuit');
+  assert.equal((await render([],{musicMuted:true,prime:true,world:{obstacles:[],props:[],buildings:[],setpieces:[]},players})).incidentals,0,'no source, no sound');
+  assert.deepEqual([...lit.loops].filter(id=>!['fire','generator'].includes(id)),[],'incidentals never start a persistent loop');
+  assert.equal((await render([],{musicMuted:true,prime:true,world:sources,circuit:{emergency:true},players,boss:true})).incidentals,0,'the boss fight keeps the incidentals quiet');
   assert.deepEqual(errors,[]);
   console.log('PASS audio: exploration/boss music, weapons, city cues, typed engines, persistent loops, lifecycle, independent music mute, master mute, pause and the voice cap');
 }finally{await browser.close();}

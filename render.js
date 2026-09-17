@@ -79,7 +79,9 @@
  function civilian(g,v,s){
    const id='survivors/civilian',frame=v.state==='moving'&&!v.cower?Math.floor(s.time*6+v.x)%2:0;
    if(!LIT)ART.shadow(g,v.x,v.y+2,8,.5);
-   if(hasArt(id,v))ART.draw(g,id,v.x,v.y,{frame:v.cower?2:frame,flip:v.x>0});
+   // four distinct people, three frames each (walk A, walk B, cower): a stable person per civilian id
+   const who=(parseInt(String(v.id).split('-').pop(),10)||0)%4;
+   if(hasArt(id,v))ART.draw(g,id,v.x,v.y,{frame:(v.cower?2:frame)+3*who,flip:v.x>0});
    else{rect(g,v.x-5,v.y-18,10,16,v.cower?'#5b6468':'#8a9a94');rect(g,v.x-4,v.y-24,8,7,'#c9b9a0');}
  }
  function vehicleVariant(v){
@@ -90,9 +92,9 @@
  function vehicleDraw(g,v,s){
    const ca=Math.cos(v.angle),sa=Math.sin(v.angle),vertical=Math.abs(sa)>Math.abs(ca);
    const cardinal=vertical?(sa>0?Math.PI/2:-Math.PI/2):(ca<0?Math.PI:0),residual=Math.atan2(Math.sin(v.angle-cardinal),Math.cos(v.angle-cardinal));
-   const type=v.vehicleType||'sedan',intact='vehicles/'+type+'_'+(vertical?'v':'h'),name=(!v.dead||type!=='sedan')&&hasArt(intact)?intact:'wrecks/car_'+(vertical?'v':'h');
+   const type=v.vehicleType||'sedan',south=vertical&&sa>0&&hasArt('vehicles/'+type+'_vs'),intact='vehicles/'+type+'_'+(vertical?(south?'vs':'v'):'h'),name=(!v.dead||type!=='sedan')&&hasArt(intact)?intact:'wrecks/car_'+(vertical?'v':'h');
    // vehicle art is drawn nose-first at low x (_h) / low y (_v): mirror when heading east or south
-   const opt={anchorX:.5,anchorY:.5,variant:vehicleVariant(v),rotate:residual,flip:!vertical&&ca>0,flipY:vertical&&sa>0},def=root.DSGame.VEHICLES[type]||root.DSGame.VEHICLES.sedan;
+   const opt={anchorX:.5,anchorY:.5,variant:name.startsWith('wrecks/')?0:vehicleVariant(v),rotate:residual, /* a destroyed sedan is the civilian hatch wreck, never the police variant */flip:!vertical&&ca>0,flipY:vertical&&sa>0&&!name.endsWith('_vs')},def=root.DSGame.VEHICLES[type]||root.DSGame.VEHICLES.sedan;
    if(!LIT)ART.shadow(g,v.x,v.y+def.wid/2-2,vertical?def.wid*.58:def.len*.51,.6);
    ART.draw(g,name,v.x,v.y-5,opt);cast(name,v.x,v.y-5,opt,{kind:'low',src:v,vid:v.id});
    for(const id of [v.driver,...v.riders]){const p=s.players.find(p=>p.id===id);if(!p)continue;
@@ -165,6 +167,8 @@
    if(!hasArt(o.art,o)){if(o.type==='rubble'||o.type==='barrier'){root.DSWorld.legacy.wreck(g,o);return;}placeholder(g,o);return;}
    const sp=ART.spec(o.art),an=ART.anchorOf(sp);
    const vid=o.driveable?((s.vehicles||[]).find(v=>v.obstacle===o)||{}).id:null;
+   // tile-anchored set-piece solids (conveyor runs) draw from their rect's top-left
+   if(an.x===0&&an.y===0&&!o.rot){ART.draw(g,o.art,o.x,o.y,{variant:o.variant||0});cast(o.art,o.x,o.y,{anchorX:0,anchorY:0},{kind:'low',src:o,occ:true,vid});return;}
    if(an.y===1&&!o.rot){if(!LIT)ART.shadow(g,o.x+o.w/2,o.y+o.h,Math.round(o.w*.45),.45);ART.draw(g,o.art,o.x+o.w/2,o.y+o.h,{variant:o.variant||0,flash:o.flash>0});
      cast(o.art,o.x+o.w/2,o.y+o.h,{variant:o.variant||0},{kind:o.type==='car'?'low':'stand',src:o,occ:true,vid});}
    else{const opt={anchorX:.5,anchorY:.5,rotate:o.rot?-Math.PI/2:0,variant:o.variant||0};ART.draw(g,o.art,o.x+o.w/2,o.y+o.h/2,opt);cast(o.art,o.x+o.w/2,o.y+o.h/2,opt,{kind:'low',src:o,occ:true,vid});}
@@ -198,7 +202,10 @@
  function drawRoof(g,h,s){
    for(const z of h.roofZones){if(z.alpha<=.02)continue;g.save();g.globalAlpha=z.alpha;g.beginPath();for(const q of z.rects)g.rect(q.x,q.y,q.w,q.h);g.clip();
      const d=root.DSWorld.district(h.x+h.w/2,h.y+h.h/2),b=z.rect;
-     if(hasArt('buildings/roofFill')){for(let y=b.y;y<b.y+b.h;y+=32)for(let x=b.x;x<b.x+b.w;x+=32)ART.draw(g,'buildings/roofFill',x,y,{anchorX:0,anchorY:0,variant:(root.DSWorld.hash(x,y)*3)|0});}
+     const shedRoof=d.id==='industry'&&(h.style==='industrial'||h.style==='shack')&&hasArt('industrial/metalRoof_h'),wardRoof=h.style==='hospital'&&hasArt('civic/wardRoof_h');
+     if(wardRoof){for(let y=b.y;y<b.y+b.h;y+=48)for(let x=b.x;x<b.x+b.w;x+=32)ART.draw(g,'civic/wardRoof_h',x,y,{anchorX:0,anchorY:0,variant:((root.DSWorld.hash(x,y)*6)|0)>4?1:0});}else
+     if(shedRoof){for(let y=b.y;y<b.y+b.h;y+=32)for(let x=b.x;x<b.x+b.w;x+=32)ART.draw(g,b.w>=b.h?'industrial/metalRoof_h':'industrial/metalRoof_v',x,y,{anchorX:0,anchorY:0,variant:((root.DSWorld.hash(x,y)*8)|0)>5?2:0});}
+     else if(hasArt('buildings/roofFill')){for(let y=b.y;y<b.y+b.h;y+=32)for(let x=b.x;x<b.x+b.w;x+=32)ART.draw(g,'buildings/roofFill',x,y,{anchorX:0,anchorY:0,variant:(root.DSWorld.hash(x,y)*3)|0});}
      else{rect(g,b.x,b.y,b.w,b.h,h.style==='clinic'?'#243636':h.style==='shack'?'#30322d':'#263539');}
      for(const q of z.rects){if(q.x===h.x)rect(g,q.x,q.y,4,q.h,'#0a1014');if(q.y===h.y)rect(g,q.x,q.y,q.w,4,'#0a1014');if(q.x+q.w===h.x+h.w)rect(g,q.x+q.w-4,q.y,4,q.h,'#0a1014');if(q.y+q.h===h.y+h.h)rect(g,q.x,q.y+q.h-4,q.w,4,'#0a1014');}
      if(h.roofZones.length>1)for(const q of z.rects){if(q.x!==h.x)rect(g,q.x,q.y,2,q.h,'#0a101488');if(q.y!==h.y)rect(g,q.x,q.y,q.w,2,'#0a101488');}
@@ -237,8 +244,57 @@
    else for(let y=o.y;y<o.y+o.h;y+=sz.h)ART.draw(g,id,o.x+o.w/2,y+sz.h,{anchorX:.5,anchorY:1,variant:(root.DSWorld.hash(o.x,y)*2)|0});
    g.restore();
  }
+ // ---- city_v2 facade kits (frontage and industrial families) ----
+ // The street face of an ordinary building, per district and use: South Blocks brick rows and shopfronts under awnings,
+ // Old Quarter masonry terraces, Ashworks corrugated sheds with workshop and office fronts. Horizontal strips stand on the
+ // south edge; frontage _v strips face west (flip for east), industrial _v strips face east (flip for west); a north
+ // face shows only its eaves. Districts without a kit keep the generic sealed facade.
+ const KITS={
+   checkpoint:{h:'frontage/brickRow_h',v:'frontage/brickRow_v',n:'frontage/brickEaves_n',
+     shop:{h:'frontage/shopfront_h',v:'frontage/shopfront_v',awning:'frontage/awning'},sealed:{h:'frontage/shutter_h',v:'frontage/shutter_v'}},
+   ruins:{h:'frontage/terrace_h',v:'frontage/terrace_v',n:'frontage/masonryEaves_n'},
+   industry:{h:'industrial/corrugatedWall_h',v:'industrial/corrugatedWall_v',vEast:true,northFlip:true,
+     workshop:{h:'industrial/workshopFront_h',v:'industrial/workshopFront_v'},dispatchOffice:{h:'industrial/officeFront_h',v:'industrial/officeFront_v'}}
+ };
+ function kitFor(d,arch,sealed){const k=KITS[d.id];if(!k)return null;return Object.assign({},k,(sealed?k.sealed:k[arch])||{});}
+ function variants(id){const sp=ART.spec(id);return sp&&sp.variants?sp.variants.length:1;}
+ // one face of rect r along side, skipping tiles that overlap a doorway; returns false when the kit has no art for it
+ function facadeFace(g,r,side,kit,doors){
+   const H=root.DSWorld.hash,blocked=(x0,x1,y0,y1)=>doors.some(d=>{const q=d.rect;return q.x<x1+4&&q.x+q.w>x0-4&&q.y<y1+4&&q.y+q.h>y0-4;});
+   if(side==='n'){
+     const id=kit.northFlip?kit.h:kit.n;if(!id||!hasArt(id))return false;const sz=artSize(id);
+     g.save();g.beginPath();g.rect(r.x,r.y,r.w,sz.h+2);g.clip();
+     for(let x=r.x;x<r.x+r.w;x+=sz.w){if(blocked(x,x+sz.w,r.y,r.y+sz.h))continue;ART.draw(g,id,x,r.y,kit.northFlip?{anchorX:0,anchorY:1,flipY:true,variant:(H(x,r.y)*variants(id))|0}:{anchorX:0,anchorY:0,variant:(H(x,r.y)*variants(id))|0});}
+     g.restore();return true;
+   }
+   const hz=side==='s',id=hz?kit.h:kit.v;if(!id||!hasArt(id))return false;const sz=artSize(id);
+   g.save();g.beginPath();g.rect(r.x,r.y,r.w,r.h);g.clip();
+   if(hz){for(let x=r.x;x<r.x+r.w;x+=sz.w){if(blocked(x,x+sz.w,r.y+r.h-sz.h,r.y+r.h))continue;ART.draw(g,id,x,r.y+r.h,{anchorX:0,anchorY:1,variant:(H(x,r.y)*variants(id))|0});}}
+   else{const east=side==='e';for(let y=r.y;y<r.y+r.h;y+=sz.h){const x0=east?r.x+r.w-sz.w:r.x;if(blocked(x0,x0+sz.w,y,y+sz.h))continue;
+     const o=kit.vEast?{anchorX:1,anchorY:0,flip:!east}:{anchorX:0,anchorY:0,flip:east};ART.draw(g,id,east?r.x+r.w:r.x,y,Object.assign(o,{variant:(H(r.x,y)*variants(id))|0}));}}
+   g.restore();
+   // shop awnings project over the pavement in front of the glazing (not over the doorway)
+   if(kit.awning&&side!=='n'){const aid=kit.awning+(hz?'_h':'_v');if(hasArt(aid)){const az=artSize(aid);
+     if(hz)for(let x=r.x;x+az.w<=r.x+r.w;x+=az.w){if(!blocked(x,x+az.w,r.y+r.h-4,r.y+r.h+4))ART.draw(g,aid,x,r.y+r.h,{anchorX:0,anchorY:0,variant:(H(x,r.y+1)*variants(aid))|0});}
+     else for(let y=r.y;y+az.h<=r.y+r.h;y+=az.h){const east=side==='e',ex=east?r.x+r.w:r.x;if(!blocked(ex-4,ex+4,y,y+az.h))ART.draw(g,aid,ex,y,{anchorX:east?0:1,anchorY:0,flip:east,variant:(H(r.x+1,y)*variants(aid))|0});}}}
+   return true;
+ }
+ // an enterable ordinary building: its street face (the public door side) plus the eaves of a north face
+ function buildingFacade(g,b){
+   const A=root.DSCity&&root.DSCity.ARCHETYPES[b.archetypeId];if(!A||A.placement!=='fabric')return;
+   const kit=kitFor(root.DSWorld.district(b.x+b.w/2,b.y+b.h/2),b.archetypeId,false);if(!kit)return;
+   const pub=b.exteriorDoors.find(d=>d.kind==='public')||b.exteriorDoors[0];if(!pub)return;
+   facadeFace(g,b,pub.side,kit,b.exteriorDoors);
+ }
  // background masses read as sealed from their street face: shuttered/boarded frontage along the facade edge
  function sealedFacade(g,o){
+   const kit=kitFor(root.DSWorld.district(o.x+o.w/2,o.y+o.h/2),null,true);
+   if(kit&&facadeFace(g,o,o.facade,kit,[])){
+     // a fresh Old Quarter collapse: torn terrace ends either side of the street face and brick spill from the gap
+     if(o.collapsed&&o.facade==='s'&&hasArt('frontage/collapse_h')){const mx=Math.round((o.x+o.w/2)/32)*32;ART.draw(g,'frontage/collapse_h',mx-32,o.y+o.h,{anchorX:0,anchorY:1});ART.draw(g,'frontage/collapse_h',mx+32,o.y+o.h,{anchorX:0,anchorY:1,flip:true});
+       if(hasArt('frontage/collapseSpill'))ART.draw(g,'frontage/collapseSpill',mx,o.y+o.h,{variant:0});}
+     return;
+   }
    const hz=o.facade==='n'||o.facade==='s',id='buildings/sealedFacade_'+(hz?'h':'v'),sz=hasArt(id)&&artSize(id);if(!sz)return;
    g.save();g.beginPath();g.rect(o.x,o.y,o.w,o.h);g.clip();
    if(hz)for(let x=o.x;x<o.x+o.w;x+=sz.w)ART.draw(g,id,x,o.facade==='n'?o.y:o.y+o.h,{anchorX:0,anchorY:o.facade==='n'?0:1,variant:(root.DSWorld.hash(x,o.y)*2)|0});
@@ -263,7 +319,9 @@
    rect(g,o.x+10,o.y+12,o.w,o.h,'#05090c88');
    g.save();g.beginPath();g.rect(o.x,o.y,o.w,o.h);g.clip();
    const x0=Math.floor(o.x/32)*32,y0=Math.floor(o.y/32)*32;
-   for(let y=y0;y<o.y+o.h;y+=32)for(let x=x0;x<o.x+o.w;x+=32)ART.draw(g,'buildings/roofFillBig',x,y,{anchorX:0,anchorY:0,variant:(hash(x,y)*3)|0});
+   // Ashworks masses are sheds: corrugated metal, or sawtooth north-light roofs on the big ones
+   const shed=d.id==='industry'&&hasArt('industrial/metalRoof_h'),fillId=shed?(o.w*o.h>=60000&&hasArt('industrial/sawtoothRoof_h')?(o.w>=o.h?'industrial/sawtoothRoof_h':'industrial/sawtoothRoof_v'):(o.w>=o.h?'industrial/metalRoof_h':'industrial/metalRoof_v')):'buildings/roofFillBig';
+   for(let y=y0;y<o.y+o.h;y+=32)for(let x=x0;x<o.x+o.w;x+=32)ART.draw(g,fillId,x,y,{anchorX:0,anchorY:0,variant:shed?((hash(x,y)*8)|0)>5?1:0:(hash(x,y)*3)|0});
    g.restore();
    if(hasArt('buildings/roofEdge')){g.save();g.beginPath();g.rect(o.x,o.y,o.w,o.h);g.clip();
      for(let y=o.y;y<o.y+o.h;y+=32)for(let x=o.x;x<o.x+o.w;x+=32){const m=(y===o.y?1:0)|(x+32>=o.x+o.w?2:0)|(y+32>=o.y+o.h?4:0)|(x===o.x?8:0);if(m)ART.draw(g,'buildings/roofEdge',Math.min(x,o.x+o.w-32),Math.min(y,o.y+o.h-32),{anchorX:0,anchorY:0,mask:m});}
@@ -273,13 +331,23 @@
    for(let i=0;i<3+(o.w>300?2:0);i++){const p='buildings/'+props[(hash(o.x+i,o.y)*props.length)|0];if(!hasArt(p))continue;const sp=ART.sprite(p),px=o.x+24+hash(i,o.x)*(o.w-48-sp.w)+sp.w/2,py=o.y+30+hash(o.y,i)*(o.h-60-sp.h)+sp.h;ART.draw(g,p,px,py);}
    if(o.w>240&&hasArt('buildings/roofBillboard')&&h>.6)ART.draw(g,'buildings/roofBillboard',o.x+o.w-40,o.y+o.h-8);
  }
+ // status lamps on arena gate posts: amber closed, cyan open, a small glow so the state reads at night
+ function gateLamps(g,ag,open){const r=ag.rect,hz=r.w>=r.h,col=open?'#79e2cf':'#ffad36',pts=hz?[[r.x+3,r.y+r.h-29],[r.x+r.w-3,r.y+r.h-29]]:[[r.x+r.w/2,r.y+3],[r.x+r.w/2,r.y+r.h-3]];for(const [x,y] of pts)ART.glow(g,x,y,12,col,'70');}
+ // overhead pieces: tile anchors at their top-left (centre for trolleys), a flat dark copy offset onto the ground below
+ function overheadOpt(p){return {anchorX:p.center||p.feet?.5:0,anchorY:p.feet?1:p.center?.5:0,variant:p.variant||0,mask:p.mask||0};}
+ function overheadShadow(g,p){if(!hasArt(p.art))return;const o=overheadOpt(p);o.tint='shadow';o.alpha=.45;ART.draw(g,p.art,p.x+4,p.y+10,o);}
  function worldPass(g,s,c){
    const W=root.DSWorld,w=s.world,items=[],push=(y,fn)=>items.push({y,fn});
    for(const o of W.visible(w,c)){
      if(o.type==='building')push(o.y+o.h,()=>{hasArt('buildings/roofFillBig')?bigRoof(g,o):W.legacy.roof(g,o);if(o.facade)sealedFacade(g,o);});
      else if(o.type==='fence')push(o.y+o.h,()=>drawStrip(g,o,'lots/'+o.fence));
      else if(o.type==='door')push(o.y+o.h,()=>drawStrip(g,o,'buildings/doorSecured'));
-     else if(o.type==='gate')push(o.y+o.h,()=>o.bollard?drawStrip(g,o,'quarantine/bollard'):drawStrip(g,o,'quarantine/gate'));
+     // gates (city_v2 V2-1): the Checkpoint barrier is one prop assembly, so its collision strip draws nothing; an open
+     // arena gate shows its posts and parked leaves around the centre bollard; post solids are drawn by those sprites
+     else if(o.type==='gate'&&(o.gateId==='evac-gate'||o.post)){}
+     else if(o.type==='gate'){const ag=o.bollard&&(w.arenaGates||[]).find(q=>q.id===o.gateId);
+       if(ag&&hasArt('quarantine/gateOpen_h')){const r=ag.rect,hz=r.w>=r.h;push(r.y+r.h,()=>{if(hz)ART.draw(g,'quarantine/gateOpen_h',r.x+r.w/2,r.y+r.h);else ART.draw(g,'quarantine/gateOpen_v',r.x+r.w/2,r.y+r.h/2);drawStrip(g,o,'quarantine/bollard');gateLamps(g,ag,true);});}
+       else push(o.y+o.h,()=>{drawStrip(g,o,o.bollard?'quarantine/bollard':'quarantine/gate');const ag2=(w.arenaGates||[]).find(q=>q.id===o.gateId);if(ag2)gateLamps(g,ag2,false);});}
      else if(o.type==='wall')push(o.y+o.h,()=>drawWall(g,o));
      else if(o.type==='furniture')push(o.y+o.h,()=>{
        // campaign states: the chapel generator runs once fuelled; Blackglass's transmitter rack lights once prepared
@@ -288,7 +356,8 @@
        if(o.art==='buildings/furn_transmitter'&&s.campaign&&s.campaign.prepared&&hasArt('buildings/transmitterLive'))ART.draw(g,'buildings/transmitterLive',o.x+o.w/2,o.y+o.h,{frame:s.campaign.holding==='transmit'||s.campaign.transmitted?Math.floor(s.time*4)%2+1:0});});
      else push(o.y+o.h,()=>drawSolid(g,o,s));
    }
-   for(const p of W.visibleProps(w,c)){if(p.flat)drawProp(g,p,s);else push(p.y,()=>drawProp(g,p,s));}
+   const overhead=[];
+   for(const p of W.visibleProps(w,c)){if(p.overhead){overhead.push(p);overheadShadow(g,p);}else if(p.flat)drawProp(g,p,s);else push(p.y,()=>drawProp(g,p,s));}
    for(const l of s.loot)if(Math.abs(l.x-c.x)<c.w/2+60&&Math.abs(l.y-c.y)<c.h/2+60)push(l.y,()=>loot(g,l,s));
    // infected outside every survivor's cone and every light stay hidden (lights.js seen); they fade in as they enter light
    for(const e of s.enemies)if(Math.abs(e.x-c.x)<c.w/2+70&&Math.abs(e.y-c.y)<c.h/2+70){const a=L?L.seen(s,e):1;if(a<.03)continue;push(e.y,()=>{if(a>=.99){enemy(g,e,s);return;}g.save();g.globalAlpha=a;enemy(g,e,s);g.restore();});}
@@ -299,7 +368,8 @@
    if(s.boss)push(s.boss.y+20,()=>root.DSBoss.drawBody(g,s));
    const mast=(w.setpieces||[]).find(p=>p.kind==='radio');if(mast&&Math.abs(mast.x-c.x)<c.w/2+200&&Math.abs(mast.y-c.y)<c.h/2+260)push(mast.y-40,()=>radioMast(g,s,mast));
    items.sort((a,b)=>a.y-b.y);for(const i of items)i.fn();
-   for(const h of w.buildings||[])if(h.x+h.w>c.x-c.w/2&&h.x<c.x+c.w/2&&h.y+h.h>c.y-c.h/2&&h.y<c.y+c.h/2)drawRoof(g,h,s);
+   for(const h of w.buildings||[])if(h.x+h.w>c.x-c.w/2&&h.x<c.x+c.w/2&&h.y+h.h>c.y-c.h/2-40&&h.y<c.y+c.h/2+40){drawRoof(g,h,s);buildingFacade(g,h);}
+   for(const p of overhead)if(hasArt(p.art,p)){ART.draw(g,p.art,p.x,p.y,overheadOpt(p));if(p.light)drawProp(g,{...p,art:null,flat:true},s);} // pipes, gantries and covered links pass over actors and roofs
    // entrances stay readable from the street: doorways draw over the roof edge they cut through
    for(const b of w.buildings||[])if(b.x+b.w>c.x-c.w/2-40&&b.x<c.x+c.w/2+40&&b.y+b.h>c.y-c.h/2-40&&b.y<c.y+c.h/2+60)for(const d of b.exteriorDoors)drawDoorway(g,b,d);
    for(const k of w.landmarks)if(k.id!=='radio'&&k.id!=='checkpoint'&&k.x>c.x-c.w/2-150&&k.x<c.x+c.w/2+150&&k.y>c.y-c.h/2-170&&k.y<c.y+c.h/2+150&&!hasArt('landmarks/hospitalEntrance'))W.legacy.landmark(g,k,s);
@@ -344,7 +414,8 @@
    root.DSBoss.drawGround(g,s);
    worldPass(g,s,v);projectiles(g,s);
    for(const f of s.fx){g.globalAlpha=Math.min(1,f.life*2);if(f.sprite&&hasArt(f.sprite)){ART.draw(g,f.sprite,f.x,f.y,{frame:Math.min(f.frames-1,Math.floor((1-f.life/f.maxLife)*f.frames)),variant:f.variant||0});continue;}text(g,f.text,f.x,f.y-(1-f.life/f.maxLife)*22,f.color,8);}g.globalAlpha=1;
-   if(L)L.draw(g,s,c); // the night: multiply the lightmap over everything in the world, before the vignette and the HUD
+   // DS_DIAGNOSTIC_LIGHT (development only, city_v2 art review): skip the night so materials are judged in neutral light
+   if(L&&!root.DS_DIAGNOSTIC_LIGHT)L.draw(g,s,c); // the night: multiply the lightmap over everything in the world, before the vignette and the HUD
    g.restore();
    const key=width+','+playHeight;
    if(key!==vignetteKey){

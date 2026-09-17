@@ -36,16 +36,24 @@
     depot:{label:'Municipal depot',size:[360,260,440,320],shell:'multiRoom',template:'depot',door:'warehouseLoading',sign:'depot',profiles:['utility','vehicleFuel'],icon:'utility',placement:'required',styles:['industrial']},
     holding:{label:'Holding block',size:[260,200,300,240],shell:'multiRoom',template:'holding',door:'military',sign:'holding',profiles:['evidence','medical'],icon:'evidence',placement:'required',styles:['military']},
     armoury:{label:'Armoury',size:[200,180,240,220],shell:'multiRoom',template:'armoury',door:'military',sign:'armoury',profiles:['munitions','weapons'],icon:'munitions',placement:'required',styles:['military']},
+    // city_v2 Section 3 ordinary fabric: Ashworks' workshops, sheds and dispatch offices replace its home/shop default;
+    // Central Quarantine's support blocks are requisitioned offices and staging depots over the old civilian frontage
+    workshop:{label:'Workshop',size:[200,170,320,260],shell:'oneRoom',template:'workshop',door:'service',sign:null,profiles:['utility','incendiary'],icon:'utility',placement:'fabric',styles:['industrial']},
+    storageShed:{label:'Storage shed',size:[200,170,320,260],shell:'oneRoom',template:'storageShed',door:'service',sign:null,profiles:['utility','vehicleFuel'],icon:'utility',placement:'fabric',styles:['shack']},
+    dispatchOffice:{label:'Dispatch office',size:[200,170,320,260],shell:'oneRoom',template:'dispatchOffice',door:'residential',sign:null,profiles:['utility','mixed'],icon:'utility',placement:'fabric',styles:['civic']},
+    requisitionOffice:{label:'Requisitioned office',size:[200,170,320,260],shell:'oneRoom',template:'requisitionOffice',door:'military',sign:null,profiles:['evidence','mixed'],icon:'evidence',placement:'fabric',styles:['military']},
+    stagingDepot:{label:'Staging depot',size:[200,170,320,260],shell:'oneRoom',template:'stagingDepot',door:'service',sign:null,profiles:['utility','mixed'],icon:'utility',placement:'fabric',styles:['industrial']},
     commandPost:{label:'Command post',size:[200,180,260,240],shell:'multiRoom',template:'commandPost',door:'military',sign:'command',profiles:['evidence'],icon:'evidence',placement:'required',styles:['military']}
   };
   // Roofless places. perimeter: fence|hedge|wall|kerb; surface drives footsteps (Phase 12A).
   var LOT_KINDS={
     park:{label:'Park',perimeter:'hedge',surface:'grass',profiles:['evidence'],icon:'evidence'},
     parkingLot:{label:'Parking lot',perimeter:'kerb',surface:'asphalt',profiles:['vehicleFuel'],icon:'vehicleFuel'},
-    graveyard:{label:'Graveyard',perimeter:'wall',surface:'gravel',profiles:['evidence'],icon:'evidence'},
+    graveyard:{label:'Graveyard',perimeter:'wall',surface:'grass',profiles:['evidence'],icon:'evidence'}, // city_v2: lawn between the graves, a baked gravel path down its lane
     serviceYard:{label:'Service yard',perimeter:'fence',surface:'concrete',profiles:['utility'],icon:'utility'},
     demolitionLot:{label:'Demolition lot',perimeter:'hoarding',surface:'gravel',profiles:['utility'],icon:'utility'},
     machineryYard:{label:'Machinery yard',perimeter:'fence',surface:'gravel',profiles:['vehicleFuel','utility'],icon:'vehicleFuel'},
+    courtyard:{label:'Courtyard',perimeter:'kerb',surface:'concrete',profiles:[],icon:null},
     burnYard:{label:'Disposal yard',perimeter:'fence',surface:'concrete',profiles:[],icon:null}
   };
   // Every required place from DISTRICTS[].required. kind: landmark (story compound), building, lot.
@@ -91,7 +99,8 @@
   // Blocks are the road grid's cells: usable edges sit 170 from each avenue axis (road + pavement).
   var PLAN=[
     // South Blocks: market on the crossroads north of the checkpoint, police beside the evac route
-    {id:'checkpoint-nine',rect:[-260,2540,520,380],vehicleSlots:[{id:'evac-car',vehicleType:'sedan',rect:[100,2560,48,96],heading:'v'}]},
+    {id:'checkpoint-nine',rect:[-260,2540,520,380],access:[[170,2970,130,360],[-300,2970,130,360]], // corner lanes past the barrier stay open for the final approach
+     vehicleSlots:[{id:'evac-car',vehicleType:'sedan',rect:[100,2560,48,96],heading:'v'}]},
     {id:'crossroads-supermarket',rect:[-1230,1570,1060,730],
       buildings:[{archetype:'supermarket',rect:[-800,1600,600,420],doors:[['n',.72,150,'public'],['s',.5,110,'service']]}],
       lots:[{id:'loading',kind:'serviceYard',rect:[-800,2060,630,220],entrances:[['e',.5,160],['w',.5,90]],open:['n']}],
@@ -101,6 +110,17 @@
     {id:'police-station',rect:[180,2170,720,360],
       buildings:[{archetype:'police',rect:[200,2180,440,340],doors:[['w',.5,100,'public'],['e',.5,90,'barred']]}],
       lots:[{id:'yard',kind:'serviceYard',rect:[680,2200,200,300],entrances:[['s',.5,100],['w',.5,90]]}]},
+    // city_v2 V2-3 South Blocks pilot (block-3-4, see PILOT_BLOCKS): the police block's formerly anonymous core becomes
+    // the station's staff parking, reached by the north alley, beside the terrace's rear court off the east lane
+    {id:'police-staff-parking',rect:[440,1840,320,300],optional:true,name:'Police Staff Parking',
+      lots:[{kind:'parkingLot',rect:[440,1840,320,300],entrances:[['n',.89,70],['s',.5,120]]}],
+      vehicleSlots:[{id:'staff-bay-0',vehicleType:'sedan',rect:[470,1880,48,96],heading:'v'},{id:'staff-bay-1',vehicleType:'sedan',rect:[560,1880,48,96],heading:'v'}]},
+    {id:'linden-rear-court',rect:[790,1810,210,370],optional:true,name:'Rear Court',
+      lots:[{kind:'serviceYard',rect:[790,1810,210,370],entrances:[['e',.726,60],['w',.1,70]],bare:true}]},
+    // city_v2 V2-3 Ashworks pilot (block-5-4): workshops face the x=2800 avenue, a truck lane runs between them into a
+    // fenced loading court, and the north lane gives a second way in past the dispatch office
+    {id:'ashworks-loading-court',rect:[3230,1830,290,550],optional:true,name:'Loading Court',
+      lots:[{kind:'serviceYard',rect:[3230,1830,290,550],entrances:[['w',.717,90],['n',.82,110],['s',.3,90]],bare:true}]},
     {id:'residential-park',rect:[-2300,1920,400,400],lots:[{kind:'park',rect:[-2290,1930,380,380],entrances:[['n',.5,90],['s',.5,90],['w',.5,90],['e',.5,90]]}]},
     // Old Quarter: the graveyard and its chapel beside the x=-1400 avenue, demolition around the collapse
     {id:'collapsed-quarter',rect:[-3380,-400,1160,800]},
@@ -149,6 +169,20 @@
     {id:'vehicle-yard',rect:[175,405,440,210],lots:[{kind:'serviceYard',rect:[180,410,430,200],entrances:[['w',.5,120],['n',.5,160]]}]},
     {id:'inner-arena',rect:[-380,-380,760,760],lots:[{kind:'burnYard',rect:[-370,-370,740,740],entrances:[['n',.5,100],['s',.5,100],['e',.5,100],['w',.5,100]]}]}
   ];
+  // ---- Authored blocks (city_v2 V2-3 pilots) ----
+  // A pilot block replaces random frontage with authored parcels: [side, x, y, w, h, archetype|'sealed', rearDoorSide?].
+  // Attached frontage with deliberate gaps (alley mouths, lanes) instead of repeated 50-99 unit voids; its core is
+  // authored through PLAN lots, so the block adds no random background masses.
+  var PILOT_BLOCKS={
+    'block-3-4':{alleys:[[690,1570,70,270,'north alley'],[1020,2030,210,70,'east lane'],[380,2100,60,70,'police side passage']],parcels:[
+      ['n',170,1570,250,210,'shop'],['n',420,1570,270,210,'home','s'],['n',760,1570,230,210,'shop','s'],['n',990,1570,240,210,'home'],
+      ['e',1020,1790,210,240,'home','w'],['e',1020,2100,210,240,'shop'],['e',1020,2340,210,290,'home'],
+      ['w',170,1790,210,310,'home','e']]},
+    'block-5-4':{alleys:[[3420,1570,120,260,'north truck lane'],[2970,2150,260,100,'loading lane']],parcels:[
+      ['n',2970,1570,230,220,'dispatchOffice','s'],['n',3200,1570,220,220,'storageShed'],
+      ['w',2970,1860,230,290,'workshop','s'],['w',2970,2250,230,270,'workshop','n'],
+      ['s',3200,2410,220,220,'storageShed','n']]}
+  };
   // ---- Economy (Phase 6) ----
   // A run's world loot is a budget: each resource rolls a pickup count inside `count`, then every pickup
   // goes to one free socket chosen by weight. Weight = profile affinity x socket class x socket use x
@@ -170,9 +204,9 @@
     },
     classes:{civic:3,landmark:2.4,lot:1.3,street:1.1,fabric:.55},
     uses:{stock:{provision:3,vehicleFuel:1.5},vending:{provision:2},pocket:{provision:.35,xp:1.5},refuge:{provision:1.5,medkit:1.5}},
-    districts:{industry:{vehicleFuel:3.5,incendiary:2.2},checkpoint:{provision:.4,shells:.85},ruins:{xp:1.3},hospital:{medkit:1.3},quarantine:{weaponQ2:1.5,bullets:1.3}},
-    // city_v2: South Blocks lost its four central blocks to Quarantine, so its bullet dampener (.85) is gone to keep
-    // its per-seed share (min 14.3% over seeds 1-50); global counts are unchanged.
+    districts:{industry:{vehicleFuel:3.5,incendiary:2.2},checkpoint:{provision:.4,bullets:1.2,shells:.85},ruins:{xp:1.3},hospital:{medkit:1.3},quarantine:{weaponQ2:1.5,bullets:1.3}},
+    // city_v2: South Blocks lost its four central blocks to Quarantine, so its bullet weight rose from .85 to 1.2 to keep
+    // its per-seed share after Ashworks gained utility workshops (min 15.7% over seeds 1-50); global counts are unchanged.
     // placed before the weighted spread: Ashworks always holds enough fuel for the chapel generator, and
     // South Blocks always offers a first medkit
     guarantees:[{resource:'vehicleFuel',district:'industry',count:2},{resource:'medkit',district:'checkpoint',count:1},{resource:'provision',location:'crossroads-supermarket',count:2}],
@@ -201,5 +235,5 @@
   }
   // A style maps to its semantic archetype for ordinary one-room fabric.
   var STYLE_ARCHETYPE={row:'home',shack:'home',terrace:'home',shop:'shop',clinic:'clinic'};
-  root.DSCity={LOOT_PROFILES:LOOT_PROFILES,ARCHETYPES:ARCHETYPES,LOT_KINDS:LOT_KINDS,PLACES:PLACES,STYLE_ARCHETYPE:STYLE_ARCHETYPE,PLAN:PLAN,ECONOMY:ECONOMY,profilesFor:profilesFor};
+  root.DSCity={LOOT_PROFILES:LOOT_PROFILES,ARCHETYPES:ARCHETYPES,LOT_KINDS:LOT_KINDS,PLACES:PLACES,STYLE_ARCHETYPE:STYLE_ARCHETYPE,PLAN:PLAN,PILOT_BLOCKS:PILOT_BLOCKS,ECONOMY:ECONOMY,profilesFor:profilesFor};
 })(typeof window!=='undefined'?window:globalThis);

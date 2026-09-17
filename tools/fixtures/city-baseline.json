@@ -1,46 +1,46 @@
 {
   "seeds": "1-50",
   "geometry": {
-    "obstacles": 1454,
+    "obstacles": 1518,
     "obstaclesByType": {
-      "wall": 538,
+      "wall": 526,
       "door": 5,
-      "furniture": 327,
-      "fence": 106,
+      "furniture": 315,
+      "fence": 119,
       "debris": 4,
-      "rubble": 214,
-      "building": 51,
-      "car": 157,
+      "rubble": 280,
+      "building": 57,
+      "car": 160,
       "barrier": 47,
       "gate": 5
     },
-    "buildingMasses": 51,
-    "buildings": 89,
+    "buildingMasses": 57,
+    "buildings": 85,
     "byStyle": {
       "market": 1,
-      "civic": 3,
+      "civic": 5,
       "chapel": 1,
       "hospital": 1,
-      "clinic": 12,
-      "industrial": 3,
-      "military": 3,
-      "shop": 17,
-      "terrace": 15,
-      "row": 31,
+      "clinic": 10,
+      "industrial": 8,
+      "military": 4,
+      "shop": 20,
+      "terrace": 13,
+      "row": 20,
       "shack": 2
     },
     "byDistrict": {
-      "checkpoint": 22,
-      "ruins": 18,
-      "hospital": 22,
-      "northline": 7,
-      "industry": 5,
-      "quarantine": 15
+      "checkpoint": 23,
+      "ruins": 20,
+      "hospital": 18,
+      "northline": 8,
+      "industry": 7,
+      "quarantine": 9
     },
-    "locations": 199,
-    "lots": 18,
-    "vehicleSlots": 38,
-    "sites": 201,
+    "locations": 231,
+    "lots": 54,
+    "vehicleSlots": 40,
+    "sites": 200,
     "landmarks": [
       "checkpoint",
       "radio",
@@ -48,9 +48,9 @@
       "ruins",
       "industry"
     ],
-    "driveableCars": 33,
-    "props": 856,
-    "lights": 149,
+    "driveableCars": 35,
+    "props": 1410,
+    "lights": 150,
     "burningWrecksByDistrict": {
       "industry": 5
     }
@@ -97,14 +97,14 @@
       "max": 280
     },
     "vehicleTank": {
-      "min": 43640.14,
-      "median": 61155.42,
-      "max": 78187.17
+      "min": 46835.24,
+      "median": 64364.97,
+      "max": 81756.17
     },
     "emptyTanks": {
-      "min": 3,
-      "median": 9,
-      "max": 13
+      "min": 4,
+      "median": 10,
+      "max": 14
     }
   },
   "weaponPickups": {
@@ -135,7 +135,7 @@
     },
     "shotgun/q1": {
       "min": 1,
-      "median": 5,
+      "median": 5.5,
       "max": 11
     },
     "shotgun/q2": {

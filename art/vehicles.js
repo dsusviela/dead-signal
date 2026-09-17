@@ -84,19 +84,15 @@
   // shared shell across both liveries (rule 23: one dark shared across ramps)
   var K=MAT.basalt.K, T=MAT.iron.D, H=MAT.iron.H, G=MAT.glass.D, GG=MAT.glass.L,
       EY=MAT.iron.W, RR=MAT.rust.D;
-  // paint ramps: low-chroma custom ramps (tools/art/ramp.mjs --hue H --chroma
-  // 0.032|0.035 --l 0.17,0.72), dirtier than any stock MAT hue at this size —
-  // mid (top-lit plane) + dark (rocker/shade), never the light step
-  var slate={K:'#0c1014',D:'#26313a',M:'#465760',L:'#6d7e85',H:'#9da7a9'};   // hue 232
-  var brick2={K:'#140d10',D:'#3b2b2d',M:'#634e4e',L:'#897673',H:'#aca29f'}; // hue 18
-  // top plane uses the D step (not M — keeps the whole car dark enough to
-  // clear rule 24's contrast band against both grounds without going bright)
-  // and the rocker shade drops to the ramp's own K step, one notch above the
-  // shared outline so the hue still reads in shadow
-  var A_M=slate.D, A_D=slate.K;    // [0] saloon: dull slate-blue
-  var B_M=brick2.D, B_D=brick2.K;  // [1] estate: dull brick-maroon
-
-  var sedanPal={K:K,T:T,H:H,G:G,g:GG,E:EY,R:RR,A:A_M,a:A_D,B:B_M,b:B_D};
+  // sedan paint (see the sedan block): top lit plane / shoulder crease + arch
+  // lips / side face / rocker, M L D K steps of each ramp. Door faces stay in
+  // shade (D), the hood and roof take the light (M), same banding as the
+  // wreck cruiser's iron body so the two read as one family.
+  var maroon={K:'#180a12',D:'#391a28',M:'#59303a',L:'#734d4f'};   // ramp.mjs --hue 5 --chroma 0.06 --l 0.17,0.56
+  var slateB={K:'#11161f',D:'#213243',M:'#365163',L:'#55707e'};   // ramp.mjs --hue 240 --chroma 0.045 --l 0.2,0.64
+  var sedanPal={K:MAT.iron.K,D:MAT.iron.D,M:MAT.iron.M,L:MAT.iron.L,H:MAT.iron.H,G:MAT.glass.M,g:MAT.glass.L,
+    R:MAT.rust.M,r:MAT.rust.L,E:MAT.iron.W,
+    A:maroon.M,B:maroon.L,a:maroon.D,b:maroon.K, C:slateB.M,F:slateB.L,c:slateB.D,f:slateB.K};
 
   // service-vehicle paint: low-chroma custom ramps (ramp.mjs --hue 22 --chroma
   // 0.11 --l 0.16,0.66 / --hue 80 --chroma 0.085 --l 0.2,0.72), muted per Day 9
@@ -109,73 +105,136 @@
   var dozerPal={K:K,T:T,H:H,G:G,g:GG,Z:Z,z:z,r:r,M:M2};
 
   // =====================================================================
-  // sedan_h 96x58 [96x48]: matches wrecks/car_h exactly. Front lens block
-  // near x=0 (headlight), rear lens block near x=95 (taillight) — this
-  // front/back split only ever mirrors under render.js's x-flip, which is
-  // exactly the case where the car is facing the other way, so it stays
-  // correct after flip. No detail differs between the top and bottom long
-  // edges (never mirrored for the horizontal sprite).
+  // sedan 96x58 [96x48] / 48x106 [48x96]: the driveable saloon, built with
+  // the same parametric body as wrecks/car_h|v (makeCarH/V there): oblique
+  // 3/4 view from the south, NOSE-FIRST at low x (_h) / low y (_v); the
+  // renderer mirrors it for the other heading. Same greenhouse hull, pillars,
+  // arches, bumpers and lamp positions as the police cruiser, so a driven
+  // car that breaks down and swaps to the wreck never jumps. What reads
+  // "intact": clean unbroken glass with one sheen, two round tyres with lit
+  // hubs, shut doors with seams and handles, pale warm headlamp lenses at
+  // the true front, red tail lenses at the back, chrome bumper and window
+  // trim. No lightbar, no damage; the roof is one quiet panel so seated
+  // survivors (game.js SEATS) read on top of it.
+  //   [0] dark maroon      (ramp.mjs --hue 5 --chroma 0.06 --l 0.17,0.56)
+  //   [1] faded slate blue (ramp.mjs --hue 240 --chroma 0.045 --l 0.2,0.64)
+  // letters: paint top/hi/side/low = A B a b ([0]) | C F c f ([1]);
+  // shared iron K D M L H, glass G g, rust R r (tail lenses), E warm lamp.
   // =====================================================================
-  var W=96,H_=58,C=4;
+  var SED_W=96,SED_H=58,SED_VW=48,SED_VH=106;
+  function hline(g,x0,x1,y,ch){for(var x=x0;x<=x1;x++)setclip(g,x,y,ch);}
+  function vline(g,x,y0,y1,ch){for(var y=y0;y<=y1;y++)setclip(g,x,y,ch);}
+  function line(g,x0,y0,x1,y1,ch){
+    var dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,e=dx+dy,e2;
+    for(;;){setclip(g,x0,y0,ch);if(x0===x1&&y0===y1)break;e2=2*e;if(e2>=dy){e+=dy;x0+=sx;}if(e2<=dx){e+=dx;y0+=sy;}}
+  }
+  function roundIn(g,x0,y0,x1,y1,ch){[[x0,y0,1,1],[x1,y0,-1,1],[x0,y1,1,-1],[x1,y1,-1,-1]].forEach(function(c){setclip(g,c[0],c[1],ch);setclip(g,c[0]+c[2],c[1],ch);setclip(g,c[0],c[1]+c[3],ch);});}
+  // side-on tyre in an arch: K ring, D rubber, steel hub with a lit top
+  function tyreSide(g,cx,y0,w,h){
+    var x0=cx-(w>>1),x1=x0+w-1,y1=y0+h-1,x,y;
+    rect(g,x0,y0,x1,y1,'D');cutCorners(g,x0,y0,x1,y1,4);
+    for(y=y0;y<=y1;y++)for(x=x0;x<=x1;x++){if(g[y][x]==='.')continue;
+      if(x===x0||x===x1||y===y0||y===y1||g[y][x-1]==='.'||g[y][x+1]==='.'||g[y-1]&&g[y-1][x]==='.'||g[y+1]&&g[y+1][x]==='.')g[y][x]='K';}
+    cutCorners(g,x0,y0,x1,y1,4);
+    var hy=y0+Math.floor(h/2)-1;
+    rect(g,cx-2,hy-2,cx+2,hy+2,'L');setclip(g,cx-2,hy-2,'D');setclip(g,cx+2,hy-2,'D');setclip(g,cx-2,hy+2,'D');setclip(g,cx+2,hy+2,'D');
+    rect(g,cx-1,hy-1,cx+1,hy+1,'K');setclip(g,cx,hy-2,'H');setclip(g,cx-1,hy-2,'H');
+  }
+  // back-on tyre peeking under a bumper / out of a flank
+  function tyreEnd(g,x0,y0,x1,y1){rect(g,x0,y0,x1,y1,'K');rect(g,x0+1,y0,x1-1,y1-1,'D');for(var y=y0+1;y<y1;y+=2)hline(g,x0+2,x1-2,y,'K');}
+  function paint(v){return v?{top:'C',hi:'F',side:'c',low:'f'}:{top:'A',hi:'B',side:'a',low:'b'};}
+
   function makeSedanH(v){
-    var g=mkGrid(W,H_);
-    var P=v?'B':'A', p=v?'b':'a';
-    rect(g,0,0,W-1,40,P);
-    rect(g,0,41,W-1,H_-1,p);
-    rect(g,0,H_-3,W-1,H_-1,'T');
-    // greenhouse: windscreen, B-pillar, rear window — unbroken glass, clean streak
-    rect(g,15,8,80,24,'G');
-    rect(g,46,8,47,24,P);
-    glint(g,18,10,'g','g');
-    glint(g,60,10,'g','g');
-    setclip(g,20,20,'g');setclip(g,63,20,'g');
-    // closed-door seams (two doors per side), 2px ticks so they read as a
-    // seam end rather than a stray orphan texel
-    setclip(g,34,26,p);setclip(g,34,27,p);setclip(g,34,38,p);setclip(g,34,39,p);
-    setclip(g,64,26,p);setclip(g,64,27,p);setclip(g,64,38,p);setclip(g,64,39,p);
-    setclip(g,30,31,'H');setclip(g,31,31,'H');setclip(g,60,31,'H');setclip(g,61,31,'H'); // door handles
-    // bumper trim
-    setclip(g,1,42,'H');setclip(g,2,42,'H');setclip(g,W-3,42,'H');setclip(g,W-2,42,'H');
-    // headlight (front, x low) / taillight (rear, x high) — glassy lens, not dead
-    lens(g,3,32,4,6,'K','E');
-    lens(g,W-7,32,4,6,'K','R');
-    // two round, un-flattened wheels
-    wheel(g,14,47,14,11,'T','K','H');
-    wheel(g,68,47,14,11,'T','K','H');
-    cutCorners(g,0,0,W-1,H_-1,C);
+    var g=mkGrid(SED_W,SED_H),C=paint(v),x,y,t,a,b;
+    var rx0=42,rx1=66,ry0=10,ry1=22,bx0=28,bx1=80,by0=17,by1=31;
+    rect(g,7,50,88,53,'K');
+    rect(g,3,15,92,35,C.top);cutCorners(g,3,15,92,35,4);
+    rect(g,2,36,93,51,C.side);
+    hline(g,3,92,36,C.hi);
+    rect(g,2,48,93,51,C.low);
+    // bumpers wrap the ends
+    rect(g,0,35,3,47,C.side);rect(g,92,35,95,47,C.side);
+    hline(g,0,3,35,C.hi);hline(g,92,95,35,C.hi);
+    // greenhouse: windshield quad, rear window quad, side glass, roof
+    for(x=bx0;x<=rx0;x++){t=(rx0-x)/(rx0-bx0);a=Math.round(ry0+(by0-ry0)*t);b=Math.round(ry1+(by1-ry1)*t);vline(g,x,a,b,'G');}
+    for(x=rx1;x<=bx1;x++){t=(x-rx1)/(bx1-rx1);a=Math.round(ry0+(by0-ry0)*t);b=Math.round(ry1+(by1-ry1)*t);vline(g,x,a,b,'G');}
+    for(y=ry1;y<=by1;y++){t=(y-ry1)/(by1-ry1);hline(g,Math.round(rx0-(rx0-bx0)*t),Math.round(rx1+(bx1-rx1)*t),y,'G');}
+    rect(g,rx0,ry0,rx1,ry1,C.top);roundIn(g,rx0,ry0,rx1,ry1,'G');
+    hline(g,rx0+2,rx1-2,ry0+1,C.hi);                                                    // lit front edge of the roof
+    hline(g,rx0+1,rx1-1,ry1,C.side);vline(g,rx1,ry0+2,ry1,C.side);
+    line(g,rx0,ry1,bx0,by1,C.side);line(g,rx1,ry1,bx1,by1,C.side);                      // A / C pillars
+    line(g,rx0,ry0,bx0,by0,'K');line(g,rx1,ry0,bx1,by0,'K');
+    t=54;vline(g,t,ry1,by1,C.side);vline(g,t+1,ry1+1,by1,C.side);                      // B-pillar
+    hline(g,bx0,bx1,by1,'K');                                                          // beltline
+    hline(g,bx0+1,bx1-1,by1+1,'H');                                                    // chrome window trim
+    line(g,rx0-3,ry0+4,rx0-7,ry0+9,'g');line(g,rx0-2,ry0+5,rx0-6,ry0+10,'g');            // windshield sheen
+    hline(g,rx0+3,rx0+6,ry1+2,'g');hline(g,t+4,t+7,ry1+2,'g');
+    // wheel arches and round tyres
+    var fx=21,rxw=74;
+    [fx,rxw].forEach(function(cx){rect(g,cx-10,41,cx+10,51,'K');setclip(g,cx-10,41,C.side);setclip(g,cx-9,41,C.side);setclip(g,cx-10,42,C.side);setclip(g,cx+10,41,C.side);setclip(g,cx+9,41,C.side);setclip(g,cx+10,42,C.side);
+      hline(g,cx-8,cx+8,40,C.hi);});                                                   // arch lip catches the light
+    tyreSide(g,fx,43,17,15);tyreSide(g,rxw,43,17,15);
+    // door seams, handles
+    vline(g,31,33,47,'K');vline(g,t,33,47,'K');vline(g,bx1-3,33,47,'K');
+    hline(g,t-6,t-5,39,'H');hline(g,bx1-9,bx1-8,39,'H');
+    hline(g,33,t-2,43,C.low);hline(g,t+2,bx1-5,43,C.low);                              // door crease under the handles
+    // front: bumper chrome + headlamp at the true nose; deck-top lamp lenses
+    vline(g,1,41,46,'H');rect(g,1,36,2,39,'E');setclip(g,2,39,'H');
+    rect(g,4,17,6,19,'E');setclip(g,6,19,'H');rect(g,4,31,6,33,'E');setclip(g,6,33,'H');
+    // rear: bumper chrome + tail lenses
+    vline(g,94,42,46,'H');rect(g,93,36,94,40,'R');hline(g,93,94,36,'r');
+    rect(g,89,17,91,19,'R');setclip(g,89,17,'r');rect(g,89,31,91,33,'R');setclip(g,89,31,'r');
+    // hood / trunk panel lines
+    hline(g,7,bx0-4,16,C.hi);vline(g,bx0-2,18,31,'K');vline(g,bx1+3,18,31,'K');
+    hline(g,8,bx0-5,24,C.side);                                                        // hood centre crease
+    cutCorners(g,0,0,SED_W-1,SED_H-1,1);
     outlineFromFill(g,'K');
     return toRows(g);
   }
-
-  // =====================================================================
-  // sedan_v 48x106 [48x96]: matches wrecks/car_v exactly. Front near y=0,
-  // rear near y=105 — mirrors under flipY only, i.e. when heading swaps
-  // north/south, same reasoning as sedan_h.
-  // =====================================================================
   function makeSedanV(v){
-    var W_=48,H2=106,c=C;
-    var g=mkGrid(W_,H2);
-    var P=v?'B':'A', p=v?'b':'a';
-    rect(g,0,0,W_-1,14,P);
-    rect(g,0,15,W_-1,H2-1,p);
-    rect(g,0,15,W_-1,84,P);
-    rect(g,0,H2-3,W_-1,H2-1,'T');
-    rect(g,8,15,39,28,'G');
-    rect(g,8,71,39,84,'G');
-    glint(g,10,17,'g','g');
-    glint(g,10,73,'g','g');
-    setclip(g,20,20,'g');setclip(g,20,76,'g');
-    setclip(g,10,42,p);setclip(g,11,42,p);setclip(g,23,42,p);setclip(g,24,42,p);
-    setclip(g,10,58,p);setclip(g,11,58,p);setclip(g,23,58,p);setclip(g,24,58,p);
-    setclip(g,15,48,'H');setclip(g,15,49,'H');setclip(g,15,54,'H');setclip(g,15,55,'H');
-    setclip(g,2,17,'H');setclip(g,3,17,'H');setclip(g,W_-4,17,'H');setclip(g,W_-3,17,'H');
-    lens(g,18,3,6,4,'K','E');
-    lens(g,18,H2-7,6,4,'K','R');
-    wheel(g,3,92,14,13,'T','K','H');
-    wheel(g,31,92,14,13,'T','K','H');
-    cutCorners(g,0,0,W_-1,H2-1,c);
+    var g=mkGrid(SED_VW,SED_VH),C=paint(v),y,t,W1=SED_VW-1;
+    [[12,28],[64,80]].forEach(function(r){tyreEnd(g,0,r[0],4,r[1]);tyreEnd(g,W1-4,r[0],W1,r[1]);});
+    rect(g,3,2,W1-3,86,C.top);cutCorners(g,3,2,W1-3,86,6);
+    rect(g,3,80,W1-3,86,C.top);
+    // rear face (south end): trunk lip, tail lenses, plate, bumper
+    rect(g,2,87,W1-2,99,C.side);hline(g,3,W1-3,87,C.hi);
+    rect(g,1,95,W1-1,99,C.side);hline(g,1,W1-1,95,'H');rect(g,2,99,W1-2,100,C.low);
+    rect(g,4,89,10,92,'R');rect(g,W1-10,89,W1-4,92,'R');
+    hline(g,5,9,89,'r');hline(g,W1-9,W1-5,89,'r');
+    rect(g,19,90,28,93,'L');hline(g,19,28,93,'K');hline(g,20,27,91,'M');
+    rect(g,8,101,W1-8,102,'K');
+    tyreEnd(g,5,99,13,105);tyreEnd(g,W1-13,99,W1-5,105);
+    // front: chrome bumper at the nose, headlamps, hood crease, cowl gap
+    hline(g,8,W1-8,2,'H');
+    rect(g,5,3,10,6,'E');rect(g,W1-10,3,W1-5,6,'E');hline(g,5,10,6,'H');hline(g,W1-10,W1-5,6,'H');
+    vline(g,23,8,24,C.hi);hline(g,6,W1-6,26,'K');
+    // greenhouse
+    var ws0=28,rf0=34,rf1=57,rw1=68;
+    for(y=ws0;y<rf0;y++){t=(y-ws0)/(rf0-ws0);hline(g,Math.round(7+3*t),Math.round(W1-7-3*t),y,'G');}
+    for(y=rf1+1;y<=rw1;y++){t=(y-rf1)/(rw1-rf1);hline(g,Math.round(10-3*t),Math.round(W1-10+3*t),y,'G');}
+    rect(g,6,rf0-1,9,rf1+4,'G');rect(g,W1-9,rf0-1,W1-6,rf1+4,'G');
+    rect(g,10,rf0,W1-10,rf1,C.top);roundIn(g,10,rf0,W1-10,rf1,'G');
+    hline(g,11,W1-11,rf1,C.side);vline(g,10,rf0+2,rf1,C.side);vline(g,W1-10,rf0+2,rf1,C.side);
+    hline(g,7,W1-7,ws0,'K');hline(g,7,W1-7,rw1+1,'K');
+    t=Math.round((rf0+rf1)/2)+2;hline(g,6,9,t,C.side);hline(g,W1-9,W1-6,t,C.side);      // B-pillars
+    hline(g,9,13,ws0+2,'g');hline(g,12,15,rf1+3,'g');hline(g,13,16,rf1+4,'g');
+    hline(g,6,W1-6,rw1+3,'K');                                                         // trunk lid gap
+    // flank door seams + handles on the tumblehome
+    setclip(g,3,t,'K');setclip(g,4,t,'K');setclip(g,W1-3,t,'K');setclip(g,W1-4,t,'K');
+    setclip(g,4,t-4,'H');setclip(g,W1-4,t-4,'H');setclip(g,4,t+7,'H');setclip(g,W1-4,t+7,'H');
     outlineFromFill(g,'K');
     return toRows(g);
+  }
+  // sedan_vs 48x106: the same car heading SOUTH as the south-looking camera sees it. The top plane is mirrored nose-down
+  // and the band that shows the rear face in sedan_v becomes the FRONT face: headlamps where the tail lenses were, a slatted
+  // grille in place of the plate. render.js uses it instead of flipping sedan_v, which put the rear face on the north edge.
+  function makeSedanVS(v){
+    var rows=makeSedanV(v),W=rows[0].length,blank=new Array(W+1).join('.'),plane=rows.slice(2,87).reverse();
+    var face=rows.slice(87).map(function(r,i){var y=87+i;return r.split('').map(function(ch,x){
+      if(ch==='R')return 'E';if(ch==='r')return 'H';
+      if(x>=19&&x<=28&&y>=90&&y<=93)return y%2?'K':'M';
+      return ch;}).join('');});
+    return [blank,blank].concat(plane,face);
   }
 
   // =====================================================================
@@ -394,6 +453,7 @@
   A.define('vehicles',{
     sedan_h:{variants:[makeSedanH(0),makeSedanH(1)],pal:sedanPal,anchor:'feet',
       note:'96x58 [96x48], matches wrecks/car_h: [0] slate-blue saloon, [1] brick-maroon estate; unbroken glass, closed doors, round wheels, glassy head/tail lenses'},
+    sedan_vs:{variants:[makeSedanVS(0),makeSedanVS(1)],pal:sedanPal,anchor:'feet',note:'48x106 [48x96], heading south: nose at the bottom with its front face (headlamps, grille, chrome) where sedan_v shows the rear'},
     sedan_v:{variants:[makeSedanV(0),makeSedanV(1)],pal:sedanPal,anchor:'feet',
       note:'48x106 [48x96], matches wrecks/car_v: same two liveries, vertical'},
     fireTruck_h:{variants:[makeFireTruckH(0),makeFireTruckH(1),makeFireTruckH(2)],pal:truckPal,anchor:'feet',

@@ -13,15 +13,21 @@
 //
 // Orientation contract (flat props support {rot:1} = -90deg and {flip:true}):
 //   * source-side pieces (glassShards, brickSpill) draw their wall side on the
-//     TOP edge; rot:1 puts the wall on the LEFT, rot:1+flip on the RIGHT.
+//     TOP edge; rot:1 (-90deg) puts the wall on the LEFT. A wall on the RIGHT
+//     needs rotate:+PI/2 (or rot:1 + flipY) -- ART.draw supports both, but
+//     render.js's flat-prop path currently forwards only rot/flip.
 //   * *_h strips tile left-right (32 wide), *_v strips tile top-bottom
 //     (32 tall). Periodic marks use x%period with period | 32 and edge
 //     profiles built from sin(2*pi*k*x/32) terms, so every variant meets every
 //     other variant at the same boundary height -- seamless in any order.
-//   * paperEdge_h / gutterDamp_h / wallDirt_h: the edge (curb, fence, wall)
-//     is the TOP row; the _v twins are transposes, so the edge is the LEFT
-//     column. flip mirrors _v to a right-hand edge.
-//   * curbCut_h: road on the BOTTOM edge; curbCut_v (transpose): road RIGHT.
+//   * paperEdge_h / gutterDamp_h / drain_h / wallDirt_h: the edge (curb,
+//     fence, wall) is the TOP row. paperEdge_h, gutterDamp_h and drain_h
+//     append vertically mirrored variants (edge on the BOTTOM row) because
+//     flat props cannot flipY. The _v twins are transposes of variants [0..n)
+//     (edge on the LEFT column); flip mirrors them to a right-hand edge.
+//   * curbCut_h: road on the BOTTOM edge ([2-3] mirrored: road TOP), drawn
+//     over a tiles/curb piece and mostly transparent;
+//     curbCut_v (transpose): road RIGHT, flip for road LEFT.
 (function(){
   'use strict';
   var A=(typeof window!=='undefined'?window:globalThis).DSArt;
@@ -95,17 +101,21 @@
 
   var BAGS_PAL={K:BAG.K,D:BAG.D,M:BAG.M,L:BAG.L,H:BAG.H,E:BAGG.D,F:BAGG.M,G:BAGG.L,P:CARD.H,Q:CARD.L,C:CARD.M,S:SOIL.M,T:MAT.iron.L};
   var BOX_PAL={K:CARD.K,D:CARD.D,M:CARD.M,L:CARD.L,H:CARD.H,B:BAG.D};
-  var PAPER_PAL={K:BAG.D,P:CARD.H,Q:CARD.L,N:MAT.concrete.M,O:MAT.concrete.D,B:BAG.L,C:BAG.M};
-  var SHARD={K:'#050a0c',D:'#1c292c',M:'#3a4b4c',L:'#60706e',H:'#8c9492'};      // --hue 200 --l 0.14,0.66 --chroma 0.022 (grey glass, not window teal)
+  var PAPER_PAL={K:'#1d1d1f',P:'#94918a',Q:'#6c685f',N:'#77746c',O:MAT.concrete.D,B:BAG.L,C:BAG.M};   // P/N pale sheets (below concrete.H), Q folded face, K soft cast shadow
+  var SHARD={K:'#050a0c',D:'#2b373a',M:'#46555a',L:'#7b8b8d',H:'#a3adac'};      // grey glass, not window teal: dark see-through body + pale cool edge; H glints stay at concrete.H, never brighter
   var GLASS_PAL={K:SHARD.K,D:SHARD.D,M:SHARD.M,L:SHARD.L,H:SHARD.H,F:MAT.iron.M,G:MAT.iron.K};
   var BRICK_PAL={K:MAT.brick.K,D:MAT.brick.D,M:MAT.brick.M,L:MAT.brick.L,P:MAT.concrete.L,Q:MAT.concrete.M,U:MAT.concrete.D,V:shade(MAT.concrete.D,-6),W:MAT.wood.D};
-  var TIMBER_PAL={K:MAT.wood.K,D:MAT.wood.D,M:MAT.wood.M,L:MAT.wood.L,N:MAT.iron.L,P:MAT.sandbag.M,Q:MAT.sandbag.D,R:MAT.sandbag.L};
-  var TIP_PAL={K:BAG.K,E:BAGG.D,F:BAGG.M,G:BAGG.L,D:BAG.D,M:BAG.M,L:BAG.L,I:MAT.iron.D,J:MAT.iron.M,O:MAT.iron.L,P:CARD.H,Q:CARD.L,S:SOIL.M,U:MAT.concrete.D};
+  var WEATHERED={K:'#140d0a',D:'#30251c',M:'#4b3e31',L:'#665846',H:'#857760'};  // --hue 65 --l 0.16,0.56 --chroma 0.03: rain-greyed softwood, far below brick red
+  var PLY={K:'#16110c',D:'#3d3629',M:'#554c3b',L:'#6d6450'};                    // exterior plywood, grey-beige
+  var TIMBER_PAL={K:WEATHERED.K,D:WEATHERED.D,M:WEATHERED.M,L:WEATHERED.L,H:WEATHERED.H,N:MAT.iron.L,P:PLY.M,Q:PLY.D,R:PLY.L,S:PLY.K};
+  var BIN_G={D:'#1f2c22',M:'#33453a',L:'#4d5e4f',H:'#667263'};                  // municipal green wheelie bin, dusty
+  var BIN_K={D:'#1d2329',M:'#333b43',L:'#4c555e',H:'#657079'};                  // charcoal wheelie bin
+  var TIP_PAL={K:BAG.K,E:BIN_G.D,F:BIN_G.M,G:BIN_G.L,A:BIN_G.H,D:BIN_K.D,M:BIN_K.M,L:BIN_K.L,H:BIN_K.H,B:BAG.M,C:BAG.L,W:BAG.D,I:MAT.iron.D,J:MAT.iron.M,O:MAT.iron.L,P:CARD.H,Q:CARD.L,S:SOIL.M,U:MAT.concrete.D,V:shade(MAT.concrete.D,-8)};
   var DRAIN_PAL={K:MAT.asphalt.K,D:MAT.iron.D,M:MAT.iron.M,L:MAT.iron.L,W:MAT.asphalt.D,S:SOIL.M,P:CARD.L};
   var DAMP_PAL={K:MAT.asphalt.K,D:shade(MAT.asphalt.D,-6),L:MAT.asphalt.M};
   var DIRT_PAL={K:MAT.concrete.K,D:shade(MAT.concrete.D,-8),M:MAT.concrete.D,S:SOIL.D};
   var PAINT_PAL={W:MAT.concrete.L,V:MAT.concrete.M,D:MAT.asphalt.D,Y:HAZARD_Y,Z:shade(HAZARD_Y,-12)};
-  var CURB_PAL={K:MAT.concrete.K,D:MAT.concrete.D,M:MAT.concrete.M,L:MAT.concrete.L,T:CARD.L,U:CARD.D};
+  var CURB_PAL={K:MAT.concrete.K,D:MAT.concrete.D,M:MAT.concrete.M,L:MAT.concrete.L,J:MAT.asphalt.K,E:'#28221e',T:'#7a6f5c',U:'#5e5444'};
 
   var BAGC={K:'K',D:'D',M:'M',L:'L'},GBAGC={K:'K',D:'E',M:'F',L:'G'};
 
@@ -195,25 +205,33 @@
   }
 
   // =====================================================================
-  // paperEdge_h 32x10 x3 (edge = top row) / paperEdge_v 10x32 x3 (edge =
-  // left column): paper, newsprint and a crisp packet caught against a curb
-  // or fence line, densest at the edge.
+  // paperEdge_h 32x10 x3 (edge = top row; bottom=true puts it on the bottom
+  // row) / paperEdge_v 10x32 x3 (edge = left column): pale irregular paper
+  // stencils, each with a soft shadow on its lower side, tight to the edge.
   // =====================================================================
   function crumple(g,x,y,a,b){rect(g,x,y,x+2,y,a);rect(g,x,y+1,x+1,y+1,a);setclip(g,x+2,y+1,b);rect(g,x+1,y+2,x+3,y+2,'K');}
   function sheetFlat(g,x,y,w,a,b){rect(g,x,y,x+w-1,y,a);rect(g,x+1,y+1,x+w,y+1,a);rect(g,x+2,y+2,x+w,y+2,b);}
-  function makePaperEdgeH(v){
-    var g=mkGrid(32,10),rng=mulberry32(330+v),i,x,y,k;
-    var n=v===2?9:6;
-    for(i=0;i<n;i++){
-      x=2+Math.floor(rng()*26);y=Math.floor(rng()*rng()*6);k=rng();
-      if(k<.35)crumple(g,x,y,'P','Q');
-      else if(k<.6)sheetFlat(g,x,y,4,'N','O');
-      else if(k<.8)sheetFlat(g,x,y,3,'P','Q');
-      else{rect(g,x,y,x+2,y+1,'C');rect(g,x+1,y,x+1,y,'B');rect(g,x,y+2,x+2,y+2,'K');}
+  function makePaperEdgeH(v,bottom){
+    var g=mkGrid(32,10),rng=mulberry32(330+v),i,x,y,w,k;
+    var gapMax=[6,9,3][v],reach=[2,2,4][v];
+    function stencil(s,px,py){var yy,xx,ch;for(yy=0;yy<s.length;yy++)for(xx=0;xx<s[yy].length;xx++){ch=s[yy][xx];if(ch!=='.')setclip(g,px+xx,py+yy,ch);}}
+    // pale irregular paper shapes; the K is a soft cast shadow on the lower edge only
+    var SHEETS=[
+      ['PPPPPP.','.PPNNPP','.PPPPPQ','..KKKKK'],   // skewed flat sheet, print line, sharp corners
+      ['PPPPQ','PNNPQ','PPPPP','PPP..','.KK..'],   // sheet with its corner folded under
+      ['.PP.','PPPQ','PQQ.','.KK.'],               // crumpled ball
+      ['NNNNNN','NQQNQN','NNNNNN','NQQQNN','.KKKKK'], // newsprint page, column text
+      ['CBC','CCC','.KK']                          // crisp packet
+    ];
+    x=1+Math.floor(rng()*3);
+    for(i=0;i<12&&x<28;i++){
+      k=rng();y=Math.floor(rng()*rng()*reach);
+      var s=SHEETS[k<.25?0:k<.45?1:k<.75?2:k<.9?3:4];
+      stencil(s,x,bottom?10-s.length-y:y);w=s[0].length;
+      x+=w+1+Math.floor(rng()*gapMax);
     }
-    // edge grit line where the wind packs it
-    for(x=1;x<31;x++)if(at(g,x,0)==='.'&&pmod(x*7+v*3,5)<2)setclip(g,x,0,'O');
-    for(x=1;x<31;x++)if(at(g,x,0)==='O'&&at(g,x-1,0)!=='O'&&at(g,x+1,0)!=='O')setclip(g,x+1,0,'O');
+    // wind-packed grit in the gaps along the edge
+    for(x=1;x<30;x++){var ey=bottom?9:0;if(at(g,x,ey)==='.'&&at(g,x+1,ey)==='.'&&at(g,x-1,ey)==='.'&&pmod(x*7+v*3,9)===0){setclip(g,x,ey,'O');setclip(g,x+1,ey,'O');}}
     return toRows(g);
   }
 
@@ -228,19 +246,34 @@
     else{poly(g,[[x,y],[x+4+Math.floor(rng()*2),y+1],[x+1,y+3]],'M');setclip(g,x+1,y,'L');setclip(g,x+2,y,'L');rect(g,x+1,y+3,x+2,y+3,'K');setclip(g,x+4,y+2,'K');}
   }
   function makeGlassShards(v){
-    var g=mkGrid(32,16),rng=mulberry32(340+v),i,j,x,y;
-    // shards fall in clumps under the broken panes, a few kicked further out
-    var clumps=[[[9,2],[22,3]],[[16,2]],[[6,3],[17,5],[26,2]]][v];
-    var per=[6,14,4][v],reach=[5,6,9][v];
-    if(v===1){for(x=6;x<27;x++){var d=Math.round(1.5+2*Math.sin(Math.PI*(x-6)/21)+Math.sin(x*1.9)*.6);rect(g,x,0,x,d,'D');}}
-    for(j=0;j<clumps.length;j++)for(i=0;i<per;i++){
-      x=Math.round(clumps[j][0]+(rng()*2-1)*(4+i*.6));y=Math.max(0,Math.round(clumps[j][1]+Math.pow(rng(),1.3)*reach-2));
-      shard(g,Math.max(1,Math.min(28,x)),Math.min(12,y),i<2?2:rng()<.4?1:0,rng);
+    var w=32,h=16,g=mkGrid(w,h),rng=mulberry32(340+v),i,x,y;
+    // shard stencils: dark see-through body (D/M), a pale lit edge (L) and one
+    // glint corner (H). Big ones lie in a band at the wall foot.
+    var BIG=[
+      ['HLLLL','LMMML','.LMM.','..DD.'],
+      ['LLH','LMM','MM.','D..'],
+      ['.LLH','LMMM','LMM.','.DD.'],
+      ['HLL.','LMML','.MMM','..DD'],
+      ['LLLH.','LMMMM','.DDD.']
+    ];
+    var SMALL=[['LH','DM'],['LL','MD'],['HL','DM'],['LL','D.']];
+    function stencil(s,px,py){var yy,xx,ch;for(yy=0;yy<s.length;yy++)for(xx=0;xx<s[yy].length;xx++){ch=s[yy][xx];if(ch!=='.')setclip(g,px+xx,py+yy,ch);}}
+    // 1) the band along the wall
+    var skip=[.3,.05,.45][v];
+    x=[2,1,1][v];
+    while(x<29){
+      var s=BIG[Math.floor(rng()*BIG.length)];
+      if(rng()>skip)stencil(s,x,Math.floor(rng()*(v===1?3:2)));
+      x+=s[0].length+(v===1?0:1)+Math.floor(rng()*2);
     }
-    for(i=0;i<3;i++){x=2+Math.floor(rng()*27);y=9+Math.floor(rng()*5);shard(g,x,y,0,rng);}
-    if(v===1){line(g,4,2,14,5,'F');line(g,4,3,14,6,'G');}
-    var glints=0;
-    for(y=0;y<g.length&&glints<2;y++)for(x=1;x<31&&glints<2;x++)if(g[y][x]==='L'&&g[y][x+1]==='L'){g[y][x]='H';g[y][x+1]='H';glints++;x+=10;}
+    // 2) smaller pieces thinning out below the band
+    var mid=[6,9,12][v];
+    for(i=0;i<mid;i++){x=1+Math.floor(rng()*29);y=4+Math.floor(Math.pow(rng(),1.4)*(v===2?9:6));
+      if(at(g,x,y)==='.'&&at(g,x+1,y)==='.'&&at(g,x,y+1)==='.')stencil(SMALL[Math.floor(rng()*SMALL.length)],x,y);}
+    // 3) far glints: a pale texel with its dark body under it
+    var far=[3,4,6][v];
+    for(i=0;i<far;i++){x=1+Math.floor(rng()*30);y=(v===2?9:8)+Math.floor(rng()*(v===2?6:5));if(at(g,x,y)==='.'&&at(g,x,y+1)==='.'){setclip(g,x,y,'L');setclip(g,x,y+1,'D');}}
+    if(v===1){line(g,5,5,15,7,'F');line(g,5,6,15,8,'G');setclip(g,16,8,'F');}   // bent shopfront frame bar
     return toRows(g);
   }
 
@@ -283,13 +316,19 @@
   var WOODC={K:'K',M:'M',L:'L',D:'D'};
   function board(g,cx,cy,len,wid,ang,opt){
     opt=opt||{};
-    var c=Math.cos(ang),s=Math.sin(ang);
+    var c=Math.cos(ang),s=Math.sin(ang),x,y;
     var t=shaded(32,20,function(t){
       box(t,cx,cy,len,wid,ang,'M');
       if(opt.snap){var ex=cx+c*len/2,ey=cy+s*len/2;setclip(t,Math.round(ex),Math.round(ey-1),'.');setclip(t,Math.round(ex-c),Math.round(ey-s+1),'.');}
     },WOODC);
     if(wid>=4)line(t,cx-c*(len/2-3),cy-s*(len/2-3)+.4,cx+c*(len/2-3)-1,cy+s*(len/2-3)+.4,'D');
-    if(opt.nails){[-1,1].forEach(function(k){var nx=Math.round(cx+k*c*(len/2-2)),ny=Math.round(cy+k*s*(len/2-2));setclip(t,nx,ny,'N');setclip(t,nx,ny+1,'N');});}
+    // pale sawn end grain at both ends
+    for(y=0;y<20;y++)for(x=0;x<32;x++){
+      var ch=t[y][x];if(ch==='.'||ch==='K')continue;
+      var along=(x+.5-cx)*c+(y+.5-cy)*s;
+      if(Math.abs(along)>=len/2-1.6&&!(opt.snap&&along>0))t[y][x]='H';
+    }
+    if(opt.nails){[-1,1].forEach(function(k){var nx=Math.round(cx+k*c*(len/2-4)),ny=Math.round(cy+k*s*(len/2-4));setclip(t,nx,ny,'N');setclip(t,nx,ny+1,'K');});}
     stamp(g,t);
   }
   function makeTimberScrap(v){
@@ -304,10 +343,12 @@
       board(g,17,7,22,4,.08,{});
       board(g,13,4,16,3,-.12,{snap:true});
     }else{
-      var t=shaded(32,20,function(t){poly(t,[[3,4],[18,2],[20,16],[5,17]],'P');},{K:'K',M:'P',L:'R',D:'Q'});
-      line(t,7,6,16,5,'Q');line(t,8,11,17,10,'Q');
+      // a rectangular plywood sheet pulled off a window, one straight batten nailed across it
+      var t=shaded(32,20,function(t){box(t,14,10,22,15,.08,'P');},{K:'S',M:'P',L:'R',D:'Q'});
+      line(t,6,6,21,7,'Q');line(t,5,13,20,14,'Q');                       // ply face grain
+      rect(t,20,4,21,4,'S');rect(t,7,15,7,16,'S');                        // screw holes torn out
       stamp(g,t);
-      board(g,21,12,20,5,.46,{nails:true});
+      board(g,17,10,29,4,-.05,{nails:true});
     }
     return toRows(g);
   }
@@ -319,30 +360,44 @@
   // =====================================================================
   function makeTippedBin(v){
     var g=mkGrid(36,24),rng=mulberry32(360+v),i,x,y;
+    var BAGL={K:'K',M:'B',L:'C',D:'W'};
     if(v<2){
       var c=v===0?{K:'K',M:'F',L:'G',D:'E'}:{K:'K',M:'M',L:'L',D:'D'};
+      var hi=v===0?'A':'H';
+      // grime and ash fanning out of the mouth
+      for(x=0;x<13;x++){var d=Math.round((13-x)*(v===0?.55:.3)+Math.sin(x*1.3)*.8);if(d>0)rect(g,x,12-d,x,12+d,'V');}
       if(v===0){
-        // black bag and paper pulled out of the mouth (drawn first, bin over it)
-        stamp(g,shaded(36,24,function(t){disc(t,6,15,5,4,'M');rect(t,1,14,2,15,'M');},{K:'K',M:'M',L:'L',D:'D'}));
-        rect(g,2,19,4,19,'P');rect(g,3,20,5,20,'Q');rect(g,8,21,10,21,'P');rect(g,9,22,11,22,'Q');rect(g,1,8,3,8,'P');rect(g,2,9,4,9,'Q');
-      }
-      // wheelie bin lying on its side seen from above: long body, base (wheels,
-      // handle) on the right, mouth + lid on the left
-      stamp(g,shaded(36,24,function(t){rect(t,12,6,30,18,'M');rect(t,13,5,29,5,'M');},c));
-      rect(g,14,8,28,8,c.L);                                 // lit upper flank
-      rect(g,16,15,27,15,c.D);rect(g,17,11,26,11,c.D);         // moulded body lines
-      rect(g,30,8,30,16,'K');rect(g,31,8,32,16,'J');rect(g,33,8,33,16,'K');rect(g,31,7,32,7,'K');rect(g,31,17,32,17,'K');rect(g,31,9,31,15,'O'); // handle bar
-      stamp(g,shaded(36,24,function(t){rect(t,25,2,29,4,'J');rect(t,25,20,29,22,'J');},{K:'K',M:'J',L:'O',D:'I'})); // wheels
-      if(v===0){
-        rect(g,12,7,13,17,'K');                              // open mouth, dark inside
-        stamp(g,shaded(36,24,function(t){poly(t,[[9,2],[13,4],[12,8],[8,6]],'M');},c)); // lid flipped up and back
+        stamp(g,shaded(36,24,function(t){disc(t,5,14,4,3,'B');rect(t,8,13,11,15,'B');},BAGL)); // bag dragged out
+        setclip(g,3,12,'H');
+        [[1,5],[2,19],[8,20],[8,5]].forEach(function(p){rect(g,p[0],p[1],p[0]+2,p[1],'P');rect(g,p[0],p[1]+1,p[0]+2,p[1]+1,'Q');rect(g,p[0]+1,p[1]+2,p[0]+3,p[1]+2,'K');});
       }else{
-        rect(g,11,6,11,18,c.L);rect(g,10,6,10,18,'K');rect(g,11,5,11,5,'K');rect(g,11,19,11,19,'K'); // closed lid lip
-        rect(g,3,13,5,13,'P');rect(g,4,14,6,14,'Q');
+        rect(g,3,15,5,15,'P');rect(g,3,16,5,16,'Q');rect(g,4,17,6,17,'K');
       }
+      // body: tapers from the wide mouth end (left) to the base (right)
+      var body=shaded(36,24,function(t){poly(t,[[13,4.5],[31,7.5],[31,17.5],[13,20.5]],'M');},c);
+      for(y=9;y<=16;y++){setclip(body,21,y,c.D);setclip(body,26,y,c.D);}           // moulded ribs
+      rect(body,15,7,19,7,hi);
+      stamp(g,body);
+      if(v===0){
+        // open mouth: a lit rim ring round a black interior
+        stamp(g,shaded(36,24,function(t){disc(t,13,12,4,8,'M');},c));
+        disc(g,13,12,2,6,'K');rect(g,14,8,14,16,'W');rect(g,11,6,12,6,hi);
+        // lid: a flat plate hinged at the top of the rim, flopped open
+        stamp(g,shaded(36,24,function(t){poly(t,[[2,0],[13,1],[12,4.6],[1,3.6]],'M');},c));
+        rect(g,3,1,10,1,hi);rect(g,12,4,13,4,'O');
+      }else{
+        // lid shut: a raised lip plate over the mouth end, dark seam, handle nub
+        stamp(g,shaded(36,24,function(t){rect(t,9,4,13,21,'M');},c));
+        rect(g,10,6,10,19,hi);rect(g,14,6,14,19,'K');rect(g,7,10,8,14,'K');rect(g,8,11,8,13,'O');
+      }
+      // base end: one fat rubber wheel side-on at the lower corner, handle bar across the back
+      stamp(g,shaded(36,24,function(t){rect(t,25,16,30,21,'J');},{K:'K',M:'I'}));
+      setclip(g,25,16,'.');setclip(g,30,16,'.');setclip(g,25,21,'.');setclip(g,30,21,'.');
+      rect(g,27,18,28,19,'O');
+      rect(g,32,8,32,17,'J');rect(g,32,8,32,9,'O');rect(g,33,8,33,17,'K');rect(g,32,7,32,7,'K');rect(g,32,18,32,18,'K');
     }else{
       // ash/grit fan from the mouth
-      for(x=0;x<16;x++){var d=Math.round((16-x)*.35+Math.sin(x*1.3)*.8);if(d>0)rect(g,x,12-d,x,12+d,'U');}
+      for(x=0;x<16;x++){var d2=Math.round((16-x)*.35+Math.sin(x*1.3)*.8);if(d2>0)rect(g,x,12-d2,x,12+d2,'U');}
       for(i=0;i<5;i++){x=1+Math.floor(rng()*13);y=6+Math.floor(rng()*11);if(rng()<.6){rect(g,x,y,x+2,y,'P');rect(g,x+1,y+1,x+3,y+1,'Q');}else{rect(g,x,y,x+2,y+1,'S');}}
       var can=shaded(36,24,function(t){rect(t,14,6,31,18,'J');disc(t,14,12,3,6,'J');},{K:'K',M:'J',L:'O',D:'I'});
       for(x=18;x<31;x+=4)line(can,x,7,x,17,'I');
@@ -412,41 +467,53 @@
   // =====================================================================
   // crossing_h 32x28 x3 / crossing_v 28x32 x3: zebra crossing section. _h
   // bars run top-bottom and the crossing tiles left-right (a crossing over a
-  // north-south road); _v is the transpose. Period-16 bars (8 paint, 8 road).
+  // north-south road); _v is the transpose. Period-16 bars (8 paint, 8 road),
+  // wear kept inside the bars so their outline stays a clean rectangle.
   // [0] sound; [1] worn in the wheel tracks; [2] mostly scrubbed
   // =====================================================================
   function makeCrossingH(v){
-    var g=mkGrid(32,28),rng=mulberry32(380+v),x,y;
+    var g=mkGrid(32,28),rng=mulberry32(380+v),x,y,i;
+    // bars 8 wide on a 16 period, 26 long (rows 1-26), square crisp ends
     for(y=1;y<27;y++)for(x=0;x<32;x++)if(pmod(x-4,16)<8)g[y][x]='W';
-    var wear=[.04,.12,.3][v];
-    // wear as 2x2 chips (never single texels) and scuffed V patches
-    for(y=1;y<26;y+=2)for(x=0;x<31;x+=2){
-      if(g[y][x]!=='W')continue;
-      var r=rng();
-      var track=(v>=1&&(pmod(y,28)>=7&&pmod(y,28)<=10||pmod(y,28)>=17&&pmod(y,28)<=20));
-      if(r<wear*(track?2.5:1))rect(g,x,y,x+1,y+1,'.');
-      else if(r<wear*(track?4:2)+.05)rect(g,x,y,x+1,y+1,'V');
+    // tyre wear: short streaks along the traffic direction (down the bars),
+    // inside a bar only, so every bar keeps a clean rectangular outline
+    var n=[3,9,18][v];
+    for(i=0;i<n;i++){
+      var bx=pmod(4+16*Math.floor(rng()*2)+1+Math.floor(rng()*5),32);
+      var track=v>=1&&rng()<.7;
+      y=track?(rng()<.5?7:16)+Math.floor(rng()*4):3+Math.floor(rng()*19);
+      var len=2+Math.floor(rng()*3),ch=rng()<(v===2?.4:.15)?'D':'V';
+      rect(g,bx,y,bx,Math.min(24,y+len-1),ch);
+      if(v===2&&rng()<.5)rect(g,bx+1,y+1,bx+1,Math.min(24,y+len),'V');
     }
-    // the bar ends at the curb lines stay crisp
     return toRows(g);
   }
 
   // =====================================================================
   // curbCut_h 32x16 x2 / curbCut_v 16x32 x2: dropped kerb at a crossing,
-  // tactile blister panel, flared ramp sides (road = bottom edge for _h).
-  // [1] has a cracked flare and grit in the blisters
+  // drawn over the curb tile (road = bottom edge for _h): the kerb line dips
+  // and a tactile panel sits flush on the road edge. [1] cracked, worn
   // =====================================================================
   function makeCurbCutH(v){
     var g=mkGrid(32,16),x,y;
-    rect(g,0,0,31,15,'M');
-    rect(g,0,0,31,0,'D');                                     // slab joint to the pavement
-    line(g,0,13,7,1,'D');line(g,31,13,24,1,'D');               // flare joints
-    rect(g,8,1,23,1,'L');                                      // lip of the ramp top
-    rect(g,9,4,22,12,'U');
-    for(y=5;y<12;y+=3)for(x=(y%2?10:12);x<21;x+=4){rect(g,x,y,x+1,y,'T');}
-    rect(g,0,14,31,14,'L');rect(g,0,15,31,15,'D');             // flush worn lip, no kerb drop
-    rect(g,0,14,6,14,'M');rect(g,25,14,31,14,'M');
-    if(v===1){line(g,2,5,5,10,'K');line(g,27,3,29,6,'K');rect(g,14,8,15,8,'D');rect(g,17,11,18,11,'D');}
+    // Drawn over the curb tile (road below). Most of it is transparent: the
+    // kerb line itself dips. Outside x4-27 the kerb stays raised; across the
+    // flares its lit top row slides down and the black drop shadow thins out;
+    // across the ramp (x10-21) the kerb is flush -- no lit top, no shadow.
+    for(x=2;x<30;x++){
+      var o=x<16?x:31-x;                 // distance in from the outer end
+      var k=o<4?0:o<8?1:o<10?2:3;       // 0 raised .. 3 flush
+      if(k===0)continue;
+      if(k===1){setclip(g,x,13,'D');setclip(g,x,14,'M');setclip(g,x,15,'J');}
+      else if(k===2){setclip(g,x,13,'D');setclip(g,x,14,'D');setclip(g,x,15,'M');}
+      else{setclip(g,x,13,'D');setclip(g,x,14,'D');setclip(g,x,15,'E');}
+    }
+    rect(g,9,9,22,9,'E');                           // ramp head joint above the panel
+    line(g,5,13,8,10,'E');line(g,26,13,23,10,'E');  // short flare joints
+    // tactile blister panel, flush against the road edge
+    rect(g,10,10,21,15,'U');
+    for(y=11;y<15;y+=2)for(x=11+((y-11)/2)%2;x<21;x+=2)setclip(g,x,y,'T');
+    if(v===1){line(g,5,11,7,13,'K');line(g,25,10,26,12,'K');setclip(g,14,13,'U');setclip(g,17,11,'U');rect(g,19,14,20,14,'D');}
     return toRows(g);
   }
 
@@ -458,7 +525,7 @@
   function makeLaneArrow(v){
     var g=mkGrid(16,32),rng=mulberry32(390+v),x,y;
     poly(g,[[8,0],[15,13],[1,13]],'W');rect(g,6,13,9,31,'W');
-    var wear=[.06,.18,.4][v];
+    var wear=[.06,.16,.28][v];
     for(y=1;y<31;y+=2)for(x=0;x<15;x+=2){if(g[y][x]!=='W')continue;var r=rng();if(r<wear)rect(g,x,y,x+1,y+1,'.');else if(r<wear*2+.04)rect(g,x,y,x+1,y+1,'V');}
     return toRows(g);
   }
@@ -477,26 +544,28 @@
 
   function vs(fn,n){var out=[],i;for(i=0;i<n;i++)out.push(fn(i));return out;}
   function vsT(fn,n){return vs(fn,n).map(transpose);}
+  // variants followed by their vertical mirrors (edge moved from top to bottom)
+  function vsM(fn,n){var a=vs(fn,n);return a.concat(a.map(function(r){return r.slice().reverse();}));}
 
   A.define('streetlife',{
     binBags:{variants:vs(makeBinBags,3),pal:BAGS_PAL,anchor:'center',note:'32x24 flat. torn bin-bag cluster at a collection point: [0] three black bags, one torn; [1] two black + green garden bag; [2] one burst bag, contents strewn'},
     flatBoxes:{variants:vs(makeFlatBoxes,3),pal:BOX_PAL,anchor:'center',note:'32x24 flat. flattened cardboard behind a shop: [0] two crossed sheets; [1] stack of three; [2] sheet + crushed box'},
-    paperEdge_h:{variants:vs(makePaperEdgeH,3),pal:PAPER_PAL,anchor:'center',note:'32x10 flat. paper/newsprint/crisp packet caught against a curb or fence; the edge is the TOP row. [2] denser'},
-    paperEdge_v:{variants:vsT(makePaperEdgeH,3),pal:PAPER_PAL,anchor:'center',note:'10x32 flat. transpose of paperEdge_h; the edge is the LEFT column (flip for a right-hand edge)'},
-    glassShards:{variants:vs(makeGlassShards,3),pal:GLASS_PAL,anchor:'center',note:'32x16 flat. broken shop glass, the storefront wall on the TOP edge (rot:1 = wall left): [0] light scatter; [1] dense fall with a bent frame bar; [2] wide kicked spread'},
+    paperEdge_h:{variants:vs(makePaperEdgeH,3).concat([0,1,2].map(function(i){return makePaperEdgeH(i,true);})),pal:PAPER_PAL,anchor:'center',note:'32x10 flat. paper sheets, a crumpled ball, a newsprint page and a crisp packet caught against a curb or fence, each with a soft shadow on its lower side; the edge is the TOP row in [0-2] and the BOTTOM row in [3-5] (redrawn, not mirrored, so shadows still fall down); [2]/[5] denser'},
+    paperEdge_v:{variants:vsT(makePaperEdgeH,3),pal:PAPER_PAL,anchor:'center',note:'10x32 flat. transpose of paperEdge_h[0-2]; the edge is the LEFT column (flip for a right-hand edge)'},
+    glassShards:{variants:vs(makeGlassShards,3),pal:GLASS_PAL,anchor:'center',note:'32x16 flat. broken shop glass, the storefront wall on the TOP edge (rot:1 = wall left): a band of pale-edged plates at the wall foot thinning to small chips and single glints: [0] light; [1] dense with a bent frame bar; [2] wide kicked spread'},
     brickSpill:{variants:vs(makeBrickSpill,3),pal:BRICK_PAL,anchor:'center',note:'40x24 flat. fresh brick/plaster below a broken facade, wall on the TOP edge (rot:1 = wall left): dust bed at the wall, chunks, thrown crumbs. [2] wide, with a snapped lath'},
-    timberScrap:{variants:vs(makeTimberScrap,3),pal:TIMBER_PAL,anchor:'center',note:'32x20 flat. offcuts/pulled boards at a boarded entrance: [0] two crossed boards + offcut; [1] pile of four; [2] plywood offcut + nailed board'},
-    tippedBin:{variants:vs(makeTippedBin,3),pal:TIP_PAL,anchor:'center',note:'36x24 flat (non-solid). knocked-over container, mouth on the LEFT (flip for right): [0] green wheelie bin, lid open, bags out; [1] grey wheelie bin, lid shut; [2] round municipal bin, paper and ash out'},
-    drain_h:{variants:vs(makeDrainH,3),pal:DRAIN_PAL,anchor:'center',note:'16x10 flat. gully grate against the curb, curb on the TOP edge: [0] clear; [1] clogged with paper/muck; [2] damp stain into the road'},
+    timberScrap:{variants:vs(makeTimberScrap,3),pal:TIMBER_PAL,anchor:'center',note:'32x20 flat. weathered grey-brown offcuts and pulled boards with pale sawn ends at a boarded entrance: [0] two crossed boards + offcut; [1] pile of four; [2] rectangular plywood sheet with a batten nailed straight across'},
+    tippedBin:{variants:vs(makeTippedBin,3),pal:TIP_PAL,anchor:'center',note:'36x24 flat (non-solid). knocked-over wheelie bin tapering from the mouth end (LEFT, flip for right) to a wheel and handle at the base: [0] green bin, black mouth in a lit rim, lid flopped open, bag and paper fanned out; [1] charcoal bin, lid shut; [2] round municipal bin, paper and ash out'},
+    drain_h:{variants:vsM(makeDrainH,3),pal:DRAIN_PAL,anchor:'center',note:'16x10 flat. gully grate against the curb, curb on the TOP edge in [0-2], BOTTOM edge in mirrored [3-5]: [0]/[3] clear; [1]/[4] clogged with paper/muck; [2]/[5] damp stain into the road'},
     drain_v:{variants:vsT(makeDrainH,3),pal:DRAIN_PAL,anchor:'center',note:'10x16 flat. transpose of drain_h, curb on the LEFT edge (flip for right)'},
-    gutterDamp_h:{variants:vs(makeGutterDampH,3),pal:DAMP_PAL,anchor:'center',note:'32x8 flat strip, tiles left-right in any variant order. damp run-off along the gutter, curb on the TOP edge'},
+    gutterDamp_h:{variants:vsM(makeGutterDampH,3),pal:DAMP_PAL,anchor:'center',note:'32x8 flat strip, tiles left-right in any variant order. damp run-off along the gutter, curb on the TOP edge in [0-2], BOTTOM edge in mirrored [3-5]'},
     gutterDamp_v:{variants:vsT(makeGutterDampH,3),pal:DAMP_PAL,anchor:'center',note:'8x32 flat strip, tiles top-bottom. transpose of gutterDamp_h, curb on the LEFT edge'},
     wallDirt_h:{variants:vs(makeWallDirtH,3),pal:DIRT_PAL,anchor:'center',note:'32x6 flat strip, tiles left-right in any order. grime along a wall base, wall on the TOP edge; [2] downpipe outfall stain'},
     wallDirt_v:{variants:vsT(makeWallDirtH,3),pal:DIRT_PAL,anchor:'center',note:'6x32 flat strip, tiles top-bottom. transpose of wallDirt_h, wall on the LEFT edge'},
-    crossing_h:{variants:vs(makeCrossingH,3),pal:PAINT_PAL,anchor:'center',note:'32x28 flat, tiles left-right. zebra section, bars run top-bottom (crossing over a north-south road): [0] sound; [1] worn in wheel tracks; [2] scrubbed'},
-    crossing_v:{variants:vsT(makeCrossingH,3),pal:PAINT_PAL,anchor:'center',note:'28x32 flat, tiles top-bottom. transpose of crossing_h (crossing over an east-west road)'},
-    curbCut_h:{variants:vs(makeCurbCutH,2),pal:CURB_PAL,anchor:'center',note:'32x16 flat, opaque. dropped kerb with tactile panel, road on the BOTTOM edge; [1] cracked flare, grit'},
-    curbCut_v:{variants:vsT(makeCurbCutH,2),pal:CURB_PAL,anchor:'center',note:'16x32 flat, opaque. transpose of curbCut_h, road on the RIGHT edge (flip for left)'},
+    crossing_h:{variants:vs(makeCrossingH,3),pal:PAINT_PAL,anchor:'center',note:'32x28 flat, tiles left-right. zebra section over a north-south road: bars 8 wide on a 16 period, 26 long (rows 1-26) with crisp square ends; wear is tyre streaks inside the bars only: [0] sound; [1] worn in wheel tracks; [2] scrubbed'},
+    crossing_v:{variants:vsT(makeCrossingH,3),pal:PAINT_PAL,anchor:'center',note:'28x32 flat, tiles top-bottom. transpose of crossing_h (zebra over an east-west road: horizontal bars stacked down the road)'},
+    curbCut_h:{variants:vsM(makeCurbCutH,2),pal:CURB_PAL,anchor:'center',note:'32x16 flat, mostly transparent. laid over a tiles/curb piece whose road side is BOTTOM ([0-1]) or TOP ([2-3]), bottom edge on the road edge: the kerb line dips (lit top and asphalt shadow fade across the flares, flush in the middle) and a buff tactile panel x10-21 sits flush on the road edge; [1]/[3] cracked flare, worn blisters'},
+    curbCut_v:{variants:vsT(makeCurbCutH,2),pal:CURB_PAL,anchor:'center',note:'16x32 flat. transpose of curbCut_h, road on the RIGHT edge (flip for left)'},
     laneArrow:{variants:vs(makeLaneArrow,3),pal:PAINT_PAL,anchor:'center',note:'16x32 flat. worn white service-lane arrow pointing up (rot:1 = left): [0] sound; [1] worn; [2] half scrubbed'},
     laneHatch:{variants:vs(makeLaneHatch,2),pal:PAINT_PAL,anchor:'center',note:'32x32 flat, seamless both axes. faded amber keep-clear hatch for loading bays and lane mouths; [1] more worn'},
     laneEdge_h:{variants:vs(makeLaneEdgeH,2),pal:PAINT_PAL,anchor:'center',note:'32x6 flat strip, tiles left-right. faded amber double no-parking line along a service lane; [1] worn'},

@@ -3,7 +3,8 @@
   const W = () => root.DSWorld;
   const MEDKIT_HEAL=50, MEDKIT_CAP=3, WEAPON_CAP=2;
   const MASS={walker:3.2,runner:2.4,band:2,carrier:5,brute:14};
-  const SEATS=[[-8,-11],[-8,11],[18,-11],[18,11]];
+  // seat offsets along/across the car: both rows sit under the roof and glass, not on the hood (city_v2 car review)
+  const SEATS=[[-18,-11],[-18,11],[6,-11],[6,11]];
   // Vehicle definitions (CITY.md Phase 10). Footprint len x wid; probes are circles along the length; fuel is
   // distance units (70 per litre, see DSCity.ECONOMY.fuel); burn scales distance, idleBurn is per second running.
   // seats are [along, across] from the centre; impact scales damage taken, ram damage dealt; pivot = tracks.
@@ -144,7 +145,9 @@
     const st=s.gates[g.id];if(!st||st.open===open)return false;st.open=open;
     s.world.obstacles=s.world.obstacles.filter(o=>o.gateId!==g.id);
     const r=g.rect,h=r.w>=r.h;
-    if(open)s.world.obstacles.push({x:h?r.x+r.w/2-10:r.x,y:h?r.y:r.y+r.h/2-10,w:h?20:r.w,h:h?r.h:20,type:'gate',gateId:g.id,bollard:true,protected:true});
+    // open: the centre bollard plus the two 6-unit posts the gate sprites draw at the ends (two 34-unit passages)
+    if(open){s.world.obstacles.push({x:h?r.x+r.w/2-10:r.x,y:h?r.y:r.y+r.h/2-10,w:h?20:r.w,h:h?r.h:20,type:'gate',gateId:g.id,bollard:true,protected:true});
+      for(const end of [0,1])s.world.obstacles.push(h?{x:end?r.x+r.w-6:r.x,y:r.y,w:6,h:r.h,type:'gate',gateId:g.id,post:true,protected:true}:{x:r.x,y:end?r.y+r.h-6:r.y,w:r.w,h:6,type:'gate',gateId:g.id,post:true,protected:true});}
     else s.world.obstacles.push({x:r.x,y:r.y,w:r.w,h:r.h,type:'gate',gateId:g.id,protected:true});
     s.navVersion=(s.navVersion||0)+1;
     if(!quiet){const c={x:r.x+r.w/2,y:r.y+r.h/2};makeNoise(s,c,'gate');emit(s,'gate',open?'open':'close');}

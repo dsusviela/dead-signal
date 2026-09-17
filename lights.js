@@ -86,9 +86,12 @@
  // nearest hit along a ray against the obstacle list (slab test, no allocation); returns the distance,
  // at most R, and leaves the far side of that same obstacle in rayOut (also R when nothing was hit)
  var rayOut=0;
+ // waist-high obstacles (cars, rubble, barriers, debris, open-gate bollards) never stop a flashlight: they would cut a
+ // hard dark wedge across their own sprite. They throw a soft 'low' silhouette shadow in castShadows() instead.
+ var LOW={car:1,rubble:1,barrier:1,debris:1};
  function rayT(x,y,dx,dy,R,obs){
    var best=R,i,o,tmin,tmax,inv,t1,t2,tmp;rayOut=R;
-   for(i=0;i<obs.length;i++){o=obs[i];if(o.hp!==undefined&&o.hp<=0)continue;if(o.type==='furniture'||o.seeThrough)continue;
+   for(i=0;i<obs.length;i++){o=obs[i];if(o.hp!==undefined&&o.hp<=0)continue;if(o.type==='furniture'||o.seeThrough||LOW[o.type]||o.bollard||o.post)continue;
      tmin=0;tmax=R;
      if(dx!==0){inv=1/dx;t1=(o.x-x)*inv;t2=(o.x+o.w-x)*inv;if(t1>t2){tmp=t1;t1=t2;t2=tmp;}if(t1>tmin)tmin=t1;if(t2<tmax)tmax=t2;}else if(x<o.x||x>o.x+o.w)continue;
      if(dy!==0){inv=1/dy;t1=(o.y-y)*inv;t2=(o.y+o.h-y)*inv;if(t1>t2){tmp=t1;t1=t2;t2=tmp;}if(t1>tmin)tmin=t1;if(t2<tmax)tmax=t2;}else if(y<o.y||y>o.y+o.h)continue;
@@ -183,7 +186,8 @@
  function throwShadow(g,c,ox,oy,lx,ly,lr,a){
    var dx=c.gx-lx,dy=c.gy-ly,d=Math.sqrt(dx*dx+dy*dy)||1,ux=dx/d,uy=dy/d,k=.4+1.1*d/lr,len;
    g.globalAlpha=a;
-   if(c.kind==='low'){len=CAR_H*k;body(g,c,ox,oy,ux*len,uy*len);return;}
+   // a waist-high body throws a short, half-strength offset of itself: a contact shadow, not a black copy of the car
+   if(c.kind==='low'){len=Math.min(12,CAR_H*.45*k);g.globalAlpha=a*.5;body(g,c,ox,oy,ux*len,uy*len);return;}
    len=c.h*c.sc*k;
    g.save();g.translate(c.gx-ox,c.gy-oy);g.transform(c.fl*c.sc,0,-ux*len/c.h,-uy*len/c.h,0,0);g.drawImage(c.img,-c.w/2,-c.h);g.restore();
  }
@@ -220,7 +224,7 @@
    var i,c,any=false,f,a;
    shG.setTransform(1,0,0,1,0,0);shG.globalCompositeOperation='source-over';shG.globalAlpha=1;shG.clearRect(0,0,lw,lh);
    for(i=0;i<ncast;i++){c=casters[i];c.hit=false;
-     if(lightsAt(s,c.gx,c.gy,c.src,c.occ,c.vid)!==1)continue;
+     if(lightsAt(s,c.gx,c.gy,c.src,c.occ&&c.kind!=='low',c.vid)!==1)continue; // low solids take flashlight shadows too
      f=1-Math.hypot(c.gx-one.x,c.gy-one.y)/one.r;a=SHADOW*Math.min(1,f*2.4)*one.st;if(a<.03)continue;
      throwShadow(shG,c,left,top,one.x,one.y,one.r,a);c.hit=any=true;}
    if(s.boss&&s.boss.active&&lightsAt(s,s.boss.x,s.boss.y+30,s.boss,false,null)===1&&bossWedge(shG,s,left,top,one.x,one.y,one.r,one.st))any=true;

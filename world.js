@@ -35,12 +35,12 @@
       theme:{ambient:'#161e2a',lamp:'#cfe0ff',alive:.5,strobe:.25,specks:'#728ca0',burnt:.2,
         clutter:['barrelRust','crateStack','antennaMast','trashBags','coneTraffic','palletStack'],sidewalk:['hydrant','binSmall','mailbox','newsBox']}},
     {id:'industry',name:'Ashworks',priority:1,mapPalette:{fill:'#9a5d3a',road:'#3f2b1f',light:'#ae7d61',dark:'#633e29',label:'#ede2dc'},role:'FOUNDRY DISTRICT · BRUTES',color:'#ff7b35',ground:'#1b211f',road:'#272522',atmosphere:'#b95a32',enemy:'brute',
-      landmark:'Furnace Plant',anchor:'Machine-shop compound',required:['furnace-plant','machine-shop','warehouse','loading-yard','fuel-store','machinery-yard'],fabric:{home:.6,shop:.4},
+      landmark:'Furnace Plant',anchor:'Machine-shop compound',required:['furnace-plant','machine-shop','warehouse','loading-yard','fuel-store','machinery-yard'],fabric:{workshop:.35,storageShed:.25,dispatchOffice:.25,home:.15},
       marking:{x:2800,y:2800,label:'ASHWORKS'},card:{role:'MACHINE FUEL',note:'Fuel and bulldozer · brutes'},
       theme:{ambient:'#241a12',lamp:'#ffb040',alive:.5,strobe:.2,specks:'#b95a32',burnt:.4,
         clutter:['slagPile','barrelRust','palletStack','brokenPipe','cinderVent','tireStack','crateStack'],sidewalk:['barrelRust','hydrant','coneTraffic']}},
     {id:'quarantine',name:'Central Quarantine',priority:0,mapPalette:{fill:'#8a4650',road:'#392227',light:'#a16b73',dark:'#593037',label:'#eadee0'},role:'FINAL CONTAINMENT · PATIENT FURNACE',color:'#ff543b',ground:'#17191e',road:'#20191c',atmosphere:'#ff6a2a',enemy:'runner',
-      landmark:'Patient Furnace',anchor:'Command/incinerator compound',required:['patient-furnace','command-post','processing-tents','holding-building','armoury','vehicle-yard','inner-arena'],fabric:{shop:.4,clinic:.35,home:.25},
+      landmark:'Patient Furnace',anchor:'Command/incinerator compound',required:['patient-furnace','command-post','processing-tents','holding-building','armoury','vehicle-yard','inner-arena'],fabric:{requisitionOffice:.35,stagingDepot:.25,clinic:.2,shop:.1,home:.1},
       marking:null,card:{role:'PATIENT FURNACE',note:'Override, payload · runners'},
       // city_v2: the theme now also covers the four support blocks, so it dresses streets (processing supplies, cones)
       // and its ambient is only a step warmer than South Blocks; the disposal yard keeps its own red furnace light
@@ -366,7 +366,7 @@
   // Door art family for an exterior door: vehicle bays roll up, barred and service doors are utilitarian,
   // public entrances follow the archetype (market glass, hospital, chapel, military steel, homes).
   var PUBLIC_DOOR={home:'residential',shop:'residential',supermarket:'glassDouble',pharmacy:'glassDouble',clinic:'hospital',hospital:'hospital',morgue:'hospital',police:'policeBars',
-    fireStation:'service',radioStation:'military',machineShop:'service',warehouse:'service',depot:'service',chapel:'chapel',holding:'military',armoury:'military',commandPost:'military'};
+    fireStation:'service',radioStation:'military',machineShop:'service',warehouse:'service',depot:'service',chapel:'chapel',holding:'military',armoury:'military',commandPost:'military',workshop:'service',storageShed:'service',dispatchOffice:'residential',requisitionOffice:'military',stagingDepot:'service'};
   function doorFamily(b,d){
     if(d.kind==='vehicleBay')return b.archetypeId==='fireStation'?'fireRoller':'loadingBay';
     if(d.kind==='barred')return 'policeBars';
@@ -401,7 +401,7 @@
   // spec: {id, kind, rect:[x,y,w,h], entrances:[[side, at, width]], open:[sides without perimeter], bare}
   function lot(w,loc,spec){
     var x=spec.rect[0],y=spec.rect[1],ww=spec.rect[2],hh=spec.rect[3],id=loc.id+'/'+(spec.id||'lot'),A=90,kind=C().LOT_KINDS[spec.kind];
-    var L={id:id,locationId:loc.id,kind:spec.kind,rect:{x:x,y:y,w:ww,h:hh},surface:kind.surface,perimeter:kind.perimeter,open:(spec.open||[]).slice(),bare:!!spec.bare,
+    var L={id:id,locationId:loc.id,kind:spec.kind,rect:{x:x,y:y,w:ww,h:hh},surface:spec.surface||kind.surface,perimeter:kind.perimeter,open:(spec.open||[]).slice(),bare:!!spec.bare,
       entrances:[],propZones:[],lightAnchors:[],lootSockets:[],vehicleSlots:[]};
     var gaps={n:[],s:[],e:[],w:[]};
     (spec.entrances||[]).forEach(function(e,i){
@@ -482,11 +482,21 @@
         sockets([[R.x+R.w*.3,R.y+R.h*.55],[R.x+R.w*.62,R.y+R.h*.75]],2);return;
       }
       if(L.bare){zone('apron',R.x,R.y,R.w,R.h);sockets([[R.x+40,R.y+R.h-50],[R.x+R.w-40,R.y+R.h-50]],1);return;}
-      if(k==='park'){
+      if(k==='park'&&id==='northline-park'){
+        // Transmitter Park, the municipal one: an ordered avenue of trees and beds lined along both paths, benches facing the walk
         zone('paths',cx-24,R.y,48,R.h);zone('paths',R.x,cy-24,R.w,48);
-        [[R.x+R.w*.25,R.y+R.h*.25],[R.x+R.w*.75,R.y+R.h*.25],[R.x+R.w*.25,R.y+R.h*.75],[R.x+R.w*.75,R.y+R.h*.75]].forEach(function(p,i){
-          zone('planting',p[0]-50,p[1]-50,100,100);flat('lots/plantingBed',p[0],p[1],{variant:i%2});block('lots/tree',p[0]-9+(i%2?20:-20),p[1]-12,18,12,{cover:true});});
-        flat('lots/pathCross',cx,cy);block('props/bench',cx+40,cy-70,40,12,{cover:true});block('props/bench',cx-80,cy+58,40,12,{cover:true});
+        for(var ty=R.y+60;ty<R.y+R.h-40;ty+=110){if(Math.abs(ty-cy)<70)continue;block('lots/tree',cx-72,ty-12,18,12,{cover:true});block('lots/tree',cx+54,ty-12,18,12,{cover:true});}
+        [[R.x+R.w*.2,cy-66],[R.x+R.w*.8,cy-66],[R.x+R.w*.2,cy+66],[R.x+R.w*.8,cy+66]].forEach(function(p,i){zone('planting',p[0]-30,p[1]-22,60,44);flat('lots/plantingBed',p[0],p[1],{variant:i%2});});
+        flat('lots/pathCross',cx,cy);block('lots/benchPark_v',cx-44,cy-150,16,10,{cover:true});flat('lots/wornPatch',cx-32,cy-160,{rot:1});block('lots/benchPark_v',cx+28,cy+120,16,10,{cover:true,flip:true});flat('lots/wornPatch',cx+18,cy+110,{rot:1});
+        lamp('props/streetLamp',cx+34,cy+34,120);lamp('props/streetLamp',cx-34,R.y+60,100);flat('lots/noticeBoard',cx+40,cy-40);
+        sockets([[cx-60,cy-60],[cx+70,cy+60],[cx+60,cy-80]],2);
+      }else if(k==='park'){
+        // Linden Park, the neighbourhood one: informal tree clusters off the paths, benches where people actually sit, worn grass
+        zone('paths',cx-24,R.y,48,R.h);zone('paths',R.x,cy-24,R.w,48);
+        [[R.x+R.w*.2,R.y+R.h*.22],[R.x+R.w*.3,R.y+R.h*.3],[R.x+R.w*.78,R.y+R.h*.7],[R.x+R.w*.7,R.y+R.h*.82],[R.x+R.w*.82,R.y+R.h*.2]].forEach(function(p){block('lots/tree',p[0]-9,p[1]-12,18,12,{cover:true});});
+        [[R.x+R.w*.25,R.y+R.h*.75],[R.x+R.w*.72,R.y+R.h*.3]].forEach(function(p,i){zone('planting',p[0]-50,p[1]-50,100,100);flat('lots/plantingBed',p[0],p[1],{variant:i%2});});
+        flat('lots/pathCross',cx,cy);block('props/bench',cx+40,cy-70,40,12,{cover:true});flat('lots/wornPatch',cx+60,cy-58);block('props/bench',cx-80,cy+40,40,12,{cover:true});flat('lots/wornPatch',cx-60,cy+52,{variant:1});
+        block('lots/benchPark_v',cx+30,cy+110,16,10,{cover:true,flip:true});flat('lots/wornPatch',cx+20,cy+100,{rot:1});
         lamp('props/streetLamp',cx+34,cy+34,120);flat('lots/noticeBoard',cx-40,cy-40);
         sockets([[cx-60,cy-60],[cx+70,cy+60],[cx+60,cy-80]],2);
       }else if(k==='parkingLot'){
@@ -497,7 +507,8 @@
       }else if(k==='graveyard'){
         zone('paths',cx-30,R.y,60,R.h);
         for(var gy=R.y+70;gy<R.y+R.h-60;gy+=70)for(var gx=R.x+50;gx<R.x+R.w-40;gx+=60){if(Math.abs(gx+8-cx)<60)continue;
-          if(mix(gx,gy)<.72)block('lots/grave',gx,gy,16,8,{cover:true,variant:mix(gy,gx)*3|0});else flat('lots/graveFlat',gx+8,gy+4,{variant:mix(gx,gy+1)*2|0});}
+          var jx=Math.round((mix(gx+3,gy)-.5)*14),jy=Math.round((mix(gx,gy+5)-.5)*10),roll=mix(gx,gy);if(roll>.93)continue;
+          if(roll<.66)block('lots/grave',gx+jx,gy+jy,16,8,{cover:true,variant:mix(gy,gx)*3|0});else flat('lots/graveFlat',gx+8+jx,gy+4+jy,{variant:mix(gx,gy+1)*2|0});}
         zone('graves',R.x+30,R.y+50,R.w-60,R.h-100);flat('lots/pathGravel',cx,cy);flat('lots/refugeNotice',cx+40,R.y+60);
         sockets([[cx,R.y+R.h*.3],[cx,R.y+R.h*.7],[cx+10,R.y+R.h*.5],[R.x+R.w-50,cy]],3);
       }else if(k==='demolitionLot'){
@@ -570,22 +581,91 @@
   // Each block draws from its own generator and numbers its own parcels, so re-authoring one block no longer
   // shifts the fill or the parcel ids of every block after it. Central Quarantine's four support blocks are
   // filled like any other district around the reserved command/disposal compound (it never grows the arena).
+  // per district: parcel run length, the one opening per side (alley / forecourt width), whether a big core keeps a
+  // sealed rear wing, and the courtyard's name and surface (city_v2 Section 2 density targets)
+  var COMPOSE={
+    checkpoint:{parcel:[230,300],gap:[70,90],fill:.74,opening:'alley',wing:true,court:'Rear court',pocket:'Shop forecourt',surface:'concrete'},
+    ruins:{parcel:[220,290],gap:[60,80],fill:.8,opening:'passage',wing:true,court:'Broken court',pocket:'Demolition gap',surface:'gravel'},
+    hospital:{parcel:[240,310],gap:[120,160],fill:.56,opening:'forecourt lane',wing:false,court:'Ward garden',pocket:'Ward forecourt',surface:'grass'},
+    northline:{parcel:[240,310],gap:[110,150],fill:.56,opening:'service lane',wing:true,court:'Service court',pocket:'Depot apron',surface:'concrete'},
+    industry:{parcel:[260,320],gap:[110,140],fill:.66,opening:'truck lane',wing:true,court:'Works yard',pocket:'Yard apron',surface:'gravel'},
+    quarantine:{parcel:[240,300],gap:[90,120],fill:.62,opening:'staging lane',wing:true,court:'Staging yard',pocket:'Queue apron',surface:'concrete'}
+  };
+  // courtyards carry no loot sockets: district clutter against the walls; Civic Ward's ward gardens get trees and a bench
+  function dressCourts(w,courts){
+    courts.forEach(function(L){var R=L.rect,d=district(R.x+R.w/2,R.y+R.h/2),t=d.theme,k=0,tag={lotId:L.id,locationId:L.locationId,debris:'decorative'};
+      L.propZones.push({id:L.id+'/zone-0',kind:'court',rect:{x:R.x,y:R.y,w:R.w,h:R.h}});
+      if(d.id==='hospital'){[[.3,.3],[.7,.65]].forEach(function(f){var tx=Math.round(R.x+R.w*f[0]),ty=Math.round(R.y+R.h*f[1]);if(rectClear(w,tx-9,ty-12,18,12,30,true))solid(w,'lots/tree',tx-9,ty-12,18,12,'rubble',null,{lotId:L.id,locationId:L.locationId,debris:'decorative',cover:true});});
+        if(rectClear(w,Math.round(R.x+R.w/2-20),Math.round(R.y+R.h/2),40,12,20,true))solid(w,'props/bench',Math.round(R.x+R.w/2-20),Math.round(R.y+R.h/2),40,12,'rubble',null,tag);return;}
+      // the court is itself a reservation, so placements test obstacles only (authored rectClear)
+      for(var i=0;i<10&&k<3;i++){var fx=Math.round(R.x+40+mix(R.x+i*37,R.y)*(R.w-80)),fy=Math.round(R.y+40+mix(R.y,R.x+i*53)*(R.h-80)),name=t.clutter.length?t.clutter[mix(fx,fy)*t.clutter.length|0]:null,box=name&&PROP_BOX[name];
+        if(!name)break;if(box){var bx=Math.round(fx-box[0]/2),by=Math.round(fy-box[1]);if(rectClear(w,bx,by,box[0],box[1],24,true)){solid(w,'props/'+name,bx,by,box[0],box[1],'rubble',box[2],{variant:PROP_VARIANTS[name]?mix(fx+1,fy)*PROP_VARIANTS[name]|0:0,lotId:L.id,locationId:L.locationId,debris:'decorative'});k++;}}
+        else if(rectClear(w,fx-12,fy-12,24,12,12,true)){prop(w,'props/'+name,fx,fy,{flat:true,lotId:L.id,locationId:L.locationId,variant:PROP_VARIANTS[name]?mix(fx+1,fy)*PROP_VARIANTS[name]|0:0});}}
+      if(!w.obstacles.some(function(o){return o.lotId===L.id;})&&rectClear(w,Math.round(R.x+R.w/2-16),Math.round(R.y+R.h/2-9),32,18,20,true))solid(w,'props/crateStack',Math.round(R.x+R.w/2-16),Math.round(R.y+R.h/2-9),32,18,'rubble',80,tag);
+    });
+  }
+  // the inverse of openParcel: an ordinary interior becomes a sealed street facade (keeps its footprint)
+  function sealParcel(w,p){
+    var bid=p.buildingId,r=p.rect;
+    w.obstacles=w.obstacles.filter(function(o){return o.buildingId!==bid;});w.buildings=w.buildings.filter(function(h){return h.id!==bid;});
+    w.locations=w.locations.filter(function(l){return l.id!==p.id;});w.reserved=w.reserved.filter(function(q){return !(q.id===bid||(q.id&&q.id.indexOf(bid+'/')===0));});
+    p.use='sealed';p.buildingId=null;var o=ob(r.x,r.y,r.w,r.h,'building');o.sealed=true;o.facade=p.side;o.parcelId=p.id;o.blockId=p.blockId;o.protected=true;w.obstacles.push(o);reserve(w,r.x,r.y,r.w,r.h,'sealed',p.id);
+  }
   function buildFabric(w){
-    var FD=260;
+    var FD=260,courts=[];
     w.blocks.forEach(function(b){
       var g=rng(74393+b.col*7919+b.row*104729),n=0;
-      var R=b.rect,d=DISTRICT_BY_ID[b.districtId];
+      var R=b.rect,d=DISTRICT_BY_ID[b.districtId],pilot=C().PILOT_BLOCKS&&C().PILOT_BLOCKS[b.id];
+      if(pilot){
+        b.authored=true;
+        pilot.alleys.forEach(function(a,i){reserve(w,a[0],a[1],a[2],a[3],'approach',b.id+'/alley-'+i);});
+        pilot.parcels.forEach(function(q){
+          var side=q[0],px=q[1],py=q[2],pwd=q[3],pht=q[4],use=q[5],parcel={id:b.id+'-p'+(n++),blockId:b.id,side:side,rect:{x:px,y:py,w:pwd,h:pht},use:null,weights:d.fabric,sealedChance:0,authored:true};
+          w.parcels.push(parcel);
+          if(use==='sealed'){parcel.use='sealed';var so=ob(px,py,pwd,pht,'building');so.sealed=true;so.facade=side;so.parcelId=parcel.id;so.blockId=b.id;so.protected=true;w.obstacles.push(so);reserve(w,px,py,pwd,pht,'sealed',parcel.id);return;}
+          var style=use==='home'?HOME_STYLE[d.id]:C().ARCHETYPES[use].styles[0],loc=location(w,parcel.id,'building',px,py,pwd,pht,{archetypeId:use,name:C().ARCHETYPES[use].label});
+          var doors=[[side,.5,88,'public']];if(q[6])doors.push([q[6],.5,70,'service']);
+          parcel.use='enterable';parcel.buildingId=parcel.id+'/shell';shell(w,loc,{id:parcel.buildingId,archetypeId:use,style:style,rect:[px,py,pwd,pht],doors:doors});
+        });
+        return;
+      }
+      // city_v2 Section 2 composition: attached frontage with one purposeful opening per side (an alley, or a campus
+      // forecourt in Civic Ward / Northline) instead of repeated 50-99 unit gaps, and a named courtyard as the block core
+      var K=COMPOSE[d.id];
+      var clearOf=function(x,y,ww,hh){for(var i=0;i<w.reserved.length;i++){var q=w.reserved[i],own=q.id&&(q.id.indexOf(b.id+'-p')===0||q.id.indexOf(b.id+'/')===0);if(overlaps(q,x,y,ww,hh,own?0:30))return false;}return true;};
       b.frontage.forEach(function(side){
         var c=b.col+(side==='e'?1:side==='w'?-1:0),rr=b.row+(side==='s'?1:side==='n'?-1:0),nb=w.blocks[rr*6+c];
         var nd=nb&&nb.districtId!==b.districtId?DISTRICT_BY_ID[nb.districtId]:null;
         var weights=nd?blend(d.fabric,nd.fabric,.3):d.fabric,sealed=nd?SEALED[d.id]*.7+SEALED[nd.id]*.3:SEALED[d.id];
-        var horizontal=side==='n'||side==='s',len=horizontal?R.w:R.h,pos=(horizontal?0:FD+40)+(g()*40|0),end=horizontal?len:len-FD-40;
-        for(;;){
-          var pw=230+(g()*90|0),depth=190+(g()*70|0),gap=50+(g()*50|0),u=g(),v=g();
-          if(pos+pw>end)break;
+        // A row plans its whole run as segments: parcels, one reserved access opening (alley / forecourt lane), and small
+        // named pockets (forecourts, aprons, demolition gaps) that hold the district's intended openness (K.fill of the
+        // non-access frontage is building). Street rows reach both corners; side rows start where the street rows end.
+        var horizontal=side==='n'||side==='s',len=horizontal?R.w:R.h,has0=b.frontage.indexOf(horizontal?'w':'n')>=0,has1=b.frontage.indexOf(horizontal?'e':'s')>=0;
+        var start=horizontal?0:(has0?FD:0),stop=horizontal?len:len-(has1?FD:0),avail=stop-start,avg=(K.parcel[0]+K.parcel[1])/2;
+        var gapW=avail>=K.parcel[1]+K.gap[1]+180?K.gap[0]+(g()*(K.gap[1]-K.gap[0])|0):0,rest=avail-gapW,parcelLen=rest*K.fill,pocketLen=rest-parcelLen;
+        var pockets=pocketLen>=110?Math.max(1,Math.round(pocketLen/230)):0;if(!pockets)parcelLen=rest;
+        var count=parcelLen<150?0:Math.max(1,Math.round(parcelLen/avg));if(count&&parcelLen/count<160)count=Math.max(1,Math.floor(parcelLen/160));
+        var segs=[],openAfter=Math.floor(count*(.3+g()*.4));
+        for(var si=0;si<count;si++){segs.push({t:'p',len:parcelLen/count});
+          for(var pk=0;pk<pockets;pk++)if(si===Math.round((pk+1)*count/(pockets+1))-1&&si<count-1)segs.push({t:'k',len:pocketLen/pockets});
+          if(gapW&&si===Math.min(count-2,openAfter))segs.push({t:'a',len:gapW});}
+        var used=segs.reduce(function(s,q){return s+q.len;},0);if(!count){segs=[{t:'k',len:avail}];used=avail;}
+        if(used<avail-1)segs.push({t:'k',len:avail-used});
+        var pos=start;
+        for(var gi=0;gi<segs.length;gi++){
+          var sg=segs[gi],pw=gi===segs.length-1?Math.round(stop-pos):Math.round(sg.len),depth=horizontal?230+(g()*30|0):190+(g()*70|0),u=g(),v=g();
           var px=horizontal?R.x+pos:(side==='w'?R.x:R.x+R.w-depth),py=horizontal?(side==='n'?R.y:R.y+R.h-depth):R.y+pos,pwd=horizontal?pw:depth,pht=horizontal?depth:pw;
-          pos+=pw+gap;
-          if(reservedAt(w,px,py,pwd,pht,30))continue;
+          if(sg.t!=='p'){
+            var sd=220,ox=horizontal?R.x+pos:(side==='w'?R.x:R.x+R.w-sd),oy=horizontal?(side==='n'?R.y:R.y+R.h-sd):R.y+pos,ow=horizontal?pw:sd,oh=horizontal?sd:pw;
+            if(sg.t==='a'){if(!reservedAt(w,ox,oy,ow,oh+40*(horizontal?1:0),0))reserve(w,ox,oy,ow,horizontal?FD+20:oh,'approach',b.id+'/'+K.opening+'-'+side);}
+            else if(pw>=90&&!reservedAt(w,ox,oy,ow,oh,10)){var kloc=location(w,b.id+'/pocket-'+side+gi,'lot',ox,oy,ow,oh,{name:K.pocket,lotKind:'courtyard',discoveryRule:'visit'});
+              courts.push(lot(w,kloc,{id:'pocket',kind:'courtyard',rect:[ox,oy,ow,oh],entrances:[],surface:K.surface}));}
+            pos+=pw;continue;
+          }
+          pos+=pw;
+          if(pw<150)continue;
+          var take=clearOf(px,py,pwd,pht);
+          if(!take)continue;
           var parcel={id:b.id+'-p'+(n++),blockId:b.id,side:side,rect:{x:px,y:py,w:pwd,h:pht},use:null,weights:weights,sealedChance:Math.round(sealed*100)/100};
           w.parcels.push(parcel);
           if(u<sealed){
@@ -599,22 +679,29 @@
         }
       });
       var has=function(s){return b.frontage.indexOf(s)>=0;};
-      var x0=R.x+(has('w')?FD+60:40),x1=R.x+R.w-(has('e')?FD+60:40),y0=R.y+(has('n')?FD+60:40),y1=R.y+R.h-(has('s')?FD+60:40);
-      // the block core: up to a 2x2 grid of background masses split by 70-unit service alleys
-      var cols=x1-x0>=520?2:1,rows=y1-y0>=460?2:1,cw=(x1-x0-(cols-1)*70)/cols,ch=(y1-y0-(rows-1)*70)/rows;
-      for(var cy=0;cy<rows;cy++)for(var cx=0;cx<cols;cx++){
-        var keep=g(),mw=Math.round(Math.min(360,cw)*(.75+g()*.25)),mh=Math.round(Math.min(300,ch)*(.75+g()*.25));
-        if(keep>.8||mw<140||mh<120)continue;
-        var mx=Math.round(x0+cx*(cw+70)+(cw-mw)/2),my=Math.round(y0+cy*(ch+70)+(ch-mh)/2);
-        if(reservedAt(w,mx,my,mw,mh,50))continue;
-        var core=ob(mx,my,mw,mh,'building');core.sealed=true;core.facade=null;core.blockId=b.id;core.protected=true;w.obstacles.push(core);reserve(w,mx,my,mw,mh,'sealed',b.id+'/core-'+cx+cy);
+      var x0=R.x+(has('w')?FD+30:30),x1=R.x+R.w-(has('e')?FD+30:30),y0=R.y+(has('n')?FD+30:30),y1=R.y+R.h-(has('s')?FD+30:30);
+      // the core: a big core keeps one sealed rear wing on part of its longer axis, the rest is the block's courtyard
+      var cwid=x1-x0,chgt=y1-y0,court={x:x0,y:y0,w:cwid,h:chgt};
+      if(K.wing&&Math.max(cwid,chgt)>=520){
+        var along=cwid>=chgt,half=Math.round((along?cwid:chgt)*(.38+g()*.12)),first=g()<.5;
+        var wing=along?{x:first?x0:x1-half,y:y0+20,w:half,h:Math.min(300,chgt-40)}:{x:x0+20,y:first?y0:y1-half,w:Math.min(360,cwid-40),h:half};
+        if(wing.w>=140&&wing.h>=120&&!reservedAt(w,wing.x,wing.y,wing.w,wing.h,40)){var core=ob(wing.x,wing.y,wing.w,wing.h,'building');core.sealed=true;core.facade=null;core.blockId=b.id;core.protected=true;w.obstacles.push(core);reserve(w,wing.x,wing.y,wing.w,wing.h,'sealed',b.id+'/core-wing');
+          court=along?{x:first?x0+half+60:x0,y:y0,w:cwid-half-60,h:chgt}:{x:x0,y:first?y0+half+60:y0,w:cwid,h:chgt-half-60};}
+      }
+      if(court.w>=180&&court.h>=180&&!reservedAt(w,court.x,court.y,court.w,court.h,10)){
+        var cloc=location(w,b.id+'/court','lot',court.x,court.y,court.w,court.h,{name:K.court,lotKind:'courtyard',discoveryRule:'visit'});
+        courts.push(lot(w,cloc,{id:'court',kind:'courtyard',rect:[court.x,court.y,court.w,court.h],entrances:[],surface:K.surface}));
       }
     });
+    dressCourts(w,courts);
     // every district keeps at least three ordinary interiors: reopen its first sealed frontage if needed
     DISTRICTS.forEach(function(d){
       var mine=w.parcels.filter(function(p){return DISTRICT_BY_ID[w.blocks[+p.blockId.split('-')[2]*6+ +p.blockId.split('-')[1]].districtId]===d;});
       var open=mine.filter(function(p){return p.use==='enterable';}).length;
       mine.filter(function(p){return p.use==='sealed';}).forEach(function(p){if(open<3){openParcel(w,p);open++;}});
+      // ...and at least two sealed background masses: a compound-heavy district (Northline) seals its surplus ordinary parcels
+      var masses=w.obstacles.filter(function(o){return o.type==='building'&&district(o.x+o.w/2,o.y+o.h/2)===d;}).length;
+      mine.filter(function(p){return p.use==='enterable'&&!p.authored;}).reverse().forEach(function(p){if(masses<2&&open>3){sealParcel(w,p);masses++;open--;}});
     });
   }
   // A failed excursion's barricade across an avenue: jersey row with a breach, sandbag nests, a humvee, floodlight, tent, bodies.
@@ -643,7 +730,9 @@
   function vehicle(w,kind,x,y,vertical,extra,authored){
     var d=WRECK[kind],ww=vertical?d[1]:d[0],hh=vertical?d[0]:d[1];x=Math.round(x);y=Math.round(y);
     if(!rectClear(w,x,y,ww,hh,14,authored))return null;
-    var o=solid(w,null,x,y,ww,hh,'car',kind==='bus'?320:kind==='van'?240:200,extra);o.kind=kind;o.variant=mix(y,x)*2|0;return o;
+    var o=solid(w,null,x,y,ww,hh,'car',kind==='bus'?320:kind==='van'?240:200,extra);o.kind=kind;
+    // car variant 1 is a police cruiser: only along the evacuation road, at Checkpoint Nine and around South Blocks Police
+    var police=Math.abs(x)<260&&y>1300||Math.hypot(x-540,y-2350)<700||Math.hypot(x,y-2750)<500;o.variant=kind==='car'?(police&&mix(y,x)<.6?1:0):mix(y,x)*2|0;return o;
   }
   // Wrecks along every avenue: slots sit midway between the street caches (which
   // fall on multiples of 400), so a cache is never boxed in. Each slot rolls
@@ -716,6 +805,83 @@
     if(box){var bx=Math.round(x-box[0]/2),by=Math.round(y-box[1]);if(!rectClear(w,bx,by,box[0],box[1],margin))return null;return solid(w,'props/'+name,bx,by,box[0],box[1],'rubble',box[2],extra);}
     if(!rectClear(w,x-12,y-12,24,12,margin))return null;return prop(w,'props/'+name,x,y,extra);
   }
+  // ---- city_v2 Section 2: street life with a source (streetlife / industrial / civic families) ----
+  // Placed after loot sockets: flat decals never block, and the few solids stand only in socket-free courts or clear of
+  // every socket. Litter gathers where people left it: alley and lane mouths, rear doors, shopfronts, collapses and curbs.
+  function streetLife(w){
+    var sockets=[];w.lots.forEach(function(L){L.lootSockets.forEach(function(k){sockets.push(k);});});w.buildings.forEach(function(h){h.lootSockets.forEach(function(k){sockets.push(k);});});
+    var nearSocket=function(x,y,r){for(var i=0;i<sockets.length;i++)if(Math.abs(sockets[i].x-x)<r&&Math.abs(sockets[i].y-y)<r)return true;return false;};
+    var flat=function(art,x,y,extra){var e={flat:true,streetLife:true};for(var k in extra||{})e[k]=extra[k];return prop(w,art,Math.round(x),Math.round(y),e);};
+    var solidAt=function(art,x,y,ww,hh,extra){x=Math.round(x);y=Math.round(y);if(nearSocket(x+ww/2,y+hh/2,40)||!rectClear(w,x,y,ww,hh,16,true))return null;var e={debris:'decorative',cover:true};for(var k in extra||{})e[k]=extra[k];return solid(w,art,x,y,ww,hh,'rubble',null,e);};
+    var v3=function(x,y){return mix(x,y)*3|0;};
+    // alley, passage and lane mouths: bags and boxes against one wall at the street end, paper caught along the edge
+    w.reserved.forEach(function(q){if(q.kind!=='approach'||!q.id||!/\/(alley|passage|truck lane|staging lane|service lane|forecourt lane)/.test(q.id))return;
+      var d=district(q.x+q.w/2,q.y+q.h/2),hz=q.w<q.h; // a gap in a horizontal row runs north-south
+      var sx=hz?q.x+8:q.x+q.w/2,sy=hz?(q.y<b0(q)?q.y+20:q.y+q.h-20):q.y+8;
+      if(d.id==='industry'){flat('industrial/ashSpill',q.x+q.w/2,q.y+q.h/2,{variant:v3(q.x,q.y)%2});return;}
+      flat(mix(q.x,q.y)<.5?'streetlife/binBags':'streetlife/flatBoxes',hz?q.x+18:q.x+q.w/2,hz?q.y+q.h/2:q.y+18,{variant:v3(q.x,q.y)});
+      flat(hz?'streetlife/paperEdge_v':'streetlife/paperEdge_h',hz?q.x+q.w-8:q.x+q.w/2,hz?q.y+q.h*.7:q.y+q.h-8,{variant:v3(q.y,q.x)});});
+    function b0(q){return q.y+q.h/2;}
+    // building faces: grime along the street wall base, glass under some shopfronts, spill under fresh collapses
+    w.obstacles.forEach(function(o){if(o.type!=='building'||!o.facade)return;var d=district(o.x+o.w/2,o.y+o.h/2);
+      if(o.facade==='s')for(var x=o.x+16;x<o.x+o.w-16;x+=64)flat('streetlife/wallDirt_h',x,o.y+o.h+3,{variant:v3(x,o.y)});
+      if(o.collapsed&&o.facade==='s')flat('streetlife/brickSpill',o.x+o.w/2,o.y+o.h+14,{variant:v3(o.x,o.y)});});
+    w.buildings.forEach(function(h){var A=C().ARCHETYPES[h.archetypeId];if(!A||A.placement!=='fabric')return;var pub=h.exteriorDoors.filter(function(d){return d.kind==='public';})[0];if(!pub)return;
+      if(pub.side==='s'){for(var x=h.x+16;x<h.x+h.w-16;x+=64)if(Math.abs(x-(pub.rect.x+pub.rect.w/2))>70)flat('streetlife/wallDirt_h',x,h.y+h.h+3,{variant:v3(x,h.y)});
+        if(h.archetypeId==='shop'&&mix(h.x,h.y+3)<.4)flat('streetlife/glassShards',pub.rect.x+pub.rect.w+40,h.y+h.h+8,{variant:v3(h.x,h.y)});}
+      h.exteriorDoors.forEach(function(d){if(d.kind!=='service')return;var out={n:[0,-26],s:[0,26],e:[26,0],w:[-26,0]}[d.side];
+        flat(h.archetypeId==='shop'?'streetlife/flatBoxes':'streetlife/binBags',d.rect.x+d.rect.w/2+out[0]+(d.side==='n'||d.side==='s'?34:0),d.rect.y+d.rect.h/2+out[1]+(d.side==='e'||d.side==='w'?34:0),{variant:v3(d.rect.x,d.rect.y)});});});
+    // curbs: one drain every 400 along each avenue, alternating kerbs, a damp stain beside every other one (between the street caches), never in a crossing
+    AXES.forEach(function(a){for(var z=-3000;z<=3000;z+=400){if(Math.abs(a)<700&&Math.abs(z)<700)continue;var zz=z+200;if(axisDist(zz)<200)continue;
+      var sd=(z/400|0)%2?1:-1,damp=((z/400|0)+(a/1400|0))%2===0;flat('streetlife/drain_v',a+sd*78,zz,{variant:v3(a,zz)});if(damp)flat('streetlife/gutterDamp_v',a+sd*78,zz+26,{variant:v3(zz,a)});
+      flat('streetlife/drain_h',zz,a-sd*78,{variant:v3(zz,a+1)});if(!damp)flat('streetlife/gutterDamp_h',zz+26,a-sd*78,{variant:v3(a+1,zz)});}});
+    // courts by district: Ashworks works yards hold pallets, drums and ash skips; Quarantine staging yards tents and notices
+    w.lots.forEach(function(L){if(L.kind!=='courtyard')return;var R=L.rect,d=district(R.x+R.w/2,R.y+R.h/2),tag={lotId:L.id,locationId:L.locationId};
+      if(d.id==='industry'){solidAt('industrial/palletCluster',R.x+24,R.y+R.h-40,38,16,tag);solidAt(mix(R.x,R.y)<.5?'industrial/drumCluster':'industrial/ashSkip',R.x+R.w-60,R.y+30,mix(R.x,R.y)<.5?30:38,14,tag);flat('industrial/ashSpill',R.x+R.w/2,R.y+R.h/2,{lotId:L.id,variant:v3(R.x,R.y)%2});}
+      else if(d.id==='quarantine'){if(R.w>=160&&R.h>=120)solidAt('civic/tentGroup',R.x+R.w/2-56,R.y+R.h/2-10,112,24,tag);solidAt('civic/requisitionBoard',R.x+20,R.y+R.h-10,22,4,tag);}
+      else if(d.id!=='hospital'){flat(mix(R.x,R.y+7)<.5?'streetlife/tippedBin':'streetlife/timberScrap',R.x+R.w*.3,R.y+R.h*.35,{lotId:L.id,variant:v3(R.y,R.x)});}});
+    // the Utility Yard: transformers on plinths, a cable drum and the pole line that feeds them
+    var U=w.lots.filter(function(L){return L.locationId==='utility-yard';})[0];
+    if(U){var R=U.rect,tag={lotId:U.id,locationId:U.locationId};solidAt('civic/transformer',R.x+60,R.y+90,40,20,tag);solidAt('civic/transformer',R.x+140,R.y+90,40,20,tag);
+      solidAt('civic/cableDrum',R.x+R.w-80,R.y+R.h-90,22,8,tag);solidAt('civic/cablePole',R.x+R.w-40,R.y+60,12,8,tag);solidAt('civic/cablePole',R.x+R.w-40,R.y+R.h/2,12,8,tag);}
+  }
+  // ---- city_v2 Section 3: district set pieces on the authored compounds (civic and industrial families) ----
+  // overhead:true props never collide and draw above actors (render.js), with a flat shadow on the ground below
+  function districtPieces(w){
+    var sockets=[];w.lots.forEach(function(L){L.lootSockets.forEach(function(k){sockets.push(k);});});w.buildings.forEach(function(h){h.lootSockets.forEach(function(k){sockets.push(k);});});
+    var clearOfSockets=function(x,y,ww,hh){return !sockets.some(function(k){return k.x>x-24&&k.x<x+ww+24&&k.y>y-24&&k.y<y+hh+24;});};
+    var over=function(art,x,y,extra){var e={overhead:true};for(var k in extra||{})e[k]=extra[k];return prop(w,art,Math.round(x),Math.round(y),e);};
+    var flat=function(art,x,y,extra){var e={flat:true};for(var k in extra||{})e[k]=extra[k];return prop(w,art,Math.round(x),Math.round(y),e);};
+    // Civic Ward: a covered glass link from the hospital's east wing to the morgue, and the ambulance bay under the ambulance
+    for(var gx=2300;gx<2400;gx+=32)over('civic/glassLink_h',gx,-652,{locationId:'st-orison',variant:gx===2332?1:0});
+    flat('civic/ambulanceBay',2476,-1062,{locationId:'ambulance-yard',rot:1});
+    // Northline: painted apron in front of the fire station's apparatus bays; Blackglass's street front with its dish and mast stub
+    for(var fx=-780;fx<-300;fx+=32)flat('civic/fireApron_h',fx,-1810,{locationId:'fire-station',variant:(fx/32|0)%2&1});
+    prop(w,'civic/broadcastFront',430,-3150,{overhead:true,feet:true,locationId:'blackglass-radio'});
+    // Central Quarantine: a covered processing walkway over the north street between the holding block and the tents
+    for(var px=-350;px<180;px+=32)over('civic/processingLink_h',px,-576,{locationId:'patient-furnace',variant:(px/32|0)%3===0?1:0});
+    // Ashworks: a gantry crane spanning the loading yard (two solid A-frame piers, beam and parked trolley overhead) and the
+    // pipe run from the machine shop to the fuel store
+    [[1652,2320],[2068,2320]].forEach(function(p){var x=p[0]-12,y=p[1]-20;if(clearOfSockets(x,y,24,40)&&rectClear(w,x,y,24,40,10,true))solid(w,'industrial/gantryPier_h',x,y,24,40,'rubble',null,{debris:'decorative',cover:true,locationId:'loading-yard',anchorCenter:true});});
+    for(var bx=1664;bx<2056;bx+=32)over('industrial/gantryBeam_h',bx,2313,{locationId:'loading-yard',variant:(bx/32|0)%4===0?1:0});
+    over('industrial/gantryTrolley_h',1930,2320,{locationId:'loading-yard',center:true});
+    // Old Quarter: the chapel and its graveyard share a gravel path from the graveyard's east gate to the chapel side door,
+    // worn where the refuge queue waited, with the refuge's notices on the chapel's public door
+    var chapel=w.buildings.filter(function(b){return b.archetypeId==='chapel';})[0],grave=w.lots.filter(function(l){return l.kind==='graveyard';})[0];
+    if(chapel&&grave){var side=chapel.exteriorDoors.filter(function(d){return d.kind==='side';})[0],gate=grave.entrances.filter(function(e){return e.side==='e';})[0];
+      if(side&&gate){var py=Math.round((side.rect.y+side.rect.h/2+gate.rect.y+gate.rect.h/2)/2);for(var qx=gate.rect.x+gate.rect.w;qx<side.rect.x;qx+=32)flat('lots/pathStrip_h',qx+16,py,{locationId:'chapel',variant:(qx/32|0)%2});
+        flat('lots/wornPatch',side.rect.x-30,py+14,{locationId:'chapel'});}
+      var pub=chapel.exteriorDoors.filter(function(d){return d.kind==='public';})[0];if(pub){flat('lots/refugeNotice',pub.rect.x+40,pub.rect.y-20,{locationId:'chapel'});flat('lots/wornPatch',pub.rect.x+46,pub.rect.y+pub.rect.h/2,{locationId:'chapel',rot:1,variant:1});}}
+    // Central Quarantine registration: queue rails from the south street to the processing tents, a tent group on the north
+    // support street and the fence line on the east approach; the civilians' holding pen stays open to walk through
+    for(var qy=-395;qy<-240;qy+=32){flat('civic/queueRail_v',230,qy,{locationId:'processing-tents',overheadless:true});flat('civic/queueRail_v',300,qy,{locationId:'processing-tents'});}
+    var tg=w.lots.filter(function(L){return L.kind==='courtyard'&&district(L.rect.x+L.rect.w/2,L.rect.y+L.rect.h/2).id==='quarantine'&&L.rect.y<0;})[0];
+    if(tg)flat('civic/tentGroup',tg.rect.x+tg.rect.w/2,tg.rect.y+tg.rect.h/2+36,{locationId:tg.locationId});
+    // Ashworks production: a conveyor from the loading yard hopper to the ash skip, its run solid cover at waist height
+    [[1700,2140],[1732,2140],[1764,2140],[1796,2140]].forEach(function(p,i){if(rectClear(w,p[0],p[1],i===3?16:32,16,0,true)&&clearOfSockets(p[0],p[1],32,16))solid(w,i===3?'industrial/conveyorHead_h':'industrial/conveyor_h',p[0],p[1],i===3?16:32,16,'rubble',null,{debris:'decorative',cover:true,locationId:'loading-yard',tileArt:true});});
+    if(clearOfSockets(1640,2124,32,32))solid(w,'industrial/hopper',1668,2124,32,32,'rubble',null,{debris:'decorative',cover:true,locationId:'loading-yard'});
+    over('industrial/pipeJoint',2100,1694,{locationId:'machine-shop',mask:2});for(var ix=2112;ix<2172;ix+=32)over('industrial/pipe_h',ix,1694,{locationId:'machine-shop',variant:ix===2144?1:0});over('industrial/pipeJoint',2172,1694,{locationId:'fuel-store',mask:8});
+  }
   // Story landmark points: where the map pins each story and the HUD reads it (the radio point is the
   // transmitter console inside Blackglass; its pallet waits at the mast base).
   var LANDMARKS=[{id:'checkpoint',name:'Checkpoint Nine',x:0,y:2800,color:'#4c9aa0',locationId:'checkpoint-nine'},
@@ -731,7 +897,8 @@
     w.setpieces.push({id:'checkpoint',kind:'checkpoint',x:0,y:2650,locationId:'checkpoint-nine'});
     var CK={setpiece:'checkpoint',locationId:'checkpoint-nine'},RD={setpiece:'radio',locationId:'blackglass-radio'};
     function tag(base,extra){var o={};for(var k in base)o[k]=base[k];for(k in extra||{})o[k]=extra[k];return o;}
-    prop(w,'landmarks/gate',0,2650,tag(CK));prop(w,'landmarks/watchtower',-190,2730,tag(CK,{light:{r:110,col:'#ffd249',a:'cc',dy:80}})); // dy: the cabin window band sits 80 texels above the feet
+    // city_v2 V2-1: no decorative boom here; the only gate at Checkpoint Nine is the functional evacuation barrier at y=3000
+    prop(w,'landmarks/watchtower',-190,2730,tag(CK,{light:{r:110,col:'#ffd249',a:'cc',dy:83}})); // dy: the cabin window band centre sits 83 texels above the feet (52x104 tower)
     solid(w,'barricade/truckMil',150,2720,120,52,'car',null,tag(CK));solid(w,'barricade/crateMil',-160,2790,24,24,'barrier',120,tag(CK));solid(w,'barricade/sandbagWall',-200,2860,48,20,'barrier',400,tag(CK));solid(w,'barricade/sandbagWall',160,2860,48,20,'barrier',400,tag(CK));
     // the radio tower: mast base and shack are solid; the shack sits east so the transmitter stays reachable
     // the south evacuation barrier: a locked gate across the avenue and sandbagged pavements, opened by the override
@@ -776,7 +943,7 @@
       themedProp(w,district(px,py).theme.clutter,px,py,10);
     }
     // district landmarks as props (the legacy drawings stay until the landmarks family is registered)
-    prop(w,'landmarks/hospitalEntrance',1950,-530,{landmark:'hospital',locationId:'st-orison',light:{r:70,col:'#79e2cf',a:'20',dy:40}});
+    prop(w,'civic/entranceCanopy',1950,-540,{overhead:true,feet:true,landmark:'hospital',locationId:'st-orison',light:{r:70,col:'#79e2cf',a:'20',dy:40}}); // city_v2: the public canopy on St. Orison's facade line
     // the Furnace Plant: a sealed furnace house with its stacks, open yard in front
     solid(w,null,3080,3110,360,300,'building',null,{sealed:true,facade:'n',protected:true,locationId:'furnace-plant'});
     prop(w,'landmarks/foundryStack',3180,3160,{landmark:'industry',locationId:'furnace-plant',variant:0,light:{r:50,col:'#ff7b35',a:'26',dy:130}});prop(w,'landmarks/foundryStack',3330,3170,{landmark:'industry',locationId:'furnace-plant',variant:1,light:{r:50,col:'#ff7b35',a:'26',dy:130}});
@@ -828,7 +995,7 @@
     for(var i=0;i<52;i++){var side=i%4,along=-3200+g()*6400,off=112+g()*28,x=side<2?along:(side===2?-off:off),y=side<2?(side===0?-off:off):along;var rw=70+g()*58,rh=42+g()*42,hp=100+(g()*41|0);
       // the pieces lie on the pavement outboard of the kerb, never across the carriageway
       if(side===0)y-=rh;if(side===2)x-=rw;if(Math.abs(x)<480&&Math.abs(y)<480||reservedAt(w,x,y,rw,rh,0))continue;var rb=ob(x,y,rw,rh,'rubble',hp);rb.debris='decorative';w.obstacles.push(rb);}
-    dress(w,g);signs(w);lotSockets(w);arenaGates(w);
+    dress(w,g);signs(w);lotSockets(w);arenaGates(w);streetLife(w);districtPieces(w);
     w.landmarks=LANDMARKS.map(function(k){var c={};for(var key in k)c[key]=k[key];if(k.pallet)c.pallet={x:k.pallet.x,y:k.pallet.y};return c;});
     // the radio story point is Blackglass's transmitter console (the preparation console is a separate room)
     w.buildings.forEach(function(b){b.anchors.forEach(function(a){if(a.kind==='radioTransmit')w.landmarks.forEach(function(k){if(k.id==='radio'){k.x=a.x;k.y=a.y;}});});});
@@ -1061,6 +1228,7 @@
     // 3. lots keep the territory colour and show their use as a restrained pattern in the owner's dark value
     const step=local?7:Math.max(4,Math.round(w/110));
     for(const l of s.world.lots||[]){const R=rect(l.rect.x,l.rect.y,l.rect.w,l.rect.h),pal=palAt(l.rect.x+l.rect.w/2,l.rect.y+l.rect.h/2);if(l.kind==='burnYard')continue;
+      fill(R,pal.fill);
       ctx.save();ctx.beginPath();ctx.rect(R[0],R[1],R[2],R[3]);ctx.clip();ctx.fillStyle=pal.dark;ctx.strokeStyle=pal.dark;ctx.lineWidth=1;
       if(l.kind==='park'){for(let yy=R[1]+2;yy<R[1]+R[3];yy+=step)for(let xx=R[0]+2+((yy/step|0)%2)*step/2;xx<R[0]+R[2];xx+=step)ctx.fillRect(xx,yy,2,2);}
       else if(l.kind==='parkingLot'){for(let xx=R[0]+step;xx<R[0]+R[2];xx+=step)ctx.fillRect(xx,R[1]+2,1,Math.max(2,R[3]*.35));}

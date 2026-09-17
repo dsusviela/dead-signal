@@ -12,7 +12,7 @@
   // filter; the bulldozer is lower still and adds track clatter while it moves. Pitch follows speed / top speed.
   const ENGINE={sedan:{wave:'sawtooth',base:38,range:62,cut:140,open:480,level:.035,top:300},
     fireTruck:{wave:'square',base:27,range:36,cut:110,open:300,level:.045,top:230},
-    bulldozer:{wave:'square',base:22,range:24,cut:90,open:220,level:.05,top:95,clatter:true}};
+    bulldozer:{wave:'square',base:22,range:24,cut:90,open:220,level:.05,top:140,clatter:true}};
   try{muted=localStorage.getItem('dead-signal-muted')==='true';}catch{}
   try{musicMuted=localStorage.getItem('dead-signal-music-muted')==='true';}catch{}
   function unlock(){
@@ -516,7 +516,54 @@
     let fd=1e9;for(const o of world.obstacles||[])if(o.burning&&!(o.hp<=0)){const d=Math.hypot(o.x+o.w/2-cam.x,o.y+o.h/2-cam.y);if(d<fd)fd=d;}
     setLoop('fire',fd<700,1400,'bandpass',0,.03*Math.max(0,1-fd/700));
   }
-  function stopVoices(){engines.clear();loops.clear();for(const source of voices){try{source.stop();}catch{}}nextBeat=0;}
+  // ---- city_v2 Section 5: source-bound incidental sounds ----
+  // Never a continuous bed (the district ambience and static were removed at the user's request, AUDIO.md): each
+  // district has one sparse, short one-shot tied to a real object near the camera, and only in the condition that
+  // object is in (a transformer buzzes only on a live circuit, hot metal pings only by a still-burning wreck). Long
+  // random gaps keep moments of quiet; nothing here makes simulation noise, and a busy mix (40+ voices) skips them.
+  const INCIDENTAL=[
+    {id:'streetMetal',district:'checkpoint',gap:[11,22],reach:520,match:o=>/^props.(dumpster|binSmall|newsBox|phoneBooth)$/.test(o.art||'')},
+    {id:'terraceWind',district:'ruins',gap:[13,26],reach:620,match:o=>o.collapsed},
+    {id:'ventilation',district:'hospital',gap:[12,24],reach:560,match:o=>o.archetypeId==='hospital'||o.archetypeId==='clinic'},
+    {id:'transformer',district:'northline',gap:[10,20],reach:520,match:o=>o.locationId==='utility-yard',when:s=>!!(s.circuit&&s.circuit.emergency)},
+    {id:'mastWind',district:'northline',gap:[14,28],reach:700,match:o=>o.kind==='radio'},
+    {id:'hotMetal',district:'industry',gap:[8,16],reach:560,match:o=>o.burning&&!(o.hp<=0)},
+    {id:'fenceRattle',district:'quarantine',gap:[12,24],reach:520,match:o=>o.type==='fence'||o.type==='gate'}
+  ];
+  const incidentalNext=new Map(),incidentalSources=new WeakMap();let incidentalPlayed=0,incidentalPrimed=false;
+  function incidentalPool(world){
+    let pool=incidentalSources.get(world);if(pool)return pool;pool={};
+    const all=[...(world.obstacles||[]),...(world.props||[]),...(world.buildings||[]),...(world.setpieces||[])],W=root.DSWorld;
+    for(const k of INCIDENTAL)pool[k.id]=all.filter(o=>k.match(o)).map(o=>({o,x:o.x+(o.w||0)/2,y:o.y+(o.h||0)/2})).filter(q=>!W||W.district(q.x,q.y).id===k.district);
+    incidentalSources.set(world,pool);return pool;
+  }
+  function playIncidental(id,pan,near){
+    const t=ctx.currentTime+.02,l=.6+.4*near;
+    if(id==='streetMetal'){tone(1240,.06,.012*l,'triangle',t,effects,980,.002,pan);noise(.05,.01*l,3200,t,effects,'bandpass');tone(620,.14,.008*l,'triangle',t+.09,effects,590,.002,pan);}
+    else if(id==='terraceWind'){noise(1.6,.012*l,520,t,effects,'bandpass');noise(1.1,.006*l,900,t+.5,effects,'bandpass');}
+    else if(id==='ventilation'){tone(174,.5,.01*l,'triangle',t,effects,163,.08,pan);tone(174,.35,.008*l,'triangle',t+.62,effects,120,.05,pan);}
+    else if(id==='transformer'){tone(100,1.1,.012*l,'square',t,effects,100,.2,pan);tone(200,1.1,.004*l,'sine',t,effects,200,.2,pan);}
+    else if(id==='mastWind'){tone(880,1.4,.004*l,'sine',t,effects,960,.5,pan);noise(1.4,.008*l,1400,t,effects,'bandpass');}
+    else if(id==='hotMetal'){tone(2100,.09,.008*l,'sine',t,effects,2050,.002,pan);tone(1650,.12,.006*l,'sine',t+.37,effects,1600,.002,pan);}
+    else if(id==='fenceRattle'){for(let i=0;i<4;i++)noise(.035,.009*l*(1-i*.18),2600,t+i*.06,effects,'bandpass');}
+    incidentalPlayed++;
+  }
+  function updateIncidentals(s){
+    const world=s.world;if(!world||s.boss?.active)return;const cam=s.camera||{x:0,y:0},now=ctx.currentTime,pool=incidentalPool(world);
+    if(incidentalPrimed){incidentalPrimed=false;for(const k of INCIDENTAL)incidentalNext.set(k.id,0);}
+    for(const k of INCIDENTAL){
+      if(!incidentalNext.has(k.id)){incidentalNext.set(k.id,now+k.gap[0]*Math.random());continue;}
+      if(now<incidentalNext.get(k.id))continue;
+      incidentalNext.set(k.id,now+k.gap[0]+(k.gap[1]-k.gap[0])*Math.random());
+      if(voices.size>40||k.when&&!k.when(s))continue;
+      let best=null,bd=k.reach;for(const q of pool[k.id]){if(q.o.hp!=null&&q.o.hp<=0&&!q.o.collapsed)continue;const d=Math.hypot(q.x-cam.x,q.y-cam.y);if(d<bd){bd=d;best=q;}}
+      if(!best||k.id==='hotMetal'&&!(best.o.burning&&!(best.o.hp<=0)))continue;
+      playIncidental(k.id,Math.max(-.8,Math.min(.8,(best.x-cam.x)/500)),1-bd/k.reach);
+    }
+  }
+  // test hook: schedule every incidental kind for the next update
+  function primeIncidentals(){incidentalPrimed=true;}
+  function stopVoices(){engines.clear();loops.clear();incidentalNext.clear();for(const source of voices){try{source.stop();}catch{}}nextBeat=0;}
   function update(s){
     const events=s.audioEvents.splice(0);
     if(s!==lastState){stopVoices();beat=0;heat=0;surge='';stinger=0;bossBeat=0;nextBossBeat=0;lastPhase=1;tier=0;for(const k of clock){k.beat=0;k.next=0;}lastState=s;lastMode=s.mode;lastBoss=false;lastWave=1;cooldowns.clear();}
@@ -524,7 +571,7 @@
     if(!ctx||ctx.state!=='running')return;
     if(active!==running){running=active;master.gain.setTargetAtTime(muted||!active?0:.65,ctx.currentTime,.035);if(!active)stopVoices();}
     if(!muted&&active){
-      updateEngines(s);updateLoops(s);
+      updateEngines(s);updateLoops(s);updateIncidentals(s);
       if(!musicMuted)score(s);
       for(const event of events)cue(event.type,event.detail);
       if(s.boss?.active&&!lastBoss)cue('boss');
@@ -543,5 +590,5 @@
     if(ctx)music.gain.setTargetAtTime(musicMuted?0:.48,ctx.currentTime,.025);
     return musicMuted;
   }
-  root.DSAudio={unlock,update,toggleMute,toggleMusic,get muted(){return muted;},get musicMuted(){return musicMuted;},get status(){return {state:ctx?.state||'locked',voices:voices.size,engines:engines.size,loops:[...loops.keys()],muted,musicMuted};}};
+  root.DSAudio={unlock,update,toggleMute,toggleMusic,primeIncidentals,INCIDENTAL:INCIDENTAL.map(k=>k.id),get muted(){return muted;},get musicMuted(){return musicMuted;},get status(){return {state:ctx?.state||'locked',voices:voices.size,engines:engines.size,loops:[...loops.keys()],incidentals:incidentalPlayed,muted,musicMuted};}};
 })(typeof window!=='undefined'?window:globalThis);

@@ -69,7 +69,7 @@
 
   // ---- palettes ----
   var HEDGE={K:'#020a06',D:'#0a2013',M:'#233823',L:'#414f39',H:'#616559'}; // dead-winter clipped hedge (npm run art:ramp -- --hue 145 --l 0.13,0.5 --chroma 0.045)
-  var GRAVEL_PAL={K:'#040609',D:'#121920',M:'#243037',L:'#3b474c',H:'#585f61'}; // graveyard/yard gravel (npm run art:ramp -- --hue 235 --l 0.12,0.48 --chroma 0.02)
+  var GRAVEL_PAL={K:'#17140f',D:'#2f2a22',M:'#453e33',L:'#5a5244',H:'#776d5b'}; // warm park gravel, beige-grey (npm run art:ramp -- --hue 75 --l 0.17,0.52 --chroma 0.025); never slate blue, so paths do not read as water at night
   var HAZARD_Y='#6d4f20'; // muted faded amber (npm run art:ramp -- --hue 75 --l 0.32,0.58 --chroma 0.075 --name hazard), well below gameplay-orange saturation
   var HOARD_PAL=pal2(MAT.wood,{Y:HAZARD_Y}); // plywood hoarding, faded hazard amber
   var CRANE_PAL=pal2(MAT.concrete,{I:MAT.iron.M,J:MAT.iron.D});
@@ -77,7 +77,16 @@
   var PIPEBANK_PAL=pal2(MAT.iron,{S:MAT.wood.M,T:MAT.wood.D});
   var CONVEYOR_PAL=pal2(MAT.iron,{B:MAT.basalt.D,C:MAT.basalt.K});
   var NOTICE_PAL=pal2(MAT.wood,{P:MAT.concrete.H,Q:MAT.concrete.M});
-  var PLANTBED_PAL=pal2(MAT.wood,{G:HEDGE.M,S:HEDGE.L});
+  var NOTICEB_PAL=pal2(MAT.wood,{C:shade(MAT.concrete.D,-4),P:MAT.concrete.L,Q:MAT.concrete.M,O:MAT.concrete.D,B:MAT.iron.M});
+  var GRAVESTONE={K:'#05070c',D:'#222532',M:'#474758',L:'#706d7c',H:'#9a969e',S:'#0a0f0a'}; // npm run art:ramp -- --hue 285 --l 0.13,0.68 --chroma 0.028 (weathered grey stone, faint violet; S = grass contact shadow)
+  var SOIL={K:'#0a0404',D:'#1e100a',M:'#2f2016',L:'#3f3327',H:'#4c4740'};   // npm run art:ramp -- --hue 55 --l 0.12,0.4 --chroma 0.03
+  var SHRUB={K:'#061008',D:'#142512',M:'#2d3b1e',L:'#494f34',H:'#646456'};  // npm run art:ramp -- --hue 130 --l 0.16,0.5 --chroma 0.05 (sits above the grass tone)
+  var BARK={K:'#120b09',D:'#2b1d15',M:'#413226',L:'#554a3d',H:'#67635b'};   // npm run art:ramp -- --hue 60 --l 0.16,0.5 --chroma 0.03 (grey-brown, not plank red)
+  var TREE_PAL=pal2(BARK,{S:SOIL.D,T:SOIL.M,P:MAT.wood.D,Q:MAT.wood.M});
+  var PLANTBED_PAL={K:SHRUB.K,D:SHRUB.D,M:SHRUB.M,L:SHRUB.L,H:SHRUB.H,E:MAT.concrete.D,F:MAT.concrete.M,J:MAT.concrete.K,S:SOIL.D,T:SOIL.M,P:MAT.concrete.L,Q:MAT.concrete.M};
+  var PATH_PAL=pal2(GRAVEL_PAL,{G:'#2c3524',F:'#3a4430'}); // G/F grass blades growing over the gravel edge (a step above tiles/grass)
+  var BENCHV_PAL={K:'#1a0e0b',D:'#3f2a22',M:'#62463a',L:'#80655a',I:MAT.iron.L,J:MAT.iron.M,S:'#0d100b'}; // weathered slats (MAT.wood hue, less chroma), iron frames; S = shadow on grass
+  var WORN_PAL={T:'#342c22',U:'#443a2d',G:'#2b3124'}; // trodden soil a step above the lawn, G = surviving grass tufts
   var RUBBLE2_PAL=pal2(MAT.concrete,{B:MAT.brick.M,C:MAT.brick.L});
   var PAINT_PAL={D:MAT.asphalt.D,K:shade(MAT.ember.K,-6),Y:HAZARD_Y,W:MAT.concrete.L};
   var CHECKLIST_PAL=pal2(MAT.concrete,{C:MAT.iron.M});
@@ -185,24 +194,25 @@
   // grave 16x18 x3: headstone shapes -- rounded, cross, squat block
   // =====================================================================
   function makeGrave(variant){
-    var w=16,h=18,g=mkGrid(w,h);
-    rect(g,3,14,12,17,'D');rect(g,3,14,12,14,'K');rect(g,3,17,12,17,'K');rect(g,3,14,3,17,'K');rect(g,12,14,12,17,'K'); // plinth
-    if(variant===0){ // rounded top
-      disc(g,7,7,4,7,'M');
-      rect(g,4,7,10,13,'M');
-      outlineFrom(g,['M'],'K');
-      setclip(g,5,4,'L');setclip(g,6,3,'L');
-    }else if(variant===1){ // cross
-      rect(g,6,1,9,13,'M');
-      rect(g,3,5,12,8,'M');
-      outlineFrom(g,['M'],'K');
-      setclip(g,7,2,'L');setclip(g,8,2,'L');
-    }else{ // squat block, chamfered top corners
-      rect(g,3,4,12,13,'M');
-      setclip(g,3,4,'.');setclip(g,12,4,'.');
-      outlineFrom(g,['M'],'K');
-      rect(g,4,5,11,5,'L');
-    }
+    var w=16,h=18,g=mkGrid(w,h),x,y;
+    // contact shadow on the grass, plinth, then the stone
+    rect(g,2,17,14,17,'S');
+    rect(g,3,14,12,16,'D');rect(g,3,14,12,14,'M');rect(g,2,14,2,16,'K');rect(g,13,14,13,16,'K');rect(g,2,17,13,17,'K');
+    var t=mkGrid(w,h);
+    if(variant===0){disc(t,7,6,4,4,'M');rect(t,3,6,11,13,'M');}
+    else if(variant===1){rect(t,6,1,9,13,'M');rect(t,3,4,12,7,'M');}
+    else{rect(t,3,4,12,13,'M');setclip(t,3,4,'.');setclip(t,12,4,'.');}
+    var src=t.map(function(r){return r.slice();});
+    function e(a,b){return !(src[b]&&src[b][a]==='M');}
+    for(y=0;y<h;y++)for(x=0;x<w;x++){if(src[y][x]!=='M')continue;
+      if(e(x-1,y)||e(x+1,y)||e(x,y-1)||e(x,y+1))t[y][x]='K';
+      else if(e(x-1,y-1)||e(x,y-2)||e(x-2,y))t[y][x]='L';
+      else if(e(x+2,y)||e(x+1,y+1))t[y][x]='D';}
+    for(y=0;y<14;y++)for(x=0;x<w;x++)if(t[y][x]!=='.')g[y][x]=t[y][x];
+    // engraved lines on the face
+    if(variant===0){rect(g,5,8,9,8,'D');rect(g,6,10,8,10,'D');}
+    if(variant===2){rect(g,5,7,10,7,'D');rect(g,5,9,9,9,'D');setclip(g,6,5,'H');setclip(g,7,5,'H');}
+    if(variant===1){setclip(g,7,2,'H');}
     return toRows(g);
   }
 
@@ -220,28 +230,78 @@
   }
 
   // =====================================================================
-  // tree 48x56: bare late-winter city tree, canopy over an 18-wide trunk base
+  // tree 48x56 x3: bare late-winter city tree (anchor feet = trunk base).
+  // Tapered trunk with a lit left flank and root flare on a dark soil pit, so
+  // the sprite visibly stands on the ground; a sparse branch crown (1-2 px
+  // limbs, no leaf mass) so paths and players stay readable through it.
+  // [0] broad mature crown; [1] crown leaning right; [2] young staked tree
   // =====================================================================
-  function makeTree(){
-    var w=48,h=56,g=mkGrid(w,h);
-    rect(g,15,48,32,55,'D'); // flared base, 18 wide
-    rect(g,19,40,28,47,'D'); // lower trunk
-    rect(g,21,30,26,39,'D'); // mid trunk
-    rect(g,22,22,25,29,'D'); // stem into the canopy
-    var limbs=[ // primary limbs off the stem top, drawn 2px thick
-      [23,23,14,10],[24,23,33,9],[23,22,19,6],[24,22,29,4]
-    ];
-    limbs.forEach(function(b){line(g,b[0],b[1],b[2],b[3],'D');line(g,b[0]+1,b[1],b[2]+1,b[3],'D');});
-    var twigs=[ // secondary twigs off each limb tip, 1px
-      [14,10,8,4],[14,10,10,2],[14,10,18,3],
-      [33,9,40,4],[33,9,37,2],[33,9,29,10],
-      [19,6,15,1],[19,6,22,1],
-      [29,4,33,1],[29,4,26,0],
-      [24,23,24,15],[24,15,20,11],[24,15,28,12]
-    ];
-    twigs.forEach(function(b){line(g,b[0],b[1],b[2],b[3],'M');});
-    outlineFrom(g,['D','M'],'K');
-    setclip(g,20,49,'L');setclip(g,21,49,'L');
+  function makeTree(variant){
+    var w=48,h=56,g=mkGrid(w,h),rng=mulberry32(700+variant),x,y;
+    var young=variant===2;
+    // soil pit / root contact ellipse (drawn first, trunk over it)
+    for(y=-3;y<=3;y++)for(x=-11;x<=11;x++)if((x*x)/121+(y*y)/9<=1)setclip(g,24+x,51+y,'S');
+    for(x=-8;x<=10;x++){var d=Math.abs(x)<5?1:0;if(d||pmod(x,3)===0)setclip(g,24+x,53+(Math.abs(x)>6?0:1),'T');}
+    rect(g,14,48,15,48,'T');rect(g,32,49,33,49,'T');
+    // limbs first (behind the trunk top), then twigs, then trunk
+    var crownTop=young?12:1,base=young?32:30,lean=variant===1?5:0;
+    var segs=[];
+    function branch(x0,y0,ang,len,th,depth){
+      var x1=x0+Math.cos(ang)*len,y1=y0+Math.sin(ang)*len,k=1;
+      // stay inside the canvas by shortening the limb (never clamping one
+      // axis, which would draw flat lines along the crown edge)
+      if(y1<crownTop)k=Math.min(k,(y0-crownTop)/(y0-y1));
+      if(x1<2)k=Math.min(k,(x0-2)/(x0-x1));
+      if(x1>45)k=Math.min(k,(45-x0)/(x1-x0));
+      x1=x0+(x1-x0)*k;y1=y0+(y1-y0)*k;
+      segs.push([x0,y0,x1,y1,th]);
+      if(depth<=0||k<.6)return;
+      var n=depth>=2?2:(rng()<.5?2:1),spread=.3+rng()*.18;
+      branch(x1,y1,ang-spread+(rng()-.5)*.2,len*(.7+rng()*.1),Math.max(1,th-1),depth-1);
+      if(n>1)branch(x1,y1,ang+spread+(rng()-.5)*.2,len*(.64+rng()*.1),Math.max(1,th-1),depth-1);
+    }
+    var up=-Math.PI/2;
+    if(young){
+      branch(24,base,up-.35,9,2,2);branch(24,base,up+.4,8,2,2);branch(24,base-2,up+.05,9,1,2);
+    }else{
+      branch(24+lean*.3,base,up-.55,11,3,3);
+      branch(24+lean*.3,base,up+.5+lean*.03,11.5,3,3);
+      branch(24+lean*.3,base-2,up-.04+lean*.02,10,2,3);
+    }
+    // thin twigs (1px, D) first, heavier limbs (2-3px, M with L/D sides) over them
+    segs.filter(function(q){return q[4]===1;}).forEach(function(q){line(g,q[0],q[1],q[2],q[3],'M');});
+    segs.filter(function(q){return q[4]>1;}).forEach(function(q){
+      line(g,q[0],q[1],q[2],q[3],'M');line(g,q[0]+1,q[1],q[2]+1,q[3],'D');
+      if(q[4]>2)line(g,q[0]-1,q[1],q[2]-1,q[3],'L');
+    });
+    // twig tips catch a little light
+    segs.filter(function(q){return q[4]===1;}).forEach(function(q){
+      var tx=Math.round(q[2]),ty=Math.round(q[3]);if(g[ty]&&g[ty][tx]==='M'&&rng()<.5){setclip(g,tx,ty,'L');}
+    });
+    // trunk: width tapers from the flare to the crotch, slight lean in [1]
+    var yTop=base,yBot=51,wBot=young?4:8,wTop=young?2:4;
+    for(y=yTop;y<=yBot;y++){
+      var t=(y-yTop)/(yBot-yTop),ww=Math.round(wTop+(wBot-wTop)*t*t),cx=24+Math.round(lean*.3*(1-t));
+      var x0=cx-Math.floor(ww/2),x1=x0+ww-1;
+      rect(g,x0,y,x1,y,'M');
+      setclip(g,x0,y,'L');
+      if(ww>=4)setclip(g,x1-1,y,'D');
+      setclip(g,x1,y,'K');
+      if(ww>=5)setclip(g,x0-1,y,'K');
+    }
+    if(!young){
+      // root flare knuckles into the soil
+      rect(g,17,50,19,51,'M');setclip(g,17,50,'L');rect(g,16,51,16,51,'K');rect(g,17,52,19,52,'K');
+      rect(g,28,50,31,51,'D');rect(g,32,51,32,51,'K');rect(g,28,52,31,52,'K');
+      rect(g,20,52,27,52,'K');                        // contact shadow line at the base
+      // bark fissures
+      [[23,36],[25,41],[22,45]].forEach(function(b){setclip(g,b[0],b[1],'D');setclip(g,b[0],b[1]+1,'D');setclip(g,b[0],b[1]+2,'D');});
+    }else{
+      rect(g,22,52,26,52,'K');
+      // timber stake and a rubber tie
+      rect(g,28,30,29,51,'P');rect(g,28,30,28,51,'Q');rect(g,30,31,30,52,'K');rect(g,28,52,30,52,'K');rect(g,28,29,29,29,'K');
+      rect(g,25,37,27,37,'K');
+    }
     return toRows(g);
   }
 
@@ -338,15 +398,80 @@
   }
 
   // =====================================================================
-  // noticeBoard 22x28: wood frame, pale pinned notices
+  // noticeBoard 22x28: park/municipal notice board on two posts, small
+  // pitched cap, dark cork face, a few pinned sheets (muted paper, one
+  // council header, one torn) -- quieter than pickups
   // =====================================================================
   function makeNoticeBoard(){
     var w=22,h=28,g=mkGrid(w,h);
-    bevel(g,4,22,9,27,'K','M','D','K');
-    bevel(g,12,22,17,27,'K','M','D','K');
-    bevel(g,0,0,21,21,'K','L','M','D');
-    rect(g,3,3,18,18,'P');setclip(g,3,3,'K');setclip(g,18,3,'K');setclip(g,3,18,'K');setclip(g,18,18,'K');
-    rect(g,5,6,10,10,'Q');rect(g,12,12,17,16,'Q');
+    // posts, grounded with a contact shadow
+    rect(g,3,19,5,26,'M');rect(g,3,19,3,26,'L');rect(g,5,19,5,26,'D');
+    rect(g,16,19,18,26,'M');rect(g,16,19,16,26,'L');rect(g,18,19,18,26,'D');
+    rect(g,2,27,6,27,'K');rect(g,15,27,19,27,'K');
+    // pitched cap
+    rect(g,1,1,20,3,'D');rect(g,3,0,18,0,'K');rect(g,1,1,2,1,'K');rect(g,19,1,20,1,'K');rect(g,0,2,0,3,'K');rect(g,21,2,21,3,'K');
+    rect(g,3,1,18,1,'L');rect(g,1,4,20,4,'K');
+    // frame + cork face
+    rect(g,1,5,20,20,'M');rect(g,1,5,1,20,'L');rect(g,20,5,20,20,'D');rect(g,1,20,20,20,'D');
+    rect(g,0,5,0,20,'K');rect(g,21,5,21,20,'K');rect(g,0,21,21,21,'K');
+    rect(g,3,6,18,18,'C');
+    // sheets
+    rect(g,4,7,9,13,'P');rect(g,4,7,9,7,'B');rect(g,5,9,8,9,'Q');rect(g,5,11,8,11,'Q');rect(g,5,14,9,14,'O');
+    rect(g,11,8,17,12,'P');rect(g,12,10,16,10,'Q');rect(g,17,8,17,8,'C');rect(g,16,12,17,12,'C');rect(g,12,13,17,13,'O');
+    rect(g,10,14,15,17,'Q');rect(g,11,15,14,15,'O');rect(g,15,17,15,17,'C');
+    return toRows(g);
+  }
+  // =====================================================================
+  // benchPark_v 16x40 (anchor feet): park bench for a north-south path, seat
+  // facing LEFT (flip to face right). Three weathered slats, backrest on the
+  // right casting a shadow outward, iron frames at both ends and the middle.
+  // =====================================================================
+  function makeBenchParkV(){
+    var w=16,h=40,g=mkGrid(w,h),x,y;
+    // seat: three 2-wide slats (x1-2, x4-5, x7-8) with dark gaps, rows 1-35
+    rect(g,0,0,9,36,'K');
+    [1,4,7].forEach(function(sx){
+      rect(g,sx,1,sx+1,35,'M');rect(g,sx,1,sx,35,'L');
+      for(y=6;y<34;y+=9+sx%3)setclip(g,sx+1,y,'D');                     // grain
+    });
+    // backrest: a raised board on the right with a lit inner face
+    rect(g,10,0,13,36,'K');rect(g,11,1,12,35,'M');rect(g,11,1,11,35,'L');
+    for(y=9;y<34;y+=12)setclip(g,12,y,'D');
+    // cast shadow on the outer (back) side, so the facing reads
+    rect(g,14,2,14,37,'S');rect(g,15,4,15,36,'S');
+    // iron end frames and a middle support crossing every slat and the backrest
+    [2,17,32].forEach(function(fy){
+      rect(g,0,fy,13,fy+2,'J');rect(g,0,fy,13,fy,'I');rect(g,0,fy+2,13,fy+2,'K');
+      setclip(g,14,fy+1,'K');setclip(g,14,fy+2,'K');
+    });
+    // legs down to the ground under the end frames, contact shadow row
+    rect(g,1,37,2,38,'J');rect(g,11,37,12,38,'J');rect(g,1,37,1,38,'I');rect(g,11,37,11,38,'I');
+    rect(g,0,39,4,39,'K');rect(g,10,39,14,39,'K');
+    return toRows(g);
+  }
+
+  // =====================================================================
+  // wornPatch 40x16 x2 (decal): bare trodden soil where people stop -- in
+  // front of benches, at gates and the notice board. Lumpy lobes, no outline,
+  // dithered out into the grass.
+  // =====================================================================
+  function makeWornPatch(variant){
+    var w=40,h=16,g=mkGrid(w,h),rng=mulberry32(720+variant),x,y;
+    // an elongated, lumpy trodden area: three overlapping lobes along the
+    // approach, no outline; bare soil thins into grass through a dither
+    var lobes=variant===0?[[11,9,9,4.5],[21,7,10,5.5],[31,8,7,4]]:[[9,7,8,4],[19,9,9,5],[30,7,9,5]];
+    function hsh(a,b){var n=Math.sin(a*127.1+b*311.7+variant*74.7)*43758.5453;return n-Math.floor(n);}
+    for(y=0;y<h;y++)for(x=0;x<w;x++){
+      var d=9;
+      lobes.forEach(function(l){var dx=(x+.5-l[0])/l[2],dy=(y+.5-l[1])/l[3];d=Math.min(d,dx*dx+dy*dy);});
+      var r=hsh(x,y);
+      if(d<.35){g[y][x]=r<.12?'G':r<.2?'U':'T';}
+      else if(d<.7){g[y][x]=r<.55?'T':r<.62?'U':'.';}
+      else if(d<1.1){if(r<.3)g[y][x]='T';}
+      else if(d<1.5){if(r<.08)g[y][x]='T';}
+    }
+    // a few scuffed stones and heel marks in the middle
+    for(var i=0;i<4;i++){x=8+Math.floor(rng()*24);y=5+Math.floor(rng()*6);if(g[y][x]==='T'){setclip(g,x,y,'U');}}
     return toRows(g);
   }
 
@@ -363,60 +488,169 @@
   }
 
   // =====================================================================
-  // graveFlat 16x10 x2: flush ground marker (decal)
+  // graveFlat 16x10 x2: flush ledger slab with a name line (decal, no cross)
   // =====================================================================
   function makeGraveFlat(variant){
     var w=16,h=10,g=mkGrid(w,h);
-    rect(g,1,1,14,8,'M');
-    rect(g,1,1,14,1,'L');rect(g,1,8,14,8,'D');rect(g,1,1,1,8,'K');rect(g,14,1,14,8,'K');
-    if(variant===1){rect(g,7,3,8,6,'D');rect(g,5,4,10,5,'D');}
+    // a long low ledger slab lying flush in the grass: no raised plinth, a
+    // lit top edge, a thin grass shadow, and a chiselled name line (no cross)
+    rect(g,1,2,14,8,'M');
+    rect(g,1,2,14,2,'L');rect(g,0,3,0,8,'K');rect(g,15,3,15,8,'K');rect(g,1,1,14,1,'K');rect(g,1,9,14,9,'S');
+    rect(g,14,3,14,8,'D');rect(g,1,8,14,8,'D');
+    setclip(g,1,2,'K');setclip(g,14,2,'K');
+    if(variant===0){rect(g,4,5,11,5,'D');}
+    else{rect(g,3,4,12,4,'D');rect(g,4,6,9,6,'D');setclip(g,11,6,'D');}
     return toRows(g);
   }
 
   // =====================================================================
-  // plantingBed 48x32 x2: tended bed, bare soil + low shrubs (decal)
+  // plantingBed 48x32 x2: tended municipal bed (decal). Low concrete edging
+  // with a lit top/left lip, dark raked soil, clipped evergreen mounds that
+  // sit above the grass tone (K outline + soil shadow), winter-pruned stubs.
+  // [0] a row of clipped mounds + bulb shoots; [1] pruned rose stubs, two
+  // mounds and a plant label
   // =====================================================================
   function makePlantingBed(variant){
-    var w=48,h=32,g=mkGrid(w,h),rng=mulberry32(variant===0?95:96),x;
-    rect(g,2,2,45,29,'D');
-    rect(g,2,2,45,2,'M');rect(g,2,29,45,29,'K');rect(g,2,2,2,29,'K');rect(g,45,2,45,29,'K');
-    for(x=6;x<44;x+=9){
-      disc(g,x,10,4,3,'G');disc(g,x,10,2,1,'S');
+    var w=48,h=32,g=mkGrid(w,h),rng=mulberry32(variant===0?95:96),x,y;
+    // edging kerb, rounded outer corners
+    rect(g,1,1,46,30,'E');
+    setclip(g,1,1,'.');setclip(g,46,1,'.');setclip(g,1,30,'.');setclip(g,46,30,'.');
+    rect(g,2,1,45,1,'F');rect(g,1,2,1,29,'F');                     // lit lip top/left
+    rect(g,2,30,45,30,'J');rect(g,46,2,46,29,'J');                 // shadowed lip bottom/right
+    // soil
+    rect(g,3,3,44,28,'T');
+    rect(g,3,3,44,3,'S');rect(g,3,3,3,28,'S');                     // edging shadow falls inside
+    for(y=6;y<28;y+=3)for(x=5+pmod(y*5,7);x<42;x+=9+pmod(x+y,5))rect(g,x,y,x+2,y,'S'); // raked furrows
+    function mound(cx,cy,rx,ry){
+      var t=mkGrid(w,h),xx,yy;disc(t,cx,cy,rx,ry,'M');
+      var src=t.map(function(r){return r.slice();});
+      for(yy=0;yy<h;yy++)for(xx=0;xx<w;xx++){if(src[yy][xx]!=='M')continue;
+        var e=function(a,b){return(src[b]&&src[b][a])!=='M';};
+        if(e(xx-1,yy)||e(xx+1,yy)||e(xx,yy-1)||e(xx,yy+1))t[yy][xx]='K';}
+      for(yy=0;yy<h;yy++)for(xx=0;xx<w;xx++){if(t[yy][xx]!=='M')continue;
+        if(t[yy-1][xx]==='K'||t[yy][xx-1]==='K')t[yy][xx]='L';else if(t[yy+1][xx]==='K'||t[yy][xx+1]==='K')t[yy][xx]='D';}
+      // soil shadow below-right
+      for(xx=cx-rx+2;xx<=cx+rx+1;xx++)setclip(g,xx,cy+ry+1,'S');
+      for(yy=0;yy<h;yy++)for(xx=0;xx<w;xx++)if(t[yy][xx]!=='.')g[yy][xx]=t[yy][xx];
+      setclip(g,cx-1,cy-ry+1,'H');setclip(g,cx,cy-ry+1,'H');
     }
-    for(x=0;x<42;x++)if(rng()<0.1)setclip(g,3+x,18+Math.floor(rng()*9),'K');
+    if(variant===0){
+      [8,19,30,40].forEach(function(cx,i){mound(cx,10+(i%2),5,4);});
+      for(x=7;x<42;x+=5){y=20+pmod(x*3,5);setclip(g,x,y,'L');setclip(g,x,y+1,'D');}
+    }else{
+      mound(10,20,6,5);mound(37,10,5,4);
+      [[19,8],[26,12],[24,21],[33,22]].forEach(function(b){
+        var bx=b[0],by=b[1];
+        rect(g,bx,by,bx,by+3,'K');rect(g,bx+2,by-1,bx+2,by+3,'K');rect(g,bx+1,by+1,bx+1,by+2,'D');rect(g,bx-1,by+4,bx+3,by+4,'S');
+      });
+      rect(g,40,20,41,20,'P');rect(g,40,21,41,21,'Q');rect(g,41,22,41,23,'K');
+    }
     return toRows(g);
   }
 
   // =====================================================================
-  // pathCross 64x64: gravel path junction (decal, cross of gravel over transparent)
+  // Park path system (decals). One cross-section shared by pathCross,
+  // pathStrip_h/_v and pathGravel: a 16-texel warm gravel band (L base, M/D
+  // stones, H pebble glints), edge rows broken by grass blades (G/F) and gaps
+  // on period-32 tables, and 2 rows of stray pebbles on the lawn so a path
+  // never floats as a hard rectangle or reads as a channel of water. Every table is period 32 along the
+  // path, so strips butt against the cross and each other seamlessly.
+  // =====================================================================
+  var PATH_JIT='00100110000101000011000001001100';
+  var PATH_BLADE='10002000100000200100001000020001'; // 1/2 = grass blade crossing the gravel edge
+  var PATH_FR1='01100000011000000000110000011000';
+  var PATH_FR2='00000110000000001100000000000110';
+  var PATH_TEX=(function(){
+    var rng=mulberry32(4242),t=[],a,c,i;
+    for(c=0;c<16;c++){t.push([]);for(a=0;a<32;a++)t[c].push('L');}
+    function put(a,c,ch){if(c>=0&&c<16)t[c][pmod(a,32)]=ch;}
+    for(i=0;i<34;i++){a=Math.floor(rng()*32);c=Math.floor(rng()*16);if(rng()<.5){put(a,c,'M');put(a+1,c,'M');}else{put(a,c,'M');put(a,c+1,'M');}}
+    for(i=0;i<10;i++){a=Math.floor(rng()*32);c=1+Math.floor(rng()*14);put(a,c,'D');put(a+1,c,'D');}
+    for(i=0;i<5;i++){a=Math.floor(rng()*32);c=4+Math.floor(rng()*8);put(a,c,'H');put(a+1,c,'H');}
+    for(i=0;i<9;i++){a=Math.floor(rng()*32);c=2+Math.floor(rng()*12);if(t[c][pmod(a,32)]==='L')put(a,c,'H');}   // 1-texel pebble glints
+    return t;
+  })();
+  // letter at (along, across) where across 0..15 is the band, -2..-1 / 16..17 fringe
+  function pathAt(along,across){
+    var a=pmod(along,32);
+    // lawn side: a few stray pebbles kicked onto the grass
+    if(across===-1||across===16)return PATH_FR1[pmod(a+(across>0?11:0),32)]==='1'?(pmod(a,3)===0?'L':'M'):'.';
+    if(across===-2||across===17)return PATH_FR2[pmod(a+(across>0?7:0),32)]==='1'?'M':'.';
+    if(across<0||across>15)return '.';
+    var j=PATH_JIT[a]==='1',j2=PATH_JIT[pmod(a+13,32)]==='1';
+    // edge rows: gravel broken by grass blades growing in from the lawn
+    var e=across<=1?across:across>=14?15-across:-1,jj=across<=1?j:j2;
+    if(e===0){var b=PATH_BLADE[pmod(a+(across>0?9:0),32)];return b==='1'?'G':b==='2'?'F':jj?'.':PATH_TEX[across][a];}
+    if(e===1){var b1=PATH_BLADE[pmod(a+(across>0?9:0),32)];return b1==='1'&&jj?'G':PATH_TEX[across][a];}
+    return PATH_TEX[across][a];
+  }
+  function makePathStripH(variant){
+    var w=32,h=20,g=mkGrid(w,h),x,y;
+    for(y=0;y<h;y++)for(x=0;x<w;x++)g[y][x]=pathAt(x+(variant===1?16:0),y-2);
+    if(variant===1){rect(g,9,8,12,8,'M');rect(g,10,9,14,9,'M');rect(g,20,10,22,10,'M');} // scuffed in the wheel line
+    return toRows(g);
+  }
+  function transposeRows(rows){var out=[],x,y,s;for(x=0;x<rows[0].length;x++){s='';for(y=0;y<rows.length;y++)s+=rows[y][x];out.push(s);}return out;}
+
+  // =====================================================================
+  // pathCross 64x64: gravel path junction (decal). Arms 16 wide centred on
+  // x/y 24-39 continue pathStrip_h/_v exactly; inner corners filleted r=5.
   // =====================================================================
   function makePathCross(){
-    var w=64,h=64,g=mkGrid(w,h),rng=mulberry32(97),x,y;
-    rect(g,0,24,63,39,'M');rect(g,24,0,39,63,'M');
-    for(y=0;y<h;y++)for(x=0;x<w;x++){
-      if(g[y][x]!=='M')continue;
-      if(rng()<0.12)g[y][x]='D';else if(rng()<0.06)g[y][x]='L';
+    var w=64,h=64,g=mkGrid(w,h),x,y,r=5;
+    function core(x,y){
+      if(y>=24&&y<=39)return true;if(x>=24&&x<=39)return true;
+      var cx=x<24?24-r:40+r-1,cy=y<24?24-r:40+r-1;
+      if(Math.abs(x-cx)<=r&&Math.abs(y-cy)<=r&&(x<24?x>=24-r:x<=39+r)&&(y<24?y>=24-r:y<=39+r)){
+        var dx=x+.5-(x<24?24-r:40+r),dy=y+.5-(y<24?24-r:40+r);return dx*dx+dy*dy>=r*r;
+      }
+      return false;
     }
-    rect(g,0,24,63,24,'D');rect(g,0,39,63,39,'D');rect(g,24,0,24,63,'D');rect(g,39,0,39,63,'D');
+    for(y=0;y<h;y++)for(x=0;x<w;x++){
+      var inH=y>=22&&y<=41,inV=x>=22&&x<=41;
+      if(core(x,y)&&!(y>=24&&y<=39)&&!(x>=24&&x<=39)){g[y][x]=PATH_TEX[pmod(y,16)][pmod(x,32)];continue;}
+      if(inH&&!(x>=18&&x<=45))g[y][x]=pathAt(x,y-24);
+      else if(inV&&!(y>=18&&y<=45))g[y][x]=pathAt(y,x-24);
+      else if(core(x,y))g[y][x]=PATH_TEX[pmod(y-24,16)][pmod(x,32)];
+    }
+    // soft lawn edge around the junction fillets (the arms carry their own):
+    // grass blades and gaps, never a dark rim
+    var src=g.map(function(r){return r.slice();});
+    for(y=18;y<=45;y++)for(x=18;x<=45;x++){
+      if(src[y][x]==='.')continue;
+      var edge=(src[y-1]&&src[y-1][x]==='.')||(src[y+1]&&src[y+1][x]==='.')||src[y][x-1]==='.'||src[y][x+1]==='.';
+      if(!edge)continue;
+      var k=pmod(x*5+y*3,7);
+      g[y][x]=k===0?'G':k===3?'F':k===5?'.':g[y][x];
+    }
+    // trodden centre where the routes meet: compacted, a few bright pebbles
+    rect(g,29,31,34,31,'L');rect(g,30,32,33,32,'L');setclip(g,31,30,'H');setclip(g,34,33,'H');
     return toRows(g);
   }
 
   // =====================================================================
-  // pathGravel 48x48: worn gravel yard patch (decal, blob fading to edges)
+  // pathGravel 48x48: worn gravel yard / graveyard hub (decal). Same band
+  // texture as the path system, a rounded-square outline broken by grass
+  // blades, stray pebbles outside, trodden lighter centre.
   // =====================================================================
   function makePathGravel(){
-    var w=48,h=48,g=mkGrid(w,h),rng=mulberry32(98);
-    disc(g,24,24,22,20,'M');
-    var x,y,d;
+    var w=48,h=48,g=mkGrid(w,h),x,y;
+    // a squarish trodden gravel hub (superellipse, not a round pond) whose
+    // rim breaks up into grass blades and stray pebbles on the lawn
     for(y=0;y<h;y++)for(x=0;x<w;x++){
-      if(g[y][x]!=='M')continue;
-      d=Math.sqrt((x-24)*(x-24)+(y-24)*(y-24))/22;
-      if(rng()<d*0.6)g[y][x]='.';
-      else if(rng()<0.12)g[y][x]='D';
-      else if(rng()<0.06)g[y][x]='L';
+      var dx=Math.abs((x+.5-24)/20),dy=Math.abs((y+.5-24)/20),d=Math.pow(Math.pow(dx,4)+Math.pow(dy,4),.25);
+      var ang=Math.atan2(y+.5-24,x+.5-24),k=Math.floor((ang+Math.PI)/(2*Math.PI)*32)%32,j=PATH_JIT[k]==='1'?.05:0;
+      var t=PATH_TEX[pmod(y,16)][pmod(x,32)];
+      if(d<=.93-j)g[y][x]=t;
+      else if(d<=1-j){var b=PATH_BLADE[pmod(k*3+x+y,32)];g[y][x]=b==='1'?'G':b==='2'?'F':pmod(x+y,3)===0?'.':t;}
+      else if(d<=1.12&&PATH_FR1[pmod(k*2+x,32)]==='1'&&pmod(x*y,4)===0)g[y][x]=pmod(x,2)?'M':'L';
     }
+    // trodden lighter centre
+    for(y=17;y<31;y++)for(x=17;x<31;x++)if(g[y][x]==='M'&&pmod(x+y,3)===0)g[y][x]='L';
+    setclip(g,22,21,'H');setclip(g,27,26,'H');
     return toRows(g);
   }
+
 
   // =====================================================================
   // parkingLine_v 4x60: worn white paint stripe (decal)
@@ -515,12 +749,12 @@
     chain_v:{variants:[makeChainV(0),makeChainV(1)],pal:'MAT.iron',anchor:{x:.5,y:0},note:'8x32 chain-link mesh with a running rail post at x1-3; tiles top-bottom, [1] has a small tear'},
     hedge_h:{variants:[makeHedgeH(0),makeHedgeH(1)],pal:HEDGE,anchor:{x:0,y:1},note:'32x22 clipped dark hedge, period-8 wavy canopy line shared by both variants; tiles left-right'},
     hedge_v:{variants:[makeHedgeV(0),makeHedgeV(1)],pal:HEDGE,anchor:{x:.5,y:0},note:'16x32 clipped dark hedge, period-8 canopy bumps on both long edges; tiles top-bottom'},
-    stone_h:{variants:[makeStoneH(0),makeStoneH(1)],pal:'MAT.grave',anchor:{x:0,y:1},note:'32x14 low cemetery stone wall, lit coping cap, period-8 mortar joints; tiles left-right'},
-    stone_v:{variants:[makeStoneV(0),makeStoneV(1)],pal:'MAT.grave',anchor:{x:.5,y:0},note:'12x32 low cemetery stone wall, lit coping cap running the length, period-8 joints; tiles top-bottom'},
+    stone_h:{variants:[makeStoneH(0),makeStoneH(1)],pal:GRAVESTONE,anchor:{x:0,y:1},note:'32x14 low cemetery stone wall, lit coping cap, period-8 mortar joints; tiles left-right'},
+    stone_v:{variants:[makeStoneV(0),makeStoneV(1)],pal:GRAVESTONE,anchor:{x:.5,y:0},note:'12x32 low cemetery stone wall, lit coping cap running the length, period-8 joints; tiles top-bottom'},
     hoarding_h:{variants:[makeHoardingH(0),makeHoardingH(1)],pal:HOARD_PAL,anchor:{x:0,y:1},note:'32x22 plywood construction hoarding, board seams every 8, faded hazard band at the foot; tiles left-right'},
     hoarding_v:{variants:[makeHoardingV(0),makeHoardingV(1)],pal:HOARD_PAL,anchor:{x:.5,y:0},note:'10x32 plywood construction hoarding, faded hazard band down one edge; tiles top-bottom'},
-    grave:{variants:[makeGrave(0),makeGrave(1),makeGrave(2)],pal:'MAT.grave',anchor:'feet',note:'16x18 headstone on a plinth, [0] rounded, [1] cross, [2] squat block'},
-    tree:{rows:makeTree(),pal:'MAT.wood',anchor:'feet',note:'48x56 bare late-winter city tree, canopy over an 18-wide trunk base'},
+    grave:{variants:[makeGrave(0),makeGrave(1),makeGrave(2)],pal:GRAVESTONE,anchor:'feet',note:'16x18 headstone on a plinth, [0] rounded, [1] cross, [2] squat block'},
+    tree:{variants:[makeTree(0),makeTree(1),makeTree(2)],pal:TREE_PAL,anchor:'feet',note:'48x56 bare late-winter city tree on a soil pit, tapered bark trunk with root flare, sparse see-through crown: [0] broad; [1] leaning right; [2] young staked tree'},
     lightPole:{rows:makeLightPole(),pal:'MAT.iron',anchor:'feet',note:'12x72 straight parking-lot light pole, boxy head at top'},
     utilityBox:{rows:makeUtilityBox(),pal:'MAT.iron',anchor:'feet',note:'24x22 iron utility cabinet, seam and vent slats'},
     spoilHeap:{rows:makeSpoilHeap(),pal:'MAT.wood',anchor:'feet',note:'60x34 mounded excavated dirt spoil heap'},
@@ -528,12 +762,16 @@
     craneBase:{rows:makeCraneBase(),pal:CRANE_PAL,anchor:'feet',note:'40x48 concrete footing with a steel stub rising from it'},
     gantryLeg:{rows:makeGantryLeg(),pal:GANTRY_PAL,anchor:'feet',note:'20x56 steel gantry leg on a concrete plinth'},
     pipeBank:{rows:makePipeBank(),pal:PIPEBANK_PAL,anchor:'feet',note:'90x28 stacked iron pipes on wood sleepers'},
-    noticeBoard:{rows:makeNoticeBoard(),pal:NOTICE_PAL,anchor:'feet',note:'22x28 wood-framed notice board, pale pinned notices'},
+    noticeBoard:{rows:makeNoticeBoard(),pal:NOTICEB_PAL,anchor:'feet',note:'22x28 park notice board on two posts, pitched cap, dark cork face, muted pinned sheets'},
+    benchPark_v:{rows:makeBenchParkV(),pal:BENCHV_PAL,anchor:'feet',note:'16x40 park bench for a north-south path, seat of three weathered slats faces LEFT (flip to face right), backrest on the right with a grass shadow behind it, iron end frames + middle support crossing every slat, legs on the bottom row'},
+    wornPatch:{variants:[makeWornPatch(0),makeWornPatch(1)],pal:WORN_PAL,anchor:'center',note:'40x16 flat, trodden soil where people stop: elongated lumpy lobes along the approach, no outline, dithered into the grass with surviving tufts. In front of bench seats (not behind), at gates and below notice boards; rot:1 for a north-south approach'},
     hoardingSign:{rows:makeHoardingSign(),pal:HOARD_PAL,anchor:'feet',note:'30x26 hazard-striped sign board on two stakes'},
-    graveFlat:{variants:[makeGraveFlat(0),makeGraveFlat(1)],pal:'MAT.grave',anchor:'center',note:'16x10 flush ground grave marker, [1] carved'},
-    plantingBed:{variants:[makePlantingBed(0),makePlantingBed(1)],pal:PLANTBED_PAL,anchor:'center',note:'48x32 tended planting bed, bare soil border, low shrub clusters'},
-    pathCross:{rows:makePathCross(),pal:GRAVEL_PAL,anchor:'center',note:'64x64 gravel path junction, cross-shaped, transparent corners'},
-    pathGravel:{rows:makePathGravel(),pal:GRAVEL_PAL,anchor:'center',note:'48x48 worn gravel yard patch, fades to transparent at the edge'},
+    graveFlat:{variants:[makeGraveFlat(0),makeGraveFlat(1)],pal:GRAVESTONE,anchor:'center',note:'16x10 flush ledger slab lying in the grass, lit top edge, chiselled name line ([1] two lines); no cross, so it never reads as a medkit'},
+    plantingBed:{variants:[makePlantingBed(0),makePlantingBed(1)],pal:PLANTBED_PAL,anchor:'center',note:'48x32 tended bed: concrete edging, raked soil, clipped evergreen mounds; [0] mound row + bulb shoots; [1] pruned rose stubs, two mounds, plant label'},
+    pathCross:{rows:makePathCross(),pal:PATH_PAL,anchor:'center',note:'64x64 warm gravel path junction, 16-wide arms on x/y 24-39, grass blades breaking the edges and stray pebbles on the lawn (no dark rim), filleted corners, trodden centre; continues pathStrip_h/_v'},
+    pathStrip_h:{variants:[makePathStripH(0),makePathStripH(1)],pal:PATH_PAL,anchor:'center',note:'32x20 flat, tiles left-right from pathCross arm ends (band rows 2-17, fringe rows 0-1/18-19); [1] scuffed'},
+    pathStrip_v:{variants:[transposeRows(makePathStripH(0)),transposeRows(makePathStripH(1))],pal:PATH_PAL,anchor:'center',note:'20x32 flat, tiles top-bottom from pathCross arm ends; transpose of pathStrip_h'},
+    pathGravel:{rows:makePathGravel(),pal:PATH_PAL,anchor:'center',note:'48x48 warm gravel hub/yard patch (rounded square, not a round pond), same texture as the path system, edge broken by grass blades, trodden lighter centre'},
     parkingLine_v:{rows:makeParkingLineV(),pal:PARKING_PAL,anchor:'center',note:'4x60 worn white paint stripe, scuffed'},
     trolley:{rows:makeTrolley(),pal:'MAT.iron',anchor:'center',note:'20x16 tipped shopping trolley, wire basket'},
     padMarking:{rows:makePadMarking(),pal:PAINT_PAL,anchor:'center',note:'90x120 painted machine pad outline, hazard-striped corners, mostly transparent inside'},

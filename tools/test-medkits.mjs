@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 await import('../city.js');await import('../world.js');await import('../boss.js');await import('../game.js');
 const G=globalThis.DSGame,W=globalThis.DSWorld,s=G.create(12345);
-G.addPlayer(s);G.addPlayer(s,'pad:0');s.mode='play';
+G.addPlayer(s);G.addPlayer(s,'pad:0');s.mode='play';const worldStock=s.loot.slice();s.loot=[]; // nothing underfoot: the heal assertions count kits exactly
 const [a,b]=s.players;
 assert.equal(a.medkits,1);
 assert.equal(G.useMedkit(s,a),false,'full health preserves kit');
@@ -18,7 +18,7 @@ a.dead=true;assert.equal(G.useMedkit(s,a),false);a.dead=false;
 assert.equal(a.medkits,3);
 a.hp=a.maxHp-7;assert.equal(G.useMedkit(s,a),true);assert.equal(a.hp,a.maxHp);assert.equal(a.medkits,2);
 const shared=kit();assert.equal(G.collect(s,b,shared),true);assert.equal(G.collect(s,a,shared),false,'same pickup cannot be collected twice');
-const stock=s.loot.filter(l=>l.type==='medkit');assert.ok(stock.length>0);assert.ok(stock.every(l=>!W.blocked(s.world,l.x,l.y,0)));
+const stock=worldStock.filter(l=>l.type==='medkit');assert.ok(stock.length>0);assert.ok(stock.every(l=>!W.blocked(s.world,l.x,l.y,0)));
 assert.ok(s.audioEvents.some(e=>e.type==='heal'));
 console.log('PASS medkits: inventory, pickup limits, personal healing, cap, pause, downed players, empty inventory, co-op ownership');
 

@@ -119,7 +119,7 @@ energy below 1.5 kHz or above 4 kHz (hisses and paper sit at 5-6 kHz; the tile f
 is 1.1 kHz), and nothing new touches the music bus.
 
 - **Engines by vehicle type** (`ENGINE` in audio.js): sedan saw 38-100 Hz; fire truck square
-  27-63 Hz with a darker filter; bulldozer square 22-46 Hz plus a speed-driven track clank train
+  27-63 Hz with a darker filter; bulldozer square 22-46 Hz (pitch over its 140 top speed since the city_v2 retune) plus a speed-driven track clank train
   that is skipped when more than 44 voices are live. Pitch follows speed over that type's top speed.
 - **Action cues:** board (crank / long diesel turnover), dismount and stall (plus the truck's air
   release), breakdown, blade strain (0.25 s cooldown) and route cleared, pour / refuelled /
@@ -131,6 +131,14 @@ is 1.1 kHz), and nothing new touches the music bus.
   near a still-burning (Ashworks) wreck — cold wrecks never.
   The district ambience bed and transmitter static were removed at the user's request on
   2026-09-16 to eliminate the continuous static. Music and action cues remain unchanged.
+- **Source-bound incidentals** (city_v2 Section 5, 2026-09-16): no beds or loops. Each district has
+  one short one-shot bound to a real nearby object, played at random 8–28 s gaps and only in its
+  condition: street metal by South Blocks dumpsters/bins, wind at collapsed Old Quarter terraces,
+  failing ventilation at Civic Ward hospital/clinic buildings, a transformer buzz at the Utility Yard
+  only on a live circuit and wind at the Blackglass mast, hot-metal pings by a still-burning Ashworks
+  wreck, fence rattle in Central Quarantine. Silent during the boss fight and above 40 voices; cleared
+  with every other voice on pause, hidden tab, mute and new run; never simulation noise.
+  `DSAudio.primeIncidentals()` is the test hook. Listening review still pending.
 - **Measured load** (`tools/test-audio.mjs`): three engines, both remaining loops, the boss song, a
   volley of eight shots and two heavy cues together stay at or below 48 voices without clipping.
 - **Hearing is simulation-only** (`game.js` never reads `DSAudio`): pour 110, gate motor 380,

@@ -119,9 +119,13 @@
       rect(g,31,36,bx1-3,47,C.door);hline(g,31,bx1-3,36,C.roofS);rect(g,31,44,bx1-3,47,C.doorS);
       rect(g,bx0+2,33,bx1-3,35,C.roofS);
     }
-    // bumpers wrap the ends
-    rect(g,0,35,3,47,C.side);rect(g,92,35,95,47,C.side);
-    hline(g,0,3,35,C.hi);hline(g,92,95,35,C.hi);
+    // ends: the deck's near corners are squared so the side face continues it with
+    // no notch; the nose keeps its wrap-round bumper, the tail closes as one rounded
+    // quarter (trunk lip, taillight on the corner, bumper lip, rocker tucking under)
+    rect(g,3,32,6,35,C.top);rect(g,89,32,92,35,C.top);
+    rect(g,0,35,3,47,C.side);hline(g,0,3,35,C.hi);
+    rect(g,94,38,94,46,C.side);
+    [[47,93],[48,92],[49,91],[50,90],[51,88]].forEach(function(r){rect(g,r[1]+1,r[0],95,r[0],'.');});
     // greenhouse: windshield quad, rear window quad, side glass trapezoid, roof
     for(x=bx0;x<=rx0;x++){t=(rx0-x)/(rx0-bx0);a=Math.round(ry0+(by0-ry0)*t);b=Math.round(ry1+(by1-ry1)*t);vline(g,x,a,b,C.glass);}
     for(x=rx1;x<=bx1;x++){t=(x-rx1)/(bx1-rx1);a=Math.round(ry0+(by0-ry0)*t);b=Math.round(ry1+(by1-ry1)*t);vline(g,x,a,b,C.glass);}
@@ -150,7 +154,10 @@
     vline(g,31,33,47,'K');vline(g,t,33,47,'K');vline(g,bx1-3,33,47,'K');
     if(!burnt){hline(g,t-6,t-5,39,C.trim);hline(g,bx1-9,bx1-8,39,C.trim);}
     if(!burnt){rect(g,1,37,2,39,C.trim);setclip(g,1,39,C.hub);rect(g,4,17,5,19,C.hub);rect(g,4,31,5,33,C.hub);}
-    rect(g,93,37,94,40,burnt?'K':'R');if(!burnt){rect(g,90,17,91,19,'r');rect(g,90,31,91,33,'r');}
+    // tail: taillight wrapping the rear corner, K seam over the bumper, lit bumper lip
+    rect(g,90,37,93,40,burnt?'D':'R');if(!burnt)hline(g,90,92,37,'r');
+    hline(g,86,93,41,'K');hline(g,86,93,42,C.hi);if(!burnt){setclip(g,93,44,C.trim);setclip(g,93,45,C.trim);}
+    if(!burnt){rect(g,90,17,91,19,'r');rect(g,90,31,91,33,'r');}
     // hood / trunk panel lines on the deck
     if(!burnt){hline(g,6,bx0-4,16,C.hi);vline(g,bx0-2,18,31,'K');vline(g,bx1+3,18,31,'K');}
     if(police){
@@ -167,10 +174,11 @@
       rect(g,58,45,60,46,'v');rect(g,66,44,67,46,'v');rect(g,44,45,45,46,'v');
     }
     if(hatch){
-      // rear door hanging open toward the camera, cabin interior dark behind it
-      rect(g,t+2,36,bx1-4,47,'K');rect(g,t+4,38,bx1-6,45,'D');hline(g,t+4,bx1-6,38,C.top);
-      for(y=36;y<=56;y++){a=t+2+Math.floor((y-36)/4);rect(g,a,y,a+4,y,C.door);setclip(g,a,y,'K');setclip(g,a+5,y,'K');}
-      hline(g,t+2,t+7,36,'K');hline(g,t+7,t+12,56,'K');rect(g,t+4,39,t+6,43,C.glass);
+      // rear door sprung ajar: a dark gap opens along its trailing edge and the edge
+      // catches the light; its window is smashed out (dark hole, a shard left in the corner)
+      vline(g,bx1-4,34,40,'K');vline(g,bx1-5,36,40,'K');vline(g,bx1-6,36,40,C.hi);
+      for(y=ry1+2;y<by1;y++){a=Math.round(t+3);b=Math.round(rx1+(bx1-rx1)*(y-ry1)/(by1-ry1))-3;hline(g,a,b,y,'K');}
+      line(g,t+3,by1-1,t+6,by1-4,C.glint);setclip(g,t+3,by1-2,C.glint);
       rect(g,6,20,9,21,'p');rect(g,86,25,88,26,'p');
     }
     if(burnt){
@@ -432,7 +440,7 @@
   var busPal=Object.assign({},MAT.glass,{H:MAT.iron.H});
 
   A.define('wrecks',{
-    car_h:{variants:[makeCarH('hatch'),makeCarH('police')],pal:carPal,anchor:'feet',note:'96x58 [96x48], nose at x=0: [0] blue-grey hatchback, rear door hanging open, flat rear tyre; [1] black-and-white police cruiser, dead red/blue lightbar, push bar, door shield, cracked windshield, sprung door, flat front tyre'},
+    car_h:{variants:[makeCarH('hatch'),makeCarH('police')],pal:carPal,anchor:'feet',note:'96x58 [96x48], nose at x=0: [0] blue-grey hatchback, rear door sprung ajar with its window smashed, flat rear tyre; [1] black-and-white police cruiser, dead red/blue lightbar, push bar, door shield, cracked windshield, sprung door, flat front tyre'},
     car_v:{variants:[makeCarV('hatch'),makeCarV('police')],pal:carPal,anchor:'feet',note:'48x106 [48x96], nose at y=0, rear face at the bottom: same two liveries'},
     carBurnt_h:{rows:makeCarH('burnt'),pal:burntPal,anchor:'feet',note:'96x58, basalt+rust burnt shell, window holes, warped bonnet'},
     carBurnt_v:{rows:makeCarV('burnt'),pal:burntPal,anchor:'feet',note:'48x106, burnt shell vertical'},

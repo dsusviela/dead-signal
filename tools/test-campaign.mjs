@@ -43,7 +43,7 @@ test('facts start unset; evidence waits where the anchors are; notices point onw
 });
 
 test('illegal orders refuse with reasons and change nothing; exploration stays free', () => {
-  const s = game();
+  const s = game(); s.nextXp = 1e9; // a level-up banner must not replace the refusal being checked
   hold(s, 'transmit', 5); assert.equal(s.campaign.transmitProgress, 0, 'no transmit without preparation and payload');
   assert.match(s.banner, /NOT PREPARED|PAYLOAD/);
   hold(s, 'prepare', 5); assert.equal(s.campaign.prepareProgress, 0, 'no preparation without power');
@@ -107,7 +107,7 @@ test('footstep events name the floor underfoot; walking and running keep their h
   const grave = s.world.lots.find(l => l.kind === 'graveyard');
   assert.equal(W.surfaceAt(s.world, hosp.rooms[0].rect.x + 20, hosp.rooms[0].rect.y + 20), 'tile');
   assert.equal(W.surfaceAt(s.world, wood.rooms[0].rect.x + 20, wood.rooms[0].rect.y + 20), 'wood');
-  assert.equal(W.surfaceAt(s.world, grave.rect.x + 30, grave.rect.y + 30), 'gravel');
+  assert.equal(W.surfaceAt(s.world, grave.rect.x + 30, grave.rect.y + 30), 'grass'); // city_v2: a lawn between the graves
   assert.equal(W.surfaceAt(s.world, 0, 2800), 'asphalt');
   const room = hosp.rooms.find(r => r.id.endsWith('corridor-c')).rect; Object.assign(p, { x: room.x + 20, y: room.y + room.h / 2 });
   s.audioEvents.length = 0; for (let i = 0; i < 40; i++) { s.spawnAcc = -1e12; G.step(s, .05, { 0: { x: 1, run: true } }); }

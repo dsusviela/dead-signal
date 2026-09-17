@@ -607,24 +607,32 @@ registry and absent in the browser if its script was never registered.
 
 ### P1 — art needed to establish districts
 
-- [ ] Residential and shop frontage modules: corners, attached sections, entrance recesses,
+- [~] Residential and shop frontage modules: corners, attached sections, entrance recesses,
   shutters, awnings, windows, rear extensions and court walls.
-- [ ] Old Quarter terrace/party-wall modules and fresh collapse cross-sections; revise rubble
+  *art/frontage.js (35 ids, reviewed). Integrated: render.js KITS draws brick rows, shopfronts + awnings, shutters and eaves on South Blocks generated street faces; rear/court pieces not yet placed.*
+- [~] Old Quarter terrace/party-wall modules and fresh collapse cross-sections; revise rubble
   spill so the source of the damage is visible.
-- [ ] Hospital wing roofs, public canopy, covered links, service frontage and medical facade
+  *Terrace faces and collapse ends + collapseSpill drawn on Old Quarter faces and collapsed masses; brick spill decal under collapses. Full party-wall gap composite not yet used.*
+- [~] Hospital wing roofs, public canopy, covered links, service frontage and medical facade
   modules. Establish a campus silhouette larger than a cross sign.
-- [ ] Fire-station facade/bay grouping, depot facade, utility-yard equipment/cable supports,
+  *art/civic.js drawn and reviewed; not yet placed on the St. Orison campus.*
+- [~] Fire-station facade/bay grouping, depot facade, utility-yard equipment/cable supports,
   broadcast building frontage and maintenance access. Preserve the truck's existing variants.
-- [ ] Industrial roof/wall modules, loading docks, workshop fronts, pipe connections, conveyor
+  *Drawn (civic family). Utility Yard transformers, cable drum and poles placed; fire bays, depot and broadcast fronts not yet placed.*
+- [~] Industrial roof/wall modules, loading docks, workshop fronts, pipe connections, conveyor
   endpoints and gantry silhouettes that form connected industrial scenes.
-- [ ] Quarantine support-building adaptations, coherent fence corners/posts/gates, queue rails,
+  *art/industrial.js (39 ids, reviewed). Integrated: metal / sawtooth roofs on Ashworks masses and sheds, corrugated walls, workshop and office fronts; pallets, drums, ash skips and ash spill in works yards and truck lanes. Pipes, conveyors and gantries not yet placed.*
+- [~] Quarantine support-building adaptations, coherent fence corners/posts/gates, queue rails,
   tent groupings and links between processing and disposal.
+  *Drawn (civic family); requisition boards placed in staging yards. Fences, queue rails, tent groups and processing links not yet placed.*
 - [ ] Sidewalk/curb corners, crossings, service-lane surfaces, drains and district-specific
   paving accents. Use non-solid surface detail to explain clear routes.
-- [ ] Alley/rear-frontage details and a coherent litter/debris family: reuse useful bins,
+- [~] Alley/rear-frontage details and a coherent litter/debris family: reuse useful bins,
   bags, boxes, paper, glass, pallets and rubble; add missing variants identified in the pilots.
-- [ ] Ground transition pieces/masks and park composition pieces required by Section 2,
+  *art/streetlife.js (22 ids, reviewed) placed by world.js streetLife(): bags/boxes/paper at alley and lane mouths and service doors, wall grime, shopfront glass, collapse spill, curb drains and damp, court bins and timber (about 450 flat decals, never loot-coloured).*
+- [~] Ground transition pieces/masks and park composition pieces required by Section 2,
   including grass/path/soil edges and corners. Integrate with the actual chunk renderer.
+  *Ground agent added grass/gravel/yard/kerb edges and corners, footing and grime joins and baked park paths in chunks.js; the second review rejected repetition and palette issues, which I then fixed (per-row macro shift breaks the 128-unit columns, continuous Ward joints, neutral concrete/apron palettes, darker cinder vs lighter gravel). Needs a final wide-patch review.*
 
 ### P2 — present art that needs a quality pass
 
@@ -634,16 +642,20 @@ helmet, trolley and rubble spill. Review those in their final rooms/streets at g
 Also inspect repeated roof tiles, horizontal versus vertical furniture, overly generic sealed
 facades, and props that disappear into the night palette.
 
-- [ ] Polish grass/gravel and other ground tiles in repeated world patches; remove obvious
+- [~] Polish grass/gravel and other ground tiles in repeated world patches; remove obvious
   repetition and seams, finish material transitions and verify camera-motion stability.
-- [ ] Replace visually blank district filler with readable, use-appropriate outdoor materials.
+  *See the ground note above; art lint 0 errors, warn budget re-recorded after review (454 targets, 3009 warnings).*
+- [~] Replace visually blank district filler with readable, use-appropriate outdoor materials.
+  *All district fillers redrawn plus lotQuarantine and yardAsphalt; void0034b reads as surfaced ground in neutral and night captures (scenes-ground2-diag).*
   Compare large unoccluded patches against the existing streets/sidewalks under the same light;
   preserve those successful assets. Diagnose the later third screenshot's actual ground path.
-- [ ] Review trees, benches, planting beds, park paths/borders and notices in both actual parks
+- [~] Review trees, benches, planting beds, park paths/borders and notices in both actual parks
   and the graveyard; fix weak silhouettes, scale, contact with the ground and canopy occlusion.
+  *lots.js pass (paths, benchPark_v, wornPatch, graveFlat, pathGravel) reviewed and integrated; trees, beds and
+  notices read at gameplay zoom in neutral light.*
 - [ ] Finish existing weak signs, furniture, trolley and rubble alongside their consuming scenes;
   keep a per-asset disposition (keep/revise/replace) and before/after evidence until accepted.
-- [ ] Redraw the screenshot watchtower and police-car family to the reference-specific contract
+- [x] Redraw the screenshot watchtower and police-car family to the reference-specific contract
   above; correct the tower's emitter placement. Review other oversized box-like props for
   recognizable silhouette, volume, access/support, material separation and ground contact.
 
@@ -766,13 +778,29 @@ blocks through the new viewport. These tasks are planned, not already delivered 
 
 ### V2-1 — Remove the visible placeholders
 
-- [ ] Review the existing P0 gate, bollard, evacuation barrier, circuit, generator, transmitter
+- [~] Review the existing P0 gate, bollard, evacuation barrier, circuit, generator, transmitter
   and civilian assets; complete any missing frame/state integration and verify registration.
-- [ ] Align gate collision, visual openings, shadows and interaction prompts; remove duplicate
+  *Workflow city-v2-p0-review (draw → independent review, both accepted): gate_h/_v redrawn as posts + braced leaves
+  + lock on a track (100-unit tiles), new gateOpen_h/_v, bollards, evacBarrier closed palisade / open concertina,
+  civilian redrawn as four clothed people (12 frames; render picks one per id). Circuit box, generator and
+  transmitter art were not redrawn in this pass. Evidence artifacts/city/v2/art/gates|civilians,
+  scenes-p0-integrated/escape.png. Open: vertical gate strips still read thin; warn budget re-record.*
+- [x] Align gate collision, visual openings, shadows and interaction prompts; remove duplicate
   geometry-looking decoration and verify full closure/reopening at every orientation.
-- [~] Correct the confirmed watchtower emitter offset and capture its glow/light agreement;
+  *render.js: the Checkpoint evac collision strip no longer double-draws under the barrier prop; open arena gates
+  draw posts + parked leaves around the bollard; amber/cyan post lamps glow. game.js: open gates add 6-unit post
+  solids (two 34-unit passages). `v2-scenes gate-{n,s,e,w}-{open,closed}` captures every orientation. The decorative
+  Checkpoint boom (landmarks/gate at y=2650) was removed so the only gate there is the functional barrier.*
+- [x] Correct the confirmed watchtower emitter offset and capture its glow/light agreement;
   complete the tower/car redraw and family consistency review with the V2-3 pilot art pass.
-- [ ] Extend art-reference checks to catch all these paths and verify them in actual lit scenes.
+  *Tower redrawn 52x104 (roof planes, railed deck, ladder, footings), light dy 83 = window band centre; glow on the
+  cabin in scenes-checkpoint/checkpointBoom.png. Car family: police/hatch/burnt wrecks redrawn and their rear ends
+  fixed after the player report; driveable sedans redrawn to the same body; new `vehicles/sedan_vs` gives southbound
+  cars a front face instead of a flipped rear; seats moved into the cabin; a destroyed sedan is never a police car and
+  police cruisers only appear along the evac road, Checkpoint and police station. Low solids no longer cut a hard
+  flashlight wedge through themselves (lights.js) and throw a short soft contact shadow.*
+- [x] Extend art-reference checks to catch all these paths and verify them in actual lit scenes.
+  *test-art-refs checks state frames and index.html registration; v2-scenes records fallback draws per view (none).*
 
 Exit: no unexplained red slab, generic replacement post, invisible required prop or block-figure
 civilian appears along the acceptance routes.
@@ -819,8 +847,16 @@ the six territories immediately, and supplies/roads/danger remain readable.
 
 ### V2-3 — Prove two representative blocks
 
-- [ ] Author one South Blocks market/residential block and one Ashworks workshop/loading block
+- [~] Author one South Blocks market/residential block and one Ashworks workshop/loading block
   with frontage, core use, surface hierarchy, signature assets and two useful route choices.
+  *South Blocks structure landed: `city.js PILOT_BLOCKS['block-3-4']` (police block, also the 00:34 candidate) —
+  attached north shop/home row with rear service doors, a north alley mouth, east lane, west police side passage;
+  its anonymous core is now Police Staff Parking (asphalt lot, two bays) and a Rear Court. Routes: avenue → alley →
+  parking → police yard corridor, and east lane → rear court → parking. Frontage coverage 50% → 73% (target 65–80),
+  open filler 51% → 22% (`tools/v2-frontage.mjs`, artifacts/city/v2/pilot/). void0034a now reads as a surfaced,
+  named lot (scenes-pilot). Ashworks structure: `PILOT_BLOCKS['block-5-4']` — two workshops on the avenue with rear
+  doors onto a truck-width loading lane, dispatch office and sheds, a fenced Loading Court with three gates, north truck
+  lane; coverage 60% → 73% (target 55–75). Art dressing with the new families pending.*
 - [ ] Include a connected rear alley, authored trash/debris clusters and finished ground joins
   in those pilots. Review the South Blocks residential park and its street edge alongside them
   to prove grass, paths and planting before replicating the surface treatment citywide.
@@ -830,6 +866,9 @@ the six territories immediately, and supplies/roads/danger remain readable.
 - [ ] Add only the art modules needed by those scenes, then review at normal camera zoom with
   labels and district lighting tint suppressed for diagnosis, using V2-0A's accepted HUD.
 - [ ] Measure frontage coverage, unused/unexplained areas, traversal and render/light cost.
+  *Tool ready: `node tools/v2-frontage.mjs`. Before (artifacts/city/v2/baseline/frontage-before.json): South Blocks
+  49% (target 65–80, 0/8 blocks in range), Ashworks 41% (55–75), Civic 50%, Quarantine 50%, open filler 50–62% of
+  block ground in every district.*
 - [ ] Tune the density targets and module sizes from those two scenes before expanding the city.
 - [ ] Record measured iteration cost and frame/voice headroom on a named target machine and
   supported viewport; use those results to scope the six district passes and set budgets.
@@ -843,13 +882,27 @@ purposeful, and extra composition has not blocked movement or added unbudgeted s
 - [ ] Old Quarter: terrace fabric, broken courts and coherent chapel/graveyard approaches.
 - [ ] Civic Ward: connected hospital campus and differentiated public/service circulation.
 - [ ] Northline: unmistakable fire department/truck, utility transition and radio endpoint.
-- [ ] Ashworks: industrial ordinary fill and connected production/loading/service spaces.
-- [ ] Central Quarantine: four support blocks, clear outer/inner hierarchy and visible containment.
+- [~] Ashworks: industrial ordinary fill and connected production/loading/service spaces.
+  *Fabric archetypes workshop / storageShed / dispatchOffice replace the home .6 / shop .4 default (home .15 kept at the
+  edge); tested. Connected production/loading spaces and art modules pending.*
+- [~] Central Quarantine: four support blocks, clear outer/inner hierarchy and visible containment.
+  *Support-block fabric: requisitionOffice / stagingDepot over surviving clinic, shop and home frontage (15 interiors).
+  South Blocks bullet weight .85→1.2 keeps its share (50-seed minimum 15.7%). Authored staging/logistics and art pending.*
 - [ ] Complete P1 art modules and P2 revisions; account for every remaining substantial void.
-- [ ] Complete the alley/service-route and district-specific trash/debris passes across all
+- [~] Complete the alley/service-route and district-specific trash/debris passes across all
   six districts, with decorative/solid/clearable states visually distinct and routes preserved.
-- [ ] Finish both parks and the chapel graveyard individually, including entrances, connected
+  *Structure landed city-wide (`world.js COMPOSE` + `buildFabric`): every generated street row plans its run as
+  attached parcels, one reserved access opening (alley / passage / forecourt lane / truck lane / staging lane) and named
+  pockets (Shop forecourt, Demolition gap, Ward forecourt, Depot apron, Yard apron, Queue apron) sized by a per-district
+  fill; block cores become named courtyards (Rear court, Broken court, Ward garden, Service court, Works yard, Staging
+  yard) with surfaces and district clutter, big cores keep one sealed rear wing. Courtyards and pockets carry no loot
+  sockets. Measured: ruins 68% (target 70–85, 0/8 blocks, open filler 30%); northline 44% (target 45–65, 2/4 blocks, open filler 51%); hospital 58% (target 45–65, 6/8 blocks, open filler 41%); quarantine 59% (target 50–70, 4/4 blocks, open filler 47%); checkpoint 65% (target 65–80, 2/8 blocks, open filler 36%); industry 63% (target 55–75, 1/4 blocks, open filler 39%). Remaining off-target blocks are compound blocks (radio, hospital campus, Furnace Plant,
+  machine shop) for the authored briefs. Trash/debris art dressing waits for the streetlife family.*
+- [~] Finish both parks and the chapel graveyard individually, including entrances, connected
   paths, seating/planting composition, daily-use details and ground/material transitions.
+  *Linden Park (informal clusters, benches with worn patches) and Transmitter Park (ordered avenue of trees and beds)
+  now differ; paths are baked gravel strips on grass edge to edge; the graveyard is a lawn with a gravel lane and
+  irregular rows (lost and offset stones). Evidence scenes-parks/. Entrance/gate alignment of baked paths still to check.*
 - [ ] Roll out accepted district-filler, grass, gravel, yard and industrial-ground revisions;
   preserve existing street/sidewalk art, integrating only required new joins. Inspect repeated
   patches and tile/chunk boundaries in every affected district.
@@ -861,8 +914,12 @@ alone does not complete this phase.
 
 ### V2-5 — Integrate sound, lighting and campaign states
 
-- [ ] Review inherited truck/dozer differentiation and Phase 12A's listening queue; integrate
+- [~] Review inherited truck/dozer differentiation and Phase 12A's listening queue; integrate
   any additional source-bound ambience required by the new scenes without duplicating engines.
+  *Implemented as sparse one-shots, not beds (AUDIO.md records the user's earlier removal of continuous
+  ambience): seven source- and condition-bound incidentals in `audio.js`, covered by test-audio (sources,
+  circuit condition, no-source silence, boss quiet, no loops, voice cap). Bulldozer engine pitch follows its
+  new 140 top speed. Listening review and new-scene sources (after V2-4) pending.*
 - [ ] Compose entrance/landmark lights and test restored power, open gates and final evacuation
   against the new surroundings. Retain functional occlusion and Day 9 fire rules.
 - [ ] Check interrupted interactions, backtracking, boarding/dismounting, vehicle breakdown,
