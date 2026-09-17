@@ -251,5 +251,28 @@ test('armor survives vehicle seats and simultaneous hits in one frame resolve on
   assert.equal(p.armor, 21, 'the second hit landed inside the invulnerability window');
 });
 
+// ---- Phase 8: loot economy ----
+test('refused power loot stays in the world for one to four survivors', () => {
+  for (let n = 1; n <= 4; n++) {
+    const s = solo(21 + n); for (let k = 1; k < n; k++) G.addPlayer(s, 'pad:' + k); s.overflowQueue = []; s.mode = 'play';
+    s.players.forEach((p, i) => { p.x = 1200 + i * 3; p.y = 1200; p.armor = 50; p.turret = { id: 500 + i, ammo: 60, durability: 150 }; p.invuln = 1e9; });
+    const vest = { id: 'v', x: 1200, y: 1200, type: 'armor', amount: 25 }, case_ = { id: 'c', x: 1200, y: 1200, type: 'turret' };
+    s.loot = [vest, case_]; for (let i = 0; i < 20; i++) G.step(s, 1 / 30, {});
+    assert.ok(!vest.taken && !case_.taken && s.loot.length === 2, n + ' players: nothing vanished');
+    s.players[n - 1].armor = 40; s.players[n - 1].turret = null; for (let i = 0; i < 5; i++) G.step(s, 1 / 30, {});
+    assert.equal(s.players[n - 1].armor, 50); assert.equal(vest.amount, 15); assert.ok(!vest.taken); assert.ok(case_.taken && s.players[n - 1].turret, 'the survivor with room takes the case');
+  }
+});
+test('world loot carries every new power source: launchers, armor, grenade rounds and exactly two turrets', () => {
+  for (const seed of [1, 17, 42]) {
+    const w = W.create(seed), items = w.sites.flatMap(x => x.loot);
+    const turrets = items.filter(i => i.type === 'turret'); assert.deepEqual(turrets.map(i => i.locationId).sort(), ['armoury', 'police-station']);
+    assert.ok(items.filter(i => i.weapon === 'launcher').every(i => i.quality === 1), 'launchers are never Q2');
+    assert.ok(items.some(i => i.type === 'armor') && items.some(i => i.ammo === 'grenades'));
+    const s = G.create(seed); G.addPlayer(s, 'keyboard'); s.mode = 'play'; const p = s.players[0], it = s.loot.find(i => i.ammo === 'grenades'); const g0 = s.ammo.grenades;
+    G.collect(s, p, it); assert.equal(s.ammo.grenades, g0 + it.amount, 'grenade rounds join the shared reserve');
+  }
+});
+
 console.log(results.join('\n'));
 if (failed) { console.log(failed + ' player-power tests failed'); process.exitCode = 1; } else console.log('player-power tests passed');

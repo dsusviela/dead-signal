@@ -42,12 +42,12 @@ export function geometry(W) {
 
 // One seed's initial world loot, by resource, plus the district shares the Phase 6 envelopes check.
 export function tally(W, w) {
-  const t = { pickups: 0, bullets: 0, shells: 0, incendiaryFuel: 0, medkits: 0, xp: 0, weaponQ1: 0, weaponQ2: 0, provisions: 0, vehicleFuel: 0 }, south = { bullets: 0, medkits: 0, provisions: 0 };
+  const t = { pickups: 0, bullets: 0, shells: 0, incendiaryFuel: 0, medkits: 0, xp: 0, weaponQ1: 0, weaponQ2: 0, provisions: 0, vehicleFuel: 0, launchers: 0, armorPoints: 0, grenadeRounds: 0, turrets: 0 }, south = { bullets: 0, medkits: 0, provisions: 0 };
   let ashworksFuel = 0, supermarketProvisions = 0;
   for (const site of w.sites) for (const i of site.loot) {
     t.pickups++;
-    const key = i.type === 'ammo' ? (i.ammo === 'fuel' ? 'incendiaryFuel' : i.ammo) : i.type === 'medkit' ? 'medkits' : i.type === 'xp' ? 'xp' : i.type === 'provision' ? 'provisions' : i.type === 'vehicleFuel' ? 'vehicleFuel' : i.type === 'weapon' ? (i.quality > 1 ? 'weaponQ2' : 'weaponQ1') : null;
-    const n = i.type === 'weapon' ? 1 : i.amount;
+    const key = i.type === 'weapon' && i.weapon === 'launcher' ? 'launchers' : i.type === 'armor' ? 'armorPoints' : i.type === 'turret' ? 'turrets' : i.type === 'ammo' && i.ammo === 'grenades' ? 'grenadeRounds' : i.type === 'ammo' ? (i.ammo === 'fuel' ? 'incendiaryFuel' : i.ammo) : i.type === 'medkit' ? 'medkits' : i.type === 'xp' ? 'xp' : i.type === 'provision' ? 'provisions' : i.type === 'vehicleFuel' ? 'vehicleFuel' : i.type === 'weapon' ? (i.quality > 1 ? 'weaponQ2' : 'weaponQ1') : null;
+    const n = i.type === 'weapon' || i.type === 'turret' ? 1 : i.amount;
     t[key] += n;
     const d = W.district(i.x, i.y).id;
     if (d === 'checkpoint' && key in south) south[key] += n;
@@ -58,12 +58,12 @@ export function tally(W, w) {
 }
 
 export function measure(c = loadGame()) {
-  const W = c.DSWorld, G = c.DSGame, per = { pickups: [], bullets: [], shells: [], incendiaryFuel: [], medkits: [], xp: [], provisions: [], vehicleFuel: [], vehicleTank: [], emptyTanks: [] };
+  const W = c.DSWorld, G = c.DSGame, per = { pickups: [], bullets: [], shells: [], incendiaryFuel: [], medkits: [], xp: [], provisions: [], vehicleFuel: [], launchers: [], armorPoints: [], grenadeRounds: [], turrets: [], vehicleTank: [], emptyTanks: [] };
   const weapons = {};
   for (const seed of SEEDS) {
     const w = W.create(seed), t = tally(W, w);
     for (const site of w.sites) for (const i of site.loot) if (i.type === 'weapon') { const k = `${i.weapon}/q${i.quality}`; (weapons[k] ||= []).push(seed); }
-    for (const k of ['pickups', 'bullets', 'shells', 'incendiaryFuel', 'medkits', 'xp', 'provisions', 'vehicleFuel']) per[k].push(t[k]);
+    for (const k of ['pickups', 'bullets', 'shells', 'incendiaryFuel', 'medkits', 'xp', 'provisions', 'vehicleFuel', 'launchers', 'armorPoints', 'grenadeRounds', 'turrets']) per[k].push(t[k]);
     const s = G.create(seed);
     per.vehicleTank.push(round(s.vehicles.reduce((n, v) => n + v.fuel, 0)));
     per.emptyTanks.push(s.vehicles.filter(v => v.fuel <= 0).length);

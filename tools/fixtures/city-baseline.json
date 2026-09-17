@@ -57,34 +57,34 @@
   },
   "worldLoot": {
     "pickups": {
-      "min": 231,
-      "median": 251,
-      "max": 267
+      "min": 256,
+      "median": 274,
+      "max": 288
     },
     "bullets": {
-      "min": 2249,
-      "median": 2587.5,
-      "max": 2927
+      "min": 2291,
+      "median": 2624,
+      "max": 2906
     },
     "shells": {
-      "min": 380,
-      "median": 464.5,
-      "max": 507
+      "min": 397,
+      "median": 457,
+      "max": 511
     },
     "incendiaryFuel": {
-      "min": 744,
-      "median": 872,
-      "max": 1058
+      "min": 738,
+      "median": 870,
+      "max": 1053
     },
     "medkits": {
       "min": 9,
-      "median": 11.5,
+      "median": 11,
       "max": 13
     },
     "xp": {
-      "min": 679,
-      "median": 821,
-      "max": 966
+      "min": 702,
+      "median": 824,
+      "max": 943
     },
     "provisions": {
       "min": 13,
@@ -95,6 +95,26 @@
       "min": 200,
       "median": 240,
       "max": 280
+    },
+    "launchers": {
+      "min": 3,
+      "median": 4,
+      "max": 4
+    },
+    "armorPoints": {
+      "min": 150,
+      "median": 200,
+      "max": 225
+    },
+    "grenadeRounds": {
+      "min": 19,
+      "median": 30,
+      "max": 38
+    },
+    "turrets": {
+      "min": 2,
+      "median": 2,
+      "max": 2
     },
     "vehicleTank": {
       "min": 46835.24,
@@ -109,34 +129,44 @@
   },
   "weaponPickups": {
     "ar/q1": {
-      "min": 1,
+      "min": 3,
+      "median": 6,
+      "max": 13
+    },
+    "ar/q2": {
+      "min": 0,
       "median": 1,
-      "max": 1
+      "max": 5
     },
     "flame/q1": {
       "min": 1,
-      "median": 5,
-      "max": 11
+      "median": 4,
+      "max": 8
     },
     "flame/q2": {
       "min": 0,
       "median": 0,
       "max": 2
     },
+    "launcher/q1": {
+      "min": 3,
+      "median": 4,
+      "max": 4
+    },
     "rifle/q1": {
-      "min": 1,
-      "median": 5.5,
-      "max": 10
+      "min": 2,
+      "median": 5,
+      "max": 8
     },
     "rifle/q2": {
       "min": 0,
-      "median": 2,
-      "max": 6
+      "median": 1,
+      "max": 4
     },
     "shotgun/q1": {
-      "min": 1,
-      "median": 5,
-      "max": 11
+      "min": 0,
+      "median": 4,
+      "max": 9
     },
     "shotgun/q2": {
       "min": 0,
@@ -145,12 +175,12 @@
     },
     "smg/q1": {
       "min": 1,
-      "median": 6,
-      "max": 13
+      "median": 4,
+      "max": 10
     },
     "smg/q2": {
       "min": 0,
-      "median": 2,
+      "median": 1,
       "max": 4
     }
   },

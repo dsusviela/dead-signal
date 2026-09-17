@@ -660,7 +660,7 @@ test('world loot stays inside the explicit per-resource envelopes over seeds 1-5
   const E = ECONOMY.envelopes, fuelByDistrict = {};
   for (const w of SEED_WORLDS) {
     const t = tally(W, w);
-    for (const k of ['pickups', 'bullets', 'shells', 'incendiaryFuel', 'medkits', 'xp', 'weaponQ1', 'weaponQ2', 'provisions', 'vehicleFuel']) assert.ok(t[k] >= E[k][0] && t[k] <= E[k][1], `seed ${w.seed} ${k}=${t[k]} outside ${E[k]}`);
+    for (const k of ['pickups', 'bullets', 'shells', 'incendiaryFuel', 'medkits', 'xp', 'weaponQ1', 'weaponQ2', 'provisions', 'vehicleFuel', 'launchers', 'armorPoints', 'grenadeRounds', 'turrets']) assert.ok(t[k] >= E[k][0] && t[k] <= E[k][1], `seed ${w.seed} ${k}=${t[k]} outside ${E[k]}`);
     for (const [k, [lo, hi]] of Object.entries(E.southBlocksShare)) assert.ok(t.southBlocksShare[k] >= lo && t.southBlocksShare[k] <= hi, `seed ${w.seed} South Blocks ${k} share ${t.southBlocksShare[k].toFixed(2)}`);
     assert.ok(t.ashworksFuel >= E.ashworksFuelMin, `seed ${w.seed} Ashworks fuel ${t.ashworksFuel}`);
     assert.ok(t.supermarketProvisions >= E.supermarketProvisions[0] && t.supermarketProvisions <= E.supermarketProvisions[1], `seed ${w.seed} market rations ${t.supermarketProvisions}`);

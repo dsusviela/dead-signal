@@ -1066,11 +1066,14 @@
       var R=E.resources[res],x=p.sock.x,y=p.sock.y,id=p.sock.id,e={socketId:id},item;if(p.interior)e.interior=true;
       if(res==='weapon'||res==='weaponQ2'){var list=E.weapons.filter(function(k){return k!=='flame'||affinity(p,'incendiary')>0||p.profiles.indexOf('mixed')>=0;});
         e.weapon=list[Math.floor(r()*list.length)];e.quality=res==='weaponQ2'?2:1;e.label=res==='weaponQ2'?'military weapon':'salvaged weapon';item=it(id,x,y,'weapon',e);}
+      else if(res==='launcher'){e.weapon='launcher';e.quality=1;e.label='grenade launcher';item=it(id,x,y,'weapon',e);}
+      else if(res==='turret'){e.label='sentry turret';item=it(id,x,y,'turret',e);}
+      else if(res==='armor'){e.amount=between(R.amount);e.label='armor vest';item=it(id,x,y,'armor',e);}
       else if(res==='medkit'){e.label='medkit';item=it(id,x,y,'medkit',e);}
       else if(res==='provision'){e.label='ration pack';item=it(id,x,y,'provision',e);}
       else if(res==='vehicleFuel'){e.amount=between(R.amount);e.label='jerrycan';item=it(id,x,y,'vehicleFuel',e);}
       else if(res==='xp'){e.amount=between(R.amount);e.label=p.profiles.indexOf('evidence')>=0?'field notes':'signal cache';item=it(id,x,y,'xp',e);}
-      else{e.ammo=res==='incendiary'?'fuel':res;e.amount=between(R.amount);e.label=res==='incendiary'?'incendiary fuel':res==='shells'?'shells':'magazine';item=it(id,x,y,'ammo',e);}
+      else{e.ammo=res==='incendiary'?'fuel':res;e.amount=between(R.amount);e.label=res==='incendiary'?'incendiary fuel':res==='shells'?'shells':res==='grenades'?'grenade rounds':'magazine';item=it(id,x,y,'ammo',e);}
       item.siteId=p.site.id;item.locationId=p.site.locationId;p.used=true;perSite[p.site.id]=(perSite[p.site.id]||0)+1;p.site.loot.push(item);
     }
     function place(res,only){

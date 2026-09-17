@@ -192,28 +192,32 @@
   // shells, graveyards never get weapons). Generous civic places are paid for by thin ordinary homes
   // and street caches because they draw from the same fixed counts.
   var ECONOMY={
-    order:['weaponQ2','weapon','medkit','provision','vehicleFuel','incendiary','shells','bullets','xp'],
+    // PLAYER_POWER Phase 8: launchers, armor and grenade rounds join the budget; turrets come only from guarantees
+    order:['turret','weaponQ2','launcher','weapon','medkit','armor','provision','vehicleFuel','incendiary','grenades','shells','bullets','xp'],
     resources:{
       weaponQ2:{count:[5,8]},weapon:{count:[20,26]},medkit:{count:[9,13]},provision:{count:[13,18]},
       vehicleFuel:{count:[10,14],amount:[20,20]},incendiary:{count:[20,27],amount:[30,45]},
-      shells:{count:[40,50],amount:[8,12]},bullets:{count:[56,70],amount:[34,48]},xp:{count:[42,54],amount:[13,21]}
+      shells:{count:[40,50],amount:[8,12]},bullets:{count:[56,70],amount:[34,48]},xp:{count:[42,54],amount:[13,21]},
+      launcher:{count:[3,4]},armor:{count:[6,9],amount:[25,25]},grenades:{count:[8,12],amount:[2,4]},turret:{count:[0,0]}
     },
     profiles:{
-      medical:{medkit:6,xp:.8},munitions:{bullets:5,shells:4.5},weapons:{weaponQ2:7,weapon:4,bullets:1},provisions:{provision:6,medkit:.6},
-      incendiary:{incendiary:6,weapon:.4},vehicleFuel:{vehicleFuel:6,xp:.4},refuge:{provision:3,medkit:2,bullets:.7,xp:1},
-      utility:{bullets:1.4,shells:1,vehicleFuel:.8,xp:1.2},evidence:{xp:5},
-      mixed:{bullets:2,shells:1.5,medkit:.5,incendiary:.6,weapon:1,weaponQ2:.08,xp:1.2,provision:.25}
+      medical:{medkit:6,xp:.8,armor:1.2},munitions:{bullets:5,shells:4.5,grenades:2.5,armor:2,turret:1},weapons:{weaponQ2:7,weapon:4,bullets:1,launcher:5,grenades:1.5,turret:1},provisions:{provision:6,medkit:.6},
+      incendiary:{incendiary:6,weapon:.4},vehicleFuel:{vehicleFuel:6,xp:.4},refuge:{provision:3,medkit:2,bullets:.7,xp:1,armor:1},
+      utility:{bullets:1.4,shells:1,vehicleFuel:.8,xp:1.2,grenades:.6},evidence:{xp:5},
+      mixed:{bullets:2,shells:1.5,medkit:.5,incendiary:.6,weapon:1,weaponQ2:.08,xp:1.2,provision:.25,launcher:.12,grenades:.8,armor:.15}
     },
     classes:{civic:3,landmark:2.4,lot:1.3,street:1.1,fabric:.55},
     uses:{stock:{provision:3,vehicleFuel:1.5},vending:{provision:2},pocket:{provision:.35,xp:1.5},refuge:{provision:1.5,medkit:1.5}},
-    districts:{industry:{vehicleFuel:3.5,incendiary:2.2},checkpoint:{provision:.4,bullets:1.5,shells:.85},ruins:{xp:1.3},hospital:{medkit:1.3},quarantine:{weaponQ2:1.5,bullets:1.3}},
+    districts:{industry:{vehicleFuel:3.5,incendiary:2.2},checkpoint:{provision:.4,bullets:1.5,shells:.85},ruins:{xp:1.3},hospital:{medkit:1.3},quarantine:{weaponQ2:1.5,bullets:1.3,grenades:1.6,launcher:1.3}},
     // city_v2: South Blocks lost its four central blocks to Quarantine, so its bullet weight rose from .85 to 1.5 to keep
     // its per-seed share after Ashworks gained workshops and the frontage composition pass (min 14.8% over seeds 1-50); global counts are unchanged.
     // placed before the weighted spread: Ashworks always holds enough fuel for the chapel generator, and
     // South Blocks always offers a first medkit
-    guarantees:[{resource:'vehicleFuel',district:'industry',count:2},{resource:'medkit',district:'checkpoint',count:1},{resource:'provision',location:'crossroads-supermarket',count:2}],
+    guarantees:[{resource:'vehicleFuel',district:'industry',count:2},{resource:'medkit',district:'checkpoint',count:1},{resource:'provision',location:'crossroads-supermarket',count:2},
+      {resource:'turret',location:'police-station',count:1},{resource:'turret',location:'armoury',count:1}],
     perSite:3,
-    weapons:['smg','shotgun','rifle','flame'],
+    // the AR joins the salvage pool so its attachments are reachable from duplicates like every other gun (Phase 8)
+    weapons:['ar','smg','shotgun','rifle','flame'],
     // Fuel units: 1 L of vehicle fuel drives a sedan 70 distance units (the old tank scale), so a
     // sedan holds 56 L and parked sedans spawn with 8-56 L. The squad carries up to 60 L in shared
     // jerrycans (20 L each); a pickup that would overflow leaves the rest in the can on the ground.
@@ -223,8 +227,8 @@
     provisions:{carryCap:6,fedSeconds:90,staminaRegen:1.5,sprintDrain:.8},
     // explicit per-seed envelopes for world loot, checked over seeds 1-50 (CITY.md Phase 6 table)
     envelopes:{
-      pickups:[205,290],bullets:[2000,3250],shells:[340,600],incendiaryFuel:[640,1200],medkits:[9,13],xp:[600,1100],
-      weaponQ1:[18,28],weaponQ2:[5,10],provisions:[13,18],vehicleFuel:[200,280],
+      pickups:[205,310],bullets:[2000,3250],shells:[340,600],incendiaryFuel:[640,1200],medkits:[9,13],xp:[600,1100],
+      weaponQ1:[18,28],weaponQ2:[5,10],provisions:[13,18],vehicleFuel:[200,280],launchers:[3,4],armorPoints:[150,225],grenadeRounds:[16,48],turrets:[2,2],
       southBlocksShare:{bullets:[.12,.55],medkits:[.05,.6],provisions:[.1,.7]},ashworksFuelMin:40,supermarketProvisions:[2,7]
     }
   };

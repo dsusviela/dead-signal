@@ -142,7 +142,8 @@ test('spending all optional fuel still powers the chapel; cleared places, the ar
   for (let k = 0; k < 4; k++) { run(s, .05, { [p.id]: { interact: true } }); run(s, 3); }
   assert.equal(s.supplies.vehicleFuel, 30, 'the generator charge survives optional spending'); assert.ok(car.fuel >= 30 * L - 1);
   // drive the fuel away and back: nothing respawns, nothing is lost
-  const loc = s.world.locations.find(l => l.id === 'graveyard'); // loose finds only: walking over them collects
+  // loose finds only: walking over them collects (the first of these places that rolled any loot this seed)
+  const loc = ['graveyard', 'residential-park', 'northline-park'].map(id => s.world.locations.find(l => l.id === id)).find(l => s.loot.some(i => l.siteIds.includes(i.siteId) && i.type !== 'evidence'));
   for (const it of s.loot.filter(i => loc.siteIds.includes(i.siteId) && !i.taken && i.type !== 'evidence')) { put(p, it, 0); run(s, .1); }
   assert.ok(!s.loot.some(i => loc.siteIds.includes(i.siteId) && !i.taken), loc.id + ' emptied'); {
     assert.equal(s.locationState[loc.id].cleared, true, loc.id + ' cleared');
@@ -165,10 +166,10 @@ test('spending all optional fuel still powers the chapel; cleared places, the ar
 });
 
 test('long runs: unowned drops compact at 700 while authored and campaign loot is never merged away', () => {
-  const s = game(1); const authored = s.loot.filter(i => i.siteId).length, xpBefore = s.loot.filter(i => i.type === 'xp' && !i.siteId).reduce((n, i) => n + i.amount, 0);
+  const s = game(1); const authored = s.loot.filter(i => i.siteId), xpBefore = s.loot.filter(i => i.type === 'xp' && !i.siteId).reduce((n, i) => n + i.amount, 0);
   for (let i = 0; i < 1400; i++) s.loot.push({ id: s.nextId++, x: 2400 + (i % 40) * 8, y: -2400 + Math.floor(i / 40) * 8, type: 'xp', amount: 1, label: 'experience' });
   run(s, .5);
-  assert.ok(s.loot.length <= 700, 'compacted to ' + s.loot.length); assert.equal(s.loot.filter(i => i.siteId).length, authored, 'authored loot untouched');
+  assert.ok(s.loot.length <= 700, 'compacted to ' + s.loot.length); assert.ok(authored.every(i => i.taken || s.loot.includes(i)), 'authored loot untouched (only what the survivor walked over is gone)');
   assert.equal(s.loot.filter(i => i.type === 'xp' && !i.siteId).reduce((n, i) => n + i.amount, 0), xpBefore + 1400, 'no experience lost');
 });
 

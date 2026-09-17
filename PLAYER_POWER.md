@@ -647,31 +647,60 @@ medkits continue to matter.
 
 ### Phase 8 — Integrate new power into city loot and the run economy
 
-- [ ] Add loot-family rules and map/HUD representation for grenade ammunition, turrets, and armor
+- [x] Add loot-family rules and map/HUD representation for grenade ammunition, turrets, and armor
   without implying an exact item where the existing requisition map promises only a category.
-- [ ] Decide whether turrets and armor are guaranteed once per run, budgeted random finds, rewards,
+  Evidence: city.js ECONOMY profiles (munitions: grenades, armor, turret; weapons: launcher, grenades, turret; medical
+  and refuge: armor; mixed/utility small shares). The map keeps its category icons (munitions/medical) unchanged, so
+  it never promises a specific item; in-world labels read "ARMOR +25", "SENTRY TURRET", "n GRENADES".
+- [x] Decide whether turrets and armor are guaranteed once per run, budgeted random finds, rewards,
   enemy drops, or some combination; document the rationale and exact sources.
-- [ ] Add grenade ammunition to appropriate authored and randomized sites with explicit minimum,
+  Evidence: turrets are guarantees only (police-station 1, armoury 1; `turret.count [0,0]`) so a run always has
+  two and their homes are learnable; armor is a budgeted random find (6–9 vests × 25). No enemy drops.
+- [x] Add grenade ammunition to appropriate authored and randomized sites with explicit minimum,
   median, and maximum totals over seeds 1–50.
-- [ ] Add armor pickups with explicit seed-distribution bounds and no forbidden-location leaks.
-- [ ] Add turret placement/drop rules with stable site/location ownership and clear-state behavior.
-- [ ] Rebudget weapon type frequencies so the fixed attachment progressions are attainable but a
+  Evidence: 8–12 pickups × 2–4 rounds, quarantine bias 1.6; fixture `worldLoot.grenadeRounds` min 19 / median 30 /
+  max 38; envelope `grenadeRounds [16,48]`.
+- [x] Add armor pickups with explicit seed-distribution bounds and no forbidden-location leaks.
+  Evidence: fixture `armorPoints` 150 / 200 / 225, envelope [150,225]; profiles without an armor weight (evidence,
+  provisions, vehicleFuel, incendiary) can never hold one (affinity 0).
+- [x] Add turret placement/drop rules with stable site/location ownership and clear-state behavior.
+  Evidence: guarantees place on a socket of the named location's site, so `siteId/locationId` and cleared state work
+  like any stash item; test "world loot carries … exactly two turrets" (locations asserted).
+- [x] Rebudget weapon type frequencies so the fixed attachment progressions are attainable but a
   single route does not guarantee every survivor a fully upgraded loadout.
-- [ ] Preserve co-op sharing: a useful weapon, turret, armor pickup, or grenade stack remains in
+  Evidence / assumption: the AR joined the salvage pool (previously unobtainable, so AR attachments were unreachable);
+  launchers raised from the Phase 0 2–3 to **3–4** so tier 3 is reachable when all are found. Per-type Q1 medians over
+  50 seeds are 4–6 with minimums of 1–3, so full tiers need several districts and are not guaranteed.
+- [x] Preserve co-op sharing: a useful weapon, turret, armor pickup, or grenade stack remains in
   the world when the interacting survivor cannot or chooses not to benefit.
-- [ ] Decide whether enemy weapon drops can grant attachments and apply the same transaction and
-  ownership rules if they can.
-- [ ] Ensure duplicate conversion does not accidentally create or erase loaded/shared ammunition.
-- [ ] Keep authored-site cleared state correct when a duplicate is upgraded, a weapon is dropped,
+  Evidence: refused armor/turret collections return false and stay; weapons need an explicit press; grenade rounds
+  are shared stock. Test "refused power loot stays in the world for one to four survivors".
+- [x] Decide whether enemy weapon drops can grant attachments and apply the same transaction and
+  ownership rules if they can. Decision: no — infected drop XP only (unchanged), so attachments come from authored
+  world loot only.
+- [x] Ensure duplicate conversion does not accidentally create or erase loaded/shared ammunition.
+  Evidence: Phase 3 duplicate transaction tests (the duplicate's loaded rounds move to the reserve exactly once).
+- [x] Keep authored-site cleared state correct when a duplicate is upgraded, a weapon is dropped,
   a turret is retrieved, or a partial pickup remains.
-- [ ] Extend the 50-seed economy fixture with weapon duplicates by type/quality, attainable
+  Evidence: upgrades mark the item taken through the normal collect path; dropped weapons and retrieved turrets are
+  not site items; a partial armor vest stays untaken so its site is not cleared. test-campaign cleared-place test
+  now picks the first loose-find place that rolled loot (seed 90's graveyard rolls empty after the RNG shift).
+- [x] Extend the 50-seed economy fixture with weapon duplicates by type/quality, attainable
   attachment tiers, grenade ammunition, turret count, armor points, and district/source breakdown.
-- [ ] Test that new loot never overlaps collision, furniture, doors, campaign pickups, vehicle
-  slots, or inaccessible sockets.
-- [ ] Test full inventories and full armor in one-to-four-player parties so valuable loot never
-  vanishes due to a refused collection.
-- [ ] Compare total offensive/defensive value with the Phase 0 ammunition, medkit, weapon, and
+  Evidence: tools/city-baseline.mjs tally adds launchers, armorPoints, grenadeRounds, turrets; `weaponPickups` gains
+  ar/q1, ar/q2, launcher/q1. Diff reviewed before --write: pickups +22 median (new items), other resources moved
+  only by RNG order (all inside envelopes), per-type weapon medians −1 from the AR joining. Pickup envelope raised
+  from [205,290] to [205,310] for the new items.
+- [x] Test that new loot never overlaps collision, furniture, doors, campaign pickups, vehicle
+  slots, or inaccessible sockets. Evidence: new items use the same sockets, so test-city "every authored item sits
+  on a clear socket of its own site, away from doors and gates" covers them (passes).
+- [x] Test full inventories and full armor in one-to-four-player parties so valuable loot never
+  vanishes due to a refused collection. Evidence: Phase 8 test above.
+- [x] Compare total offensive/defensive value with the Phase 0 ammunition, medkit, weapon, and
   pressure baselines before approving any compensating scarcity change.
+  Evidence: armor 150–225 points ≈ 30–40% of the medkit healing budget (9–13 × 50 HP); grenade rounds 19–38 ≈ one
+  launcher's worth of bursts per district; turret opening rounds (2 × 60) are 4–5% of world bullets and every refill
+  spends shared bullets. No compensating scarcity change; threat now scales with this power instead (Phase 10).
 
 Phase 8 exit: all new systems are obtainable and shareable through a measured run economy, and
 their availability is neither accidental nor unlimited.
@@ -823,6 +852,8 @@ matching phase item.
   sim + browser tests). Human review of defensive lanes queued.
 - 2026-09-17 — Phase 7: armor (single hurt path, overflow, pickups with remainder, HUD plate, feedback, vest art,
   tests, four-strip captures). Fixed a render crash on loot labels for non-ammo pickups.
+- 2026-09-17 — Phase 8: loot economy (launchers 3–4, armor 6–9, grenades 8–12, two guaranteed turrets, AR in the
+  salvage pool), baseline fixture rewritten after diff review, envelopes extended.
 
 - 2026-09-17 — Phase 2 shotgun cleave and point-blank hit fix landed.
 
