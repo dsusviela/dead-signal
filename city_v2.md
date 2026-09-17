@@ -632,9 +632,9 @@ registry and absent in the browser if its script was never registered.
 - [x] Alley/rear-frontage details and a coherent litter/debris family: reuse useful bins,
   bags, boxes, paper, glass, pallets and rubble; add missing variants identified in the pilots.
   *art/streetlife.js (22 ids, reviewed) placed by world.js streetLife(): bags/boxes/paper at alley and lane mouths and service doors, wall grime, shopfront glass, collapse spill, curb drains and damp, court bins and timber (about 450 flat decals, never loot-coloured).*
-- [~] Ground transition pieces/masks and park composition pieces required by Section 2,
+- [x] Ground transition pieces/masks and park composition pieces required by Section 2,
   including grass/path/soil edges and corners. Integrate with the actual chunk renderer.
-  *Ground agent added grass/gravel/yard/kerb edges and corners, footing and grime joins and baked park paths in chunks.js; the second review rejected repetition and palette issues, which I then fixed (per-row macro shift breaks the 128-unit columns, continuous Ward joints, neutral concrete/apron palettes, darker cinder vs lighter gravel). Needs a final wide-patch review.*
+  *Ground agent added grass/gravel/yard/kerb edges and corners, footing and grime joins and baked park paths in chunks.js; the second review rejected repetition and palette issues, which I then fixed (per-row macro shift breaks the 128-unit columns, continuous Ward joints, neutral concrete/apron palettes, darker cinder vs lighter gravel). Wide review at play zoom in every district (scenes-wide/, --diag): fillers read as concrete, rubble soil, flagstones, slabs, cinder and precast apron; the quarantine apron keeps a visible 64-unit grid by design.*
 
 ### P2 — present art that needs a quality pass
 
@@ -644,14 +644,14 @@ helmet, trolley and rubble spill. Review those in their final rooms/streets at g
 Also inspect repeated roof tiles, horizontal versus vertical furniture, overly generic sealed
 facades, and props that disappear into the night palette.
 
-- [~] Polish grass/gravel and other ground tiles in repeated world patches; remove obvious
+- [x] Polish grass/gravel and other ground tiles in repeated world patches; remove obvious
   repetition and seams, finish material transitions and verify camera-motion stability.
   *See the ground note above; art lint 0 errors, warn budget re-recorded after review (454 targets, 3009 warnings).*
-- [~] Replace visually blank district filler with readable, use-appropriate outdoor materials.
+- [x] Replace visually blank district filler with readable, use-appropriate outdoor materials.
   *All district fillers redrawn plus lotQuarantine and yardAsphalt; void0034b reads as surfaced ground in neutral and night captures (scenes-ground2-diag).*
   Compare large unoccluded patches against the existing streets/sidewalks under the same light;
   preserve those successful assets. Diagnose the later third screenshot's actual ground path.
-- [~] Review trees, benches, planting beds, park paths/borders and notices in both actual parks
+- [x] Review trees, benches, planting beds, park paths/borders and notices in both actual parks
   and the graveyard; fix weak silhouettes, scale, contact with the ground and canopy occlusion.
   *lots.js pass (paths, benchPark_v, wornPatch, graveFlat, pathGravel) reviewed and integrated; trees, beds and
   notices read at gameplay zoom in neutral light.*
@@ -738,7 +738,10 @@ consumers; this document does not reset or duplicate that implementation.
   centre (670,2120), ground `tiles/lotSouth`, near `police-station`, `block-3-4-p88/p89`; scene
   `void0034a` reproduces an untextured flashlight patch with no edges. Intended use (V2-3 decision):
   police rear yard and staff parking behind the public desk. Missing cues: surface material, curb /
-  wall bases, entrances, perimeter and any activity cluster.*
+  wall bases, entrances, perimeter and any activity cluster.* *The block is now the V2-3 police pilot (staff parking,
+  rear court, alley) and void0034a/b read as surfaced, named places. **Awaiting human review:** the owner confirms whether
+  this is the screenshot's location — load http://127.0.0.1:4177/?seed=12345, open the console and run
+  `Object.assign(DeadSignal.state.players[0],{x:670,y:2120})`, compare with the 00:34 screenshot at night.*
 - [x] Save a current geometry/resource/performance snapshot before changing block ownership.
   *`artifacts/city/v2/baseline/city-baseline.json` (50 seeds) and `bench.txt` (sim1 1.20 ms avg, sim4 4.47 ms avg).*
 - [x] Build the complete art-reference/state manifest, including dynamic render ids and browser
@@ -779,8 +782,11 @@ This follows the evidence baseline and precedes the existing V2-1 through V2-6 s
   2048×1002 and 1024×768, one to four players, upgrades/combat/vehicle/downed/boss: top 3.9–4.2%, dock
   10.4–11.1%, vertical 14.3–15.3%, persistent area 13.4–15.8% (boss strip 1.4–1.9%), core text 12–18 px,
   minimap ≤18%. Before: 1280×720 reserved 54+195 px (243 px band with upgrades). Large HUD option
-  (1.25×) is ~19% vertical at 720 px, an explicit tradeoff. Pending: uncoached new-player and
-  physical-controller review.*
+  (1.25×) is ~19% vertical at 720 px, an explicit tradeoff. **Awaiting human review** (uncoached new player and a
+  physical controller): with no instructions, (1) pick up a medkit, get hurt, heal with H or B; press heal at full health
+  and with no kit and read the feedback; (2) press R or RB to eat; (3) board a sedan with A, accelerate with RT, brake and
+  reverse with LT, hold both, leave with A while holding RT (nothing should happen until released); (4) level up with a
+  second player and pick upgrades in Pause; record anything that needed explaining.*
 - [x] Update manual, options, onboarding, README and relevant CITY.md control references when
   implementation lands. Historical session logs remain historical; do not rewrite them as v2.
 
@@ -790,13 +796,14 @@ blocks through the new viewport. These tasks are planned, not already delivered 
 
 ### V2-1 — Remove the visible placeholders
 
-- [~] Review the existing P0 gate, bollard, evacuation barrier, circuit, generator, transmitter
+- [x] Review the existing P0 gate, bollard, evacuation barrier, circuit, generator, transmitter
   and civilian assets; complete any missing frame/state integration and verify registration.
   *Workflow city-v2-p0-review (draw → independent review, both accepted): gate_h/_v redrawn as posts + braced leaves
   + lock on a track (100-unit tiles), new gateOpen_h/_v, bollards, evacBarrier closed palisade / open concertina,
   civilian redrawn as four clothed people (12 frames; render picks one per id). Circuit box, generator and
   transmitter art were not redrawn in this pass. Evidence artifacts/city/v2/art/gates|civilians,
-  scenes-p0-integrated/escape.png. Open: vertical gate strips still read thin; warn budget re-record.*
+  scenes-p0-integrated/escape.png. Circuit box, generator and transmitter states verified by the frame test and the
+  scenes-v25 captures (generatorOff/On, transmitting). Vertical gates now raised (V2-4); budget re-recorded.*
 - [x] Align gate collision, visual openings, shadows and interaction prompts; remove duplicate
   geometry-looking decoration and verify full closure/reopening at every orientation.
   *render.js: the Checkpoint evac collision strip no longer double-draws under the barrier prop; open arena gates
@@ -824,12 +831,12 @@ civilian appears along the acceptance routes.
   test-city samples every 100 u of the city: exactly one territory cell, classifier and map agree.*
 - [x] Derive shared territory geometry and point classification from the authored ownership.
   *`district()`, `districtCells()` (36 cells with block ids), `buildBlocks` and `territoryLabel()` read one table; `bounds` removed.*
-- [~] Sketch/dress the four central support blocks so new quarantine ownership cannot trigger
+- [x] Sketch/dress the four central support blocks so new quarantine ownership cannot trigger
   today's skipped-fabric hole; preserve public through-routes and the existing arena footprint.
   *Quarantine fabric weights (shop .4 / clinic .35 / home .25), sealed .5, street clutter and sidewalk props;
   15 enterable buildings in the district (was 3), arena rect unchanged (asserted). Per-block RNG + per-block
   parcel numbering (salt 74393 chosen for 89 enterable buildings, ≥ the 84 before). Authored requisitioned
-  offices/logistics remain V2-4 work.*
+  offices/logistics landed in V2-4 (requisition offices, staging depots, staging yards, tents, queue rails).*
 - [x] Add the separate district map palettes and layer order, territorial footprints, boundaries,
   six labels/key entries, neutral icon badges and contrast-safe player/danger overlays.
   *`mapPalette` per district (fills luminance-spaced 85–154 so neighbours separate in grayscale); `drawMapRevamp`
@@ -859,7 +866,7 @@ the six territories immediately, and supplies/roads/danger remain readable.
 
 ### V2-3 — Prove two representative blocks
 
-- [~] Author one South Blocks market/residential block and one Ashworks workshop/loading block
+- [x] Author one South Blocks market/residential block and one Ashworks workshop/loading block
   with frontage, core use, surface hierarchy, signature assets and two useful route choices.
   *South Blocks structure landed: `city.js PILOT_BLOCKS['block-3-4']` (police block, also the 00:34 candidate) —
   attached north shop/home row with rear service doors, a north alley mouth, east lane, west police side passage;
@@ -950,11 +957,11 @@ purposeful, and extra composition has not blocked movement or added unbudgeted s
   yard) with surfaces and district clutter, big cores keep one sealed rear wing. Courtyards and pockets carry no loot
   sockets. Measured: ruins 68% (target 70–85, 0/8 blocks, open filler 30%); northline 44% (target 45–65, 2/4 blocks, open filler 51%); hospital 58% (target 45–65, 6/8 blocks, open filler 41%); quarantine 59% (target 50–70, 4/4 blocks, open filler 47%); checkpoint 65% (target 65–80, 2/8 blocks, open filler 36%); industry 63% (target 55–75, 1/4 blocks, open filler 39%). Remaining off-target blocks are compound blocks (radio, hospital campus, Furnace Plant,
   machine shop) for the authored briefs. Trash/debris art dressing waits for the streetlife family.*
-- [~] Finish both parks and the chapel graveyard individually, including entrances, connected
+- [x] Finish both parks and the chapel graveyard individually, including entrances, connected
   paths, seating/planting composition, daily-use details and ground/material transitions.
   *Linden Park (informal clusters, benches with worn patches) and Transmitter Park (ordered avenue of trees and beds)
   now differ; paths are baked gravel strips on grass edge to edge; the graveyard is a lawn with a gravel lane and
-  irregular rows (lost and offset stones). Evidence scenes-parks/. Entrance/gate alignment of baked paths still to check.*
+  irregular rows (lost and offset stones). Evidence scenes-parks/. Park gates sit at the midpoint of each side, on the baked path cross; the graveyard lane joins its north/south gates and the chapel path its east gate.*
 - [x] Roll out accepted district-filler, grass, gravel, yard and industrial-ground revisions;
   preserve existing street/sidewalk art, integrating only required new joins. Inspect repeated
   patches and tile/chunk boundaries in every affected district.

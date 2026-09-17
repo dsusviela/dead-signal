@@ -28,6 +28,8 @@ const SCENES={};
 for(const [d,views] of Object.entries(STREETS))for(const [v,[x,y,a]] of Object.entries(views))SCENES[`${d}-${v}`]={setup:at(x,y,a),settle:900};
 Object.assign(SCENES,{
   fullmap:{setup:`DeadSignal.ui.open('fullmap');`,settle:400},
+  // wide ground review: a camera about 2.5x wider than play over courts and fillers in each district (use with --diag)
+  ...Object.fromEntries([['South',-2100,2700],['Ruins',-3000,-1900],['Ward',3050,-2600],['North',650,-900],['Ash',3200,2450],['Quar',-800,850]].map(([n,x,y])=>['wide'+n,{setup:at(x,y,0)+`;DeadSignal.state.camera.w=1900;DeadSignal.state.players[0].x=${x};`,settle:1200}])),
   // P2 art in place: the supermarket sales floor (aisles, trolley) and the police sign
   p2Market:{setup:at(-500,1850,-Math.PI/2),settle:900},p2Police:{setup:at(150,2300,0),settle:900},p2Rubble:{setup:at(-2800,-600,Math.PI/2),settle:900},
   // V2-3 pilots: the South Blocks north alley into police staff parking, and the Ashworks loading lane into the loading court
