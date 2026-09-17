@@ -569,6 +569,32 @@
     ironAccents(g,[[14,5,'K'],[16,5,'K'],[18,5,'K'],[14,7,'K'],[16,7,'K'],[18,7,'K'],[23,4,'H'],[24,4,'H'],[25,4,'H'],[32,5,'K'],[32,6,'K'],[1,6,'D']]);
     return toRows(g);
   }
+  // deployed sentry turret, seen from the 3/4 camera: a splayed tripod, a squat post and a side ammo box.
+  // The gun head is a separate sprite so render.js can turn it toward its target without turning the legs.
+  function makeTurretBase(){
+    var g=mkGrid(26,16),i;
+    for(i=0;i<=8;i++){rect(g,9-i,7+i*.9|0,11-i,8+i*.9|0,'M');rect(g,14+i,7+i*.9|0,16+i,8+i*.9|0,'M');}rect(g,0,14,3,15,'M');rect(g,22,14,25,15,'M'); // front legs splay down-left and down-right
+    rect(g,12,2,13,4,'M');                       // rear leg foreshortened behind the post
+    rect(g,10,4,15,10,'M');                      // post collar
+    rect(g,16,6,21,10,'M');                      // ammo box on the right
+    outlineFromFill(g,'K');
+    shadeTopDown(g,'L','M','D');
+    despeckle(g);
+    pin(g,17,8,20,9,'D');ironAccents(g,[[18,7,'H'],[11,5,'H'],[12,5,'H'],[12,8,'D'],[13,8,'D']]);
+    return toRows(g);
+  }
+  function makeTurretHead(){ // faces +x like the weapons: receiver with a top rail, perforated shroud, short muzzle
+    var g=mkGrid(24,10);
+    rect(g,0,2,9,8,'M');                         // receiver
+    rect(g,2,1,7,1,'M');                         // top rail
+    rect(g,9,3,17,7,'M');                        // shroud
+    rect(g,17,4,23,6,'M');                       // barrel
+    outlineFromFill(g,'K');
+    shadeTopDown(g,'L','M','D');
+    despeckle(g);
+    ironAccents(g,[[11,5,'K'],[13,5,'K'],[15,5,'K'],[3,4,'D'],[4,4,'D'],[5,4,'D'],[22,5,'K'],[1,3,'H']]);
+    return toRows(g);
+  }
   function makeRifle(){
     var g=mkGrid(40,12);
     rect(g,0,4,11,9,'M');      // stock with a cheek rest
@@ -646,6 +672,8 @@
     wpn_smg:{rows:makeSmg(),pal:IRON,anchor:{x:.4,y:.5},note:'26x12 folding-stock SMG, box mag'},
     wpn_ar:{rows:makeAr(),pal:IRON,anchor:{x:.4,y:.5},note:'34x12 assault rifle, curved mag, iron sights'},
     wpn_shotgun:{rows:makeShotgun(),pal:IRON,anchor:{x:.4,y:.5},note:'34x12 pump shotgun, dark foreend'},
+    turret_base:{rows:makeTurretBase(),pal:IRON,anchor:'feet',note:'26x16 deployed sentry tripod, post collar and side ammo box'},
+    turret_head:{rows:makeTurretHead(),pal:IRON,anchor:{x:.3,y:.5},note:'24x10 sentry gun head facing +x, perforated shroud'},
     wpn_launcher:{rows:makeLauncher(),pal:IRON,anchor:{x:.4,y:.5},note:'34x12 grenade launcher, revolving drum, short wide barrel'},
     wpn_rifle:{rows:makeRifle(),pal:IRON,anchor:{x:.4,y:.5},note:'40x12 scoped bolt rifle, long barrel'},
     wpn_flame:{rows:makeFlame(),pal:flamePal,anchor:{x:.4,y:.5},note:'36x16 flamethrower, rust tank, ember pilot light'}

@@ -154,5 +154,69 @@ test('AP rounds and penetrators pass infected; napalm leaves bounded burning gro
   for (let i = 0; i < 300; i++) G.step(f.s, 1 / 30, { 0: {} }); assert.ok(f.s.fires.length > 0 && f.s.fires.length <= 8);
 });
 
+// ---- Phase 6: carryable turrets ----
+function field(seed = 13) { const r = range(seed); r.s.vehicles = []; r.p.x = 1200; r.p.y = 1200; r.p.moveAngle = 0; r.p.angle = 0; return r; }
+const idle = n => { const o = {}; for (let i = 0; i < n; i++) o[i] = {}; return o; };
+function deploy(s, p) { G.step(s, 1 / 30, { [p.id]: { deploy: true } }); for (let i = 0; i < 30; i++) G.step(s, 1 / 30, { [p.id]: {} }); }
+test('one turret per survivor outside weapon slots; pickup refused while carrying or owning one', () => {
+  const { s, p } = field(); const slots = p.weaponInventory.length;
+  assert.ok(G.collect(s, p, { id: 't1', x: 0, y: 0, type: 'turret' })); assert.equal(p.turret.ammo, 60); assert.equal(p.turret.durability, 150); assert.equal(p.weaponInventory.length, slots);
+  const second = { id: 't2', x: 0, y: 0, type: 'turret' }; s.loot.push(second); assert.equal(G.collect(s, p, second), false); assert.ok(s.loot.includes(second), 'left for a teammate');
+  deploy(s, p); assert.equal(s.turrets.length, 1); assert.equal(G.collect(s, p, second), false, 'a deployed turret still counts');
+});
+test('deploy takes 0.8 s standing still; moving or being hit cancels; walls and other turrets refuse placement', () => {
+  const { s, p } = field(); G.collect(s, p, { id: 't', x: 0, y: 0, type: 'turret' });
+  G.step(s, 1 / 30, { 0: { deploy: true } }); for (let i = 0; i < 20; i++) G.step(s, 1 / 30, { 0: {} }); assert.ok(!(s.turrets || []).length, 'not yet at 0.7 s');
+  G.step(s, 1 / 30, { 0: { x: 1 } }); assert.equal(p.deploying, null, 'moving cancels'); assert.ok(p.turret);
+  G.step(s, 1 / 30, { 0: { deploy: true } }); p.invuln = 0; G.hurt(s, p, 1); assert.equal(p.deploying, null, 'a hit cancels'); p.invuln = 1e9;
+  s.world.obstacles.push({ x: p.x + 10, y: p.y - 20, w: 40, h: 40 }); deploy(s, p); assert.ok(p.turret, 'a wall refuses'); assert.match(p.notice.text, /No room/);
+  s.world.obstacles = []; deploy(s, p); assert.equal(s.turrets.length, 1); const t = s.turrets[0]; assert.ok(Math.abs(t.x - p.x - 26) < 1);
+  assert.equal(G.turretPlaceOk(s, t.x + 10, t.y), false, 'too close to another turret');
+});
+test('turret targets the nearest visible infected in range, sticks to it, spends its own rounds and makes noise', () => {
+  const { s, p } = field(); G.collect(s, p, { id: 't', x: 0, y: 0, type: 'turret' }); deploy(s, p); p.x -= 400; const t = s.turrets[0];
+  const near = G.spawn(s, 'walker', t.x + 120, t.y, { hp: 1e6, maxHp: 1e6 }), far = G.spawn(s, 'walker', t.x + 200, t.y + 20, { hp: 1e6, maxHp: 1e6 }), outside = G.spawn(s, 'walker', t.x + 300, t.y, { hp: 1e6, maxHp: 1e6 });
+  [near, far, outside].forEach(e => { e.speed = 0; });
+  const bullets = s.ammo.bullets; for (let i = 0; i < 6; i++) G.step(s, 1 / 30, idle(1)); assert.equal(t.target, near);
+  for (let i = 0; i < 33; i++) G.step(s, 1 / 30, idle(1));
+  assert.ok(t.ammo < 60 && t.ammo >= 60 - 6, 'about one shot per .22 s, got ' + t.ammo); assert.equal(s.ammo.bullets, bullets, 'shared reserve untouched');
+  assert.equal(outside.hp, 1e6); assert.ok(near.hp < 1e6); assert.equal(far.hp, 1e6, 'no flicker to a similar candidate');
+  assert.ok(s.noise.some(n => n.r === 300));
+  near.dead = true; for (let i = 0; i < 12; i++) G.step(s, 1 / 30, idle(1)); assert.equal(t.target, far);
+  s.world.obstacles.push({ x: t.x + 40, y: t.y - 60, w: 20, h: 120 }); t.target = null; const hp = far.hp; for (let i = 0; i < 30; i++) G.step(s, 1 / 30, idle(1)); assert.equal(far.hp, hp, 'no line of sight, no fire');
+  s.world.obstacles = []; t.ammo = 0; for (let i = 0; i < 30; i++) G.step(s, 1 / 30, idle(1)); assert.equal(far.hp, hp, 'empty turret is silent');
+});
+test('interact beside a turret loads bullets from the shared reserve; it never makes ammunition', () => {
+  const { s, p } = field(); G.collect(s, p, { id: 't', x: 0, y: 0, type: 'turret' }); deploy(s, p); const t = s.turrets[0]; t.ammo = 100; s.ammo.bullets = 50;
+  G.step(s, 1 / 30, { 0: { interact: true } }); for (let i = 0; i < 60; i++) G.step(s, 1 / 30, { 0: {} });
+  assert.equal(t.ammo, 120); assert.equal(s.ammo.bullets, 30); assert.equal(p.resupply, null);
+  t.ammo = 0; s.ammo.bullets = 5; G.step(s, 1 / 30, { 0: { interact: true } }); for (let i = 0; i < 30; i++) G.step(s, 1 / 30, { 0: {} }); assert.equal(t.ammo, 5); assert.equal(s.ammo.bullets, 0);
+  t.ammo = 0; s.ammo.bullets = 50; G.step(s, 1 / 30, { 0: { interact: true } }); p.x += 200; for (let i = 0; i < 30; i++) G.step(s, 1 / 30, { 0: {} }); assert.ok(t.ammo <= 2, 'walking away stops the transfer');
+  p.x = t.x - 20; p.y = t.y; s.loot.push({ id: 'w', x: p.x, y: p.y, type: 'weapon', weapon: 'ar', quality: 1 });
+  const inv = p.weaponInventory.length; G.step(s, 1 / 30, { 0: { interact: true } }); assert.equal(p.weaponInventory.length, inv + 1, 'a weapon pickup wins over resupply'); assert.equal(p.resupply ?? null, null);
+});
+test('retrieval keeps rounds and durability; infected wear it down and a broken turret is lost', () => {
+  const { s, p } = field(); G.collect(s, p, { id: 't', x: 0, y: 0, type: 'turret' }); deploy(s, p); const t = s.turrets[0]; t.ammo = 37; t.durability = 90;
+  G.step(s, 1 / 30, { 0: { deploy: true } }); assert.equal(s.turrets.length, 0); assert.deepEqual([p.turret.ammo, p.turret.durability, p.turret.id], [37, 90, t.id]);
+  deploy(s, p); const u = s.turrets[0]; assert.equal(u.ammo, 37); p.x -= 600; u.ammo = 0;
+  const e = G.spawn(s, 'walker', u.x + 8, u.y); e.speed = 0; e.damage = 40;
+  for (let i = 0; i < 120 && s.turrets.length; i++) G.step(s, 1 / 30, idle(1));
+  assert.equal(s.turrets.length, 0, 'broken'); assert.equal(p.turret, null); assert.ok(G.collect(s, p, { id: 'n', x: p.x, y: p.y, type: 'turret' }), 'a fresh turret can be picked up');
+});
+test('owner leaving orphans the turret for anyone to pack; a downed owner leaves it firing', () => {
+  const { s, p } = field(); G.addPlayer(s, 'pad:0'); const q = s.players[1]; q.x = p.x + 60; q.y = p.y; q.invuln = 1e9;
+  G.collect(s, p, { id: 't', x: 0, y: 0, type: 'turret' }); deploy(s, p); const t = s.turrets[0];
+  p.dead = true; const e = G.spawn(s, 'walker', t.x + 100, t.y, { hp: 1e6, maxHp: 1e6 }); e.speed = 0; for (let i = 0; i < 15; i++) G.step(s, 1 / 30, idle(2)); assert.ok(e.hp < 1e6, 'fires while its owner is down');
+  q.x = t.x; q.y = t.y + 20; G.step(s, 1 / 30, { 1: { deploy: true } }); assert.equal(s.turrets.length, 1, 'not theirs to pack');
+  s.players = s.players.filter(x => x !== p); G.step(s, 1 / 30, { 1: { deploy: true } }); assert.equal(s.turrets.length, 0); assert.ok(q.turret);
+});
+test('four turrets in a 300-infected crowd bound search work', () => {
+  const { s, p } = field(); p.x = -2000; s.turrets = [];
+  for (let k = 0; k < 4; k++) s.turrets.push({ id: 900 + k, ownerId: 50 + k, x: k * 60, y: 0, angle: 0, ammo: 120, durability: 1e9, cd: 0, searchCd: 0, target: null });
+  for (let i = 0; i < 300; i++) { const e = G.spawn(s, 'walker', (i % 30) * 12 - 60, Math.floor(i / 30) * 12 + 90, { hp: 1e9, maxHp: 1e9 }); e.speed = 0; }
+  const t0 = performance.now(); for (let i = 0; i < 60; i++) G.turretsTick(s, 1 / 60); const ms = (performance.now() - t0) / 60;
+  assert.ok(ms < 2, 'turret tick ' + ms.toFixed(3) + ' ms'); assert.ok(s.shots.length <= 4 * 60);
+});
+
 console.log(results.join('\n'));
 if (failed) { console.log(failed + ' player-power tests failed'); process.exitCode = 1; } else console.log('player-power tests passed');

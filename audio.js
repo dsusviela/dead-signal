@@ -75,6 +75,7 @@
     if(type==='shot'){
       const gun=detail||'pistol';
       if(gun==='flame'){noise(.15,.19,650);tone(65,.13,.07,'sawtooth',t,effects,35);return;}
+      if(gun==='turret'){noise(.035,.07,2400,t,effects,'bandpass');tone(150,.04,.04,'square',t,effects,90);return;}
       if(gun==='launcher'){tone(92,.16,.14,'triangle',t,effects,48);noise(.08,.12,900,t);return;}
       const profile={pistol:[.10,.24,1700,150],ar:[.07,.20,2200,130],smg:[.055,.15,2700,190],shotgun:[.29,.39,1200,90],rifle:[.22,.32,3000,110]}[gun]||[.1,.2,1800,150];
       noise(profile[0],profile[1],profile[2]);tone(profile[3],.10,.19,'triangle',t,effects,35);
@@ -124,6 +125,8 @@
       noise(.02,.06,5200,t,effects,'highpass');tone(520,.05,.06,'triangle',t+.03);
     }else if(type==='explosion'){
       noise(.55,.34,420,t);tone(58,.5,.22,'sine',t,effects,28);noise(.18,.16,2600,t+.02,effects,'highpass');
+    }else if(type==='turret'){
+      if(detail==='break'){noise(.4,.2,900,t);tone(80,.35,.1,'sawtooth',t,effects,30);}else{[detail==='deploy'?220:330,detail==='deploy'?330:220].forEach((f,i)=>tone(f,.06,.06,'square',t+i*.09));noise(.05,.05,3000,t+.02,effects,'highpass');}
     }else if(type==='attachment'){
       tone(660,.06,.06,'triangle',t);tone(990,.09,.05,'triangle',t+.07);noise(.03,.04,4200,t,effects,'highpass');
     }else if(type==='reject'){

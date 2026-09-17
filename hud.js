@@ -163,6 +163,10 @@
     // a survivor down outranks every stash, vehicle or door hint
     const down=s.players.find(p=>p.dead);
     if(down&&living.length){const helper=living.some(q=>Math.hypot(q.x-down.x,q.y-down.y)<48);message=tag(down)+'DOWN · '+(helper?'REVIVING '+Math.round(down.revive/3*100)+'%':'NEEDS A TEAMMATE');sub=helper?'Stay beside them':'Stand beside them for three seconds to revive';return {message,sub,alert:true};}
+    // turret actions in progress (PLAYER_POWER Phase 6): deploying and loading show their progress before any new hint
+    for(const p of living){const T=G.TURRET;
+      if(p.deploying){message=tag(p)+'DEPLOYING TURRET · '+Math.floor(Math.min(1,p.deploying.t/T.deploy)*100)+'%';sub='Stand still · moving or taking a hit cancels';return {message,sub};}
+      const r=p.resupply&&(s.turrets||[]).find(t=>t.id===p.resupply.id);if(r){message=tag(p)+'LOADING TURRET · '+r.ammo+'/'+T.cap;sub='BUL '+s.ammo.bullets+' · walk away to stop';return {message,sub};}}
     for(const p of living){if(p.vehicle!=null)continue;const it=G.nearestInteract(s,p);if(it){const def=G.WEAPONS[it.weapon],up=G.upgradeTarget(s,p,it);
       if(up>=0){const w=p.weaponInventory[up],nx=G.nextAttachment(w);message=tag(p)+key(p,'interact')+'UPGRADE '+def.name+' · '+nx.label;sub='Tier '+((w.attachments||[]).length+1)+'/3 · '+nx.description+(up===(p.weaponSlot??0)&&!p.backup?'':' · slot '+(up+1))+' · or leave it for a teammate';break;}
       message=tag(p)+key(p,'interact')+def.name+' '+('*'.repeat(it.quality||1))+((it.attachments||[]).length?' +'+it.attachments.length:'');sub=(p.weaponInventory.length<G.weaponCap(s)?'Equip slot '+(p.weaponInventory.length+1):'Replace '+G.WEAPONS[p.weapon||p.weaponInventory[p.weaponSlot??0].weapon].name)+' · '+def.ammo.toUpperCase();break;}}
@@ -193,6 +197,9 @@
         sub=c.holding===action?(action==='prepare'?'Stay in the control room':'Loud · hold here · leaving keeps the progress'):why.length?why.join(' · '):prog>0?'Resume · '+Math.floor(prog*100)+'% done':'One press starts · stay in reach';break;}}
     if(!message){const near=s.players.find(p=>p.nearDoor!=null),d=near?G.doorById(s,near.nearDoor):Object.keys(s.doorState||{}).map(id=>s.doorState[id].active&&!s.doorState[id].open?G.doorById(s,id):null).find(d=>d&&living.some(p=>Math.hypot(p.x-d.rect.x-d.rect.w/2,p.y-d.rect.y-d.rect.h/2)<90));
       if(d){const st=s.doorState[d.id],p=near||living[0];message=st.active?'FORCING THE DOOR · '+Math.floor(st.progress/d.access.time*100)+'%':tag(p)+key(p,'interact')+'FORCE THE DOOR';sub=st.active?'Loud work · stay beside it':'Secured door · forcing it carries far';}}
+    if(!message)for(const p of living){if(p.vehicle!=null)continue;const t=G.nearestTurret(s,p);if(!t)continue;const T=G.TURRET,mine=t.ownerId===p.id||!s.players.some(q=>q.id===t.ownerId);
+      message=tag(p)+(t.ammo<T.cap?key(p,'interact')+'LOAD TURRET · '+t.ammo+'/'+T.cap:'TURRET FULL · '+t.ammo+'/'+T.cap)+(mine?'  '+key(p,'deploy')+'PACK UP':'');
+      sub=(t.ammo<T.cap?'Uses squad BUL · '+s.ammo.bullets+' left':'Ready')+' · wear '+Math.round(100-t.durability/T.durability*100)+'%'+(mine?'':' · owner packs it up');break;}
     if(!message&&(s.world.buildings||[]).some(h=>h.occupied&&s.loot.some(l=>l.interior&&l.x>h.x&&l.x<h.x+h.w&&l.y>h.y&&l.y<h.y+h.h))){message='STASH INSIDE';sub='Walk over supplies to take them';}
     return message?{message,sub}:null;
   }
@@ -251,6 +258,7 @@
       const hx=cx+half+8*u,smoking=iq<.35;utext(g,'HULL',hx,ry,12,smoking?COL.red:COL.muted);bar(g,hx+fwid,ry+4*u,half-fwid,5*u,iq,smoking?COL.red:COL.gold);}
     else if(p.tether){utext(g,'STAY WITH SQUAD',cx,ry,12,COL.red);}
     else if(p.running||p.stamina<p.maxStamina-.5){const t=p.sprintExhausted?'WINDED':p.fed>0?'FED':'STA';utext(g,t,cx,ry,12,p.sprintExhausted?COL.red:p.fed>0?'#b8d86b':COL.muted);const tw=umeasure(g,'WINDED ',12);bar(g,cx+tw,ry+5*u,right-cx-tw,3*u,p.stamina/p.maxStamina,COL.gold);}
+    else if(p.turret){utext(g,fit(g,'TURRET CARRIED · '+p.turret.ammo+' RDS · '+L(p,'deploy')+' DEPLOY',12,right-cx),cx,ry,12,COL.muted);}
     // player-owned feedback floats just above that player's strip
     if(p.notice){const t=p.notice.text,nw=Math.min(W-12*u,umeasure(g,t,12)+14*u),nx=Math.max(6*u,Math.min(W-6*u-nw,x)),nyy=y-21*u-17*u;
       g.save();g.globalAlpha=Math.min(1,p.notice.t*3);plate(g,nx,nyy,nw,17*u,p.color);utext(g,fit(g,t,12,nw-12*u),nx+7*u,nyy+2*u,12,p.notice.color||COL.paper);g.restore();}

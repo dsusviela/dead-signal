@@ -35,7 +35,7 @@
  HUD.bind({state:()=>s,restart,resume:()=>{s.paused=false;},toTitle:()=>{},setDrivingStyle});
  $('start').onclick=()=>start();
  $('controls-button').onclick=()=>{HUD.open('manual');sync();};
- function keyboardInput(){return{x:(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y:(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0),interact:edges.has('KeyE')||edges.has('Space'),heal:edges.has('KeyH'),eat:edges.has('KeyR'),run:keys.has('ShiftLeft')||keys.has('ShiftRight'),toggle:edges.has('KeyF'),switch:edges.has('KeyQ')};}
+ function keyboardInput(){return{x:(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y:(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0),interact:edges.has('KeyE')||edges.has('Space'),heal:edges.has('KeyH'),eat:edges.has('KeyR'),deploy:edges.has('KeyT'),run:keys.has('ShiftLeft')||keys.has('ShiftRight'),toggle:edges.has('KeyF'),switch:edges.has('KeyQ')};}
  // PlayStation pads report Sony's vendor id or name; every other standard pad uses the Xbox labels
  function padDevice(pad){return /054c|playstation|dualshock|dualsense|sony/i.test(pad&&pad.id||'')?'playstation':'xbox';}
  function tagDevices(){let pads=[];try{pads=Array.from(navigator.getGamepads?.()||[]);}catch{}for(const p of s.players){if(p.source==='keyboard'){p.device='keyboard';continue;}const pad=pads.find(q=>q&&'pad:'+q.index===p.source);if(pad)p.device=padDevice(pad);}}
@@ -76,7 +76,7 @@
        if(s.mode==='play'&&!p&&edge(0)){const id=DSGame.addPlayer(s,'pad:'+pad.index);p=s.players.find(q=>q.id===id);if(p){p.device=padDevice(pad);DSGame.announce(s,p.name+' JOINED THE SQUAD');}}
        if(p){p.device=padDevice(pad);
          // city_v2 Section 0: B heals, RB eats, RT runs on foot / gas when driving, LT brakes then reverses
-         const axis=v=>Math.abs(v||0)<.18?0:v;result[p.id]={x:axis(pad.axes[0])+(buttons[15]?1:0)-(buttons[14]?1:0),y:axis(pad.axes[1])+(buttons[13]?1:0)-(buttons[12]?1:0),interact:edge(0),heal:edge(1),eat:edge(5),run:false,rt:trigger(pad.buttons[7]),lt:trigger(pad.buttons[6]),pedals:true,toggle:edge(2),switch:edge(3)};
+         const axis=v=>Math.abs(v||0)<.18?0:v;result[p.id]={x:axis(pad.axes[0])+(buttons[15]?1:0)-(buttons[14]?1:0),y:axis(pad.axes[1])+(buttons[13]?1:0)-(buttons[12]?1:0),interact:edge(0),heal:edge(1),eat:edge(5),deploy:edge(4),run:false,rt:trigger(pad.buttons[7]),lt:trigger(pad.buttons[6]),pedals:true,toggle:edge(2),switch:edge(3)};
          if(edge(9)&&s.mode==='play'&&!started)HUD.press('pause');if(edge(8)&&s.mode==='play')HUD.press('map');
        }
      }
@@ -96,8 +96,8 @@
  function frame(now){const dt=Math.min(.1,(now-last)/1000||0);last=now;const menuAtStart=HUD.menu,input=inputs(),viewport=s.mode==='title'?{top:0,bottom:0}:HUD.layout(width,height),aspect=width/Math.max(160,height-viewport.top-viewport.bottom);
    // any menu (or a pause without one) re-arms held triggers, so closing it never accelerates or sprints
    if(HUD.menu||menuAtStart||s.paused){latched={};DSGame.rearmTriggers(s);}
-   for(const [id,i] of Object.entries(HUD.menu?{}:input)){const old=latched[id]||{};latched[id]={...i,interact:!!(old.interact||i.interact),heal:!!(old.heal||i.heal),eat:!!(old.eat||i.eat),toggle:!!(old.toggle||i.toggle),switch:!!(old.switch||i.switch)};}
-   if(s.mode==='play'&&!s.paused&&!menuAtStart){accumulator+=dt;while(accumulator>=1/60){DSGame.step(s,1/60,latched,aspect);for(const i of Object.values(latched)){i.interact=false;i.heal=false;i.eat=false;i.toggle=false;i.switch=false;}accumulator-=1/60;}}else{accumulator=0;latched={};}
+   for(const [id,i] of Object.entries(HUD.menu?{}:input)){const old=latched[id]||{};latched[id]={...i,interact:!!(old.interact||i.interact),heal:!!(old.heal||i.heal),eat:!!(old.eat||i.eat),deploy:!!(old.deploy||i.deploy),toggle:!!(old.toggle||i.toggle),switch:!!(old.switch||i.switch)};}
+   if(s.mode==='play'&&!s.paused&&!menuAtStart){accumulator+=dt;while(accumulator>=1/60){DSGame.step(s,1/60,latched,aspect);for(const i of Object.values(latched)){i.interact=false;i.heal=false;i.eat=false;i.deploy=false;i.toggle=false;i.switch=false;}accumulator-=1/60;}}else{accumulator=0;latched={};}
    DSAudio.update(s);
    DSRender.scene(ctx,s,width,height,viewport);HUD.draw(ctx,s,width,height);
    uiClock+=dt;if(uiClock>.1||HUD.menu){sync();uiClock=0;}requestAnimationFrame(frame);

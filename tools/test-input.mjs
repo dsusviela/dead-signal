@@ -92,7 +92,7 @@ test('first damage with a kit gives one device-correct heal hint; first pickup e
   G.collect(x,p,{id:'m2',x:p.x,y:p.y,type:'medkit',amount:1});assert.equal(p.notice,null,'explained once');assert.equal(p.medkits,3);
 });
 test('one binding table labels every action for keyboard, Xbox/unknown and PlayStation',()=>{
-  for(const action of ['run','gas','brake','interact','heal','eat','fire','cycle','map','pause'])
+  for(const action of ['run','gas','brake','interact','heal','eat','fire','cycle','deploy','map','pause'])
     for(const dev of ['keyboard','xbox','playstation'])assert.ok(G.BINDINGS[dev][action],dev+' '+action);
   assert.equal(G.label({source:'keyboard'},'eat'),'R');assert.equal(G.label({source:'pad:2'},'heal'),'B');assert.equal(G.label({source:'pad:2',device:'playstation'},'eat'),'R1');
 });

@@ -72,6 +72,7 @@
    }
    g.restore();
    text(g,'P'+(p.id+1),p.x,p.y-44,p.color,8);
+   if(p.deploying){g.strokeStyle='#a8b9b8';g.lineWidth=2;g.beginPath();g.arc(p.x,p.y-10,23,-Math.PI/2,-Math.PI/2+TAU*Math.min(1,p.deploying.t/root.DSGame.TURRET.deploy));g.stroke();}
    if(p.reload>0){g.strokeStyle='#ffd249';g.lineWidth=2;g.beginPath();g.arc(p.x,p.y-10,23,-Math.PI/2,-Math.PI/2+TAU*(1-p.reload/root.DSGame.WEAPONS[p.weapon].reload));g.stroke();}
  }
  const INFECTED_FPS={walker:8,runner:12,ghost:8,brute:6,carrier:6,band:12};
@@ -137,7 +138,7 @@
  function loot(g,l,s){
    const x=l.x,y=l.y,pulse=Math.floor(s.time*5+l.x*.01)%2?0:-2;
    if(l.type==='xp'){if(hasArt('loot/xpShard'))ART.draw(g,'loot/xpShard',x,y+pulse,{frame:Math.floor(s.time*6+l.x*.01)%3});else diamond(g,x,y+pulse,5,'#0b1216','#79e2cf');ART.glow(g,x,y,20,'#79e2cf','2d');return;}
-   const fresh=hasArt('loot/medkit'),name=fresh?((l.type==='heal'||l.type==='medkit')?'loot/medkit':l.type==='evidence'?'loot/evidence':l.type==='payload'?'loot/payload':l.type==='override'?'loot/override':l.type==='provision'?'loot/provision':l.type==='vehicleFuel'?'loot/jerrycan':l.type==='weapon'?'loot/weaponCrate':l.ammo==='fuel'?'loot/fuelCan':l.ammo==='shells'?'loot/ammoShells':l.ammo==='grenades'?'loot/ammoGrenades':'loot/ammoBullets'):((l.type==='heal'||l.type==='medkit')?'medkit':l.type==='weapon'?'weapon':l.ammo==='fuel'?'fuel':'ammo'),col=(l.type==='heal'||l.type==='medkit')?'#9fd39f':l.type==='evidence'||l.type==='payload'||l.type==='override'?'#d8dbc8':l.type==='provision'?'#b8d86b':l.type==='vehicleFuel'?'#ffd249':l.type==='weapon'?'#ffb866':l.ammo==='fuel'?'#ff8b3d':'#d7cda8';
+   const fresh=hasArt('loot/medkit'),name=fresh?((l.type==='heal'||l.type==='medkit')?'loot/medkit':l.type==='evidence'?'loot/evidence':l.type==='payload'?'loot/payload':l.type==='override'?'loot/override':l.type==='provision'?'loot/provision':l.type==='vehicleFuel'?'loot/jerrycan':l.type==='weapon'?'loot/weaponCrate':l.type==='turret'&&hasArt('loot/turretCase')?'loot/turretCase':l.ammo==='fuel'?'loot/fuelCan':l.ammo==='shells'?'loot/ammoShells':l.ammo==='grenades'?'loot/ammoGrenades':'loot/ammoBullets'):((l.type==='heal'||l.type==='medkit')?'medkit':l.type==='weapon'?'weapon':l.ammo==='fuel'?'fuel':'ammo'),col=(l.type==='heal'||l.type==='medkit')?'#9fd39f':l.type==='evidence'||l.type==='payload'||l.type==='override'?'#d8dbc8':l.type==='provision'?'#b8d86b':l.type==='vehicleFuel'?'#ffd249':l.type==='weapon'?'#ffb866':l.ammo==='fuel'?'#ff8b3d':'#d7cda8';
    const hidden=l.interior&&(s.world.buildings||[]).some(h=>x>h.x&&x<h.x+h.w&&y>h.y&&y<h.y+h.h&&h.roofZones.some(z=>z.alpha>.5&&z.rects.some(r=>x>r.x&&x<r.x+r.w&&y>r.y&&y<r.y+r.h)));
    if(!hidden){ART.glow(g,x,y,32,col,'2b');}ART.shadow(g,x,y+9,14,.45);ART.draw(g,name,x,y+pulse,fresh?{}:{anchorY:.65});
    if(!hidden){g.strokeStyle=col+'66';g.lineWidth=1;g.strokeRect(Math.round(x-16),Math.round(y-16+pulse),32,29);}
@@ -352,6 +353,18 @@
  // overhead pieces: tile anchors at their top-left (centre for trolleys), a flat dark copy offset onto the ground below
  function overheadOpt(p){return {anchorX:p.center||p.feet?.5:0,anchorY:p.feet?1:p.center?.5:0,variant:p.variant||0,mask:p.mask||0};}
  function overheadShadow(g,p){if(!hasArt(p.art))return;const o=overheadOpt(p);o.tint='shadow';o.alpha=.45;ART.draw(g,p.art,p.x+4,p.y+10,o);}
+ // a deployed turret (PLAYER_POWER Phase 6): tripod base, a head that turns to its target, the owner's colour on a
+ // small ammunition gauge under it and a wear bar once it has been hit
+ function turret(g,t,s){
+   const owner=s.players.find(p=>p.id===t.ownerId),col=owner?owner.color:'#a8b9b8',T=root.DSGame.TURRET;
+   if(!LIT)ART.shadow(g,t.x,t.y+6,13,.5);
+   if(hasArt('survivors/turret_base')){ART.draw(g,'survivors/turret_base',t.x,t.y+6);ART.draw(g,'survivors/turret_head',t.x,t.y-8,{rotate:t.angle,flipY:Math.cos(t.angle)<0});}
+   else{circle(g,t.x,t.y,9,'#3a444e');g.strokeStyle='#69737d';g.lineWidth=3;g.beginPath();g.moveTo(t.x,t.y-6);g.lineTo(t.x+Math.cos(t.angle)*16,t.y-6+Math.sin(t.angle)*16);g.stroke();}
+   if(t.cd>T.interval-.06&&t.ammo>=0&&t.target)ART.glow(g,t.x+Math.cos(t.angle)*18,t.y-8+Math.sin(t.angle)*18,12,'#ffd249','90');
+   rect(g,t.x-12,t.y+9,24,3,'#0b1014');rect(g,t.x-11,t.y+10,Math.round(22*t.ammo/T.cap),1,t.ammo?col:'#ff543b');
+   if(t.durability<T.durability){rect(g,t.x-12,t.y+12,24,2,'#0b1014');rect(g,t.x-11,t.y+12,Math.max(1,Math.round(22*t.durability/T.durability)),1,t.durability<T.durability*.35?'#ff8c80':'#d7cda8');}
+   if(!t.ammo)text(g,'EMPTY',t.x,t.y-22,'#ff8c80',7);
+ }
  function worldPass(g,s,c){
    const W=root.DSWorld,w=s.world,items=[],push=(y,fn)=>items.push({y,fn});
    for(const o of W.visible(w,c)){
@@ -380,6 +393,7 @@
    for(const v of s.vehicles||[])if(!v.obstacle&&!v.removed&&Math.abs(v.x-c.x)<c.w/2+100&&Math.abs(v.y-c.y)<c.h/2+130)push(v.y+26,()=>vehicleDraw(g,v,s));
    // the waiting civilians: grey survivors, cowering when infected are close
    for(const v of s.civilians||[])if(Math.abs(v.x-c.x)<c.w/2+60&&Math.abs(v.y-c.y)<c.h/2+60)push(v.y,()=>civilian(g,v,s));
+   for(const t of s.turrets||[])if(Math.abs(t.x-c.x)<c.w/2+60&&Math.abs(t.y-c.y)<c.h/2+60)push(t.y+6,()=>turret(g,t,s));
    for(const p of s.players)if(p.vehicle==null&&Math.abs(p.x-c.x)<c.w/2+70&&Math.abs(p.y-c.y)<c.h/2+70)push(p.y,()=>survivor(g,p,s));
    if(s.boss)push(s.boss.y+20,()=>root.DSBoss.drawBody(g,s));
    const mast=(w.setpieces||[]).find(p=>p.kind==='radio');if(mast&&Math.abs(mast.x-c.x)<c.w/2+200&&Math.abs(mast.y-c.y)<c.h/2+260)push(mast.y-40,()=>radioMast(g,s,mast));

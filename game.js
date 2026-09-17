@@ -148,9 +148,9 @@
   // One action-label source (city_v2 Section 0) for prompts, hints, the manual and player strips. Controllers use
   // standard-mapping positions; unknown pads fall back to the Xbox names.
   const BINDINGS={
-    keyboard:{move:'WASD',run:'SHIFT',gas:'W',brake:'S',steer:'A/D',interact:'E',heal:'H',eat:'R',fire:'F',cycle:'Q',map:'TAB',pause:'ESC',confirm:'ENTER',back:'ESC',choose:'1-3'},
-    xbox:{move:'L-STICK',run:'RT',gas:'RT',brake:'LT',steer:'L-STICK',interact:'A',heal:'B',eat:'RB',fire:'X',cycle:'Y',map:'VIEW',pause:'MENU',confirm:'A',back:'B',choose:'LB/RB'},
-    playstation:{move:'L-STICK',run:'R2',gas:'R2',brake:'L2',steer:'L-STICK',interact:'✕',heal:'○',eat:'R1',fire:'□',cycle:'△',map:'CREATE',pause:'OPTIONS',confirm:'✕',back:'○',choose:'L1/R1'}
+    keyboard:{move:'WASD',run:'SHIFT',gas:'W',brake:'S',steer:'A/D',interact:'E',heal:'H',eat:'R',fire:'F',cycle:'Q',deploy:'T',map:'TAB',pause:'ESC',confirm:'ENTER',back:'ESC',choose:'1-3'},
+    xbox:{move:'L-STICK',run:'RT',gas:'RT',brake:'LT',steer:'L-STICK',interact:'A',heal:'B',eat:'RB',fire:'X',cycle:'Y',deploy:'LB',map:'VIEW',pause:'MENU',confirm:'A',back:'B',choose:'LB/RB'},
+    playstation:{move:'L-STICK',run:'R2',gas:'R2',brake:'L2',steer:'L-STICK',interact:'✕',heal:'○',eat:'R1',fire:'□',cycle:'△',deploy:'L1',map:'CREATE',pause:'OPTIONS',confirm:'✕',back:'○',choose:'L1/R1'}
   };
   function deviceOf(p){return p&&p.device&&BINDINGS[p.device]?p.device:p&&p.source==='keyboard'?'keyboard':'xbox';}
   function label(p,action){return BINDINGS[deviceOf(p)][action]||'?';}
@@ -177,7 +177,7 @@
   function rearmTriggers(s){for(const p of s.players)p.triggerContext=null;}
   function hurt(s,p,amount,kx=0,ky=0){
     if(p.dead||p.invuln>0)return;
-    emit(s,'hurt');p.hp=Math.max(0,p.hp-amount);p.invuln=.65;p.flash=.2;
+    emit(s,'hurt');p.hp=Math.max(0,p.hp-amount);p.invuln=.65;p.flash=.2;if(p.deploying){p.deploying=null;notify(s,p,'Deploy interrupted','#ff8c80','turret-cancel');}
     // Split impulses so the same solid geometry used for walking also stops knockback.
     for(let i=0;i<8;i++)W().move(s.world,p,kx/8,ky/8);
     effect(s,p.x,p.y-22,'−'+Math.ceil(amount),'#ff8c80');
@@ -390,6 +390,60 @@
     }
     if(s.fires&&s.fires.length){for(const f of s.fires){f.t-=dt;f.acc=(f.acc||0)+dt;if(f.acc<.25)continue;f.acc-=.25;for(const e of s.enemies)if(!e.dead&&dist(f,e)<22+(e.r||10))hitEnemy(s,e,7*.25,null);}s.fires=s.fires.filter(f=>f.t>0);}
   }
+  // ---- carryable turrets (PLAYER_POWER Phase 6) ----
+  const TURRET={cap:120,start:60,range:260,interval:.22,damage:12,noise:300,durability:150,deploy:.8,reach:40,refill:.03,search:.15};
+  function ownTurret(s,p){return (s.turrets||[]).find(t=>t.ownerId===p.id)||null;}
+  // assumption: a turret whose owner left the session is orphaned and any survivor may pack it up
+  function packable(s,p){return (s.turrets||[]).find(t=>Math.hypot(t.x-p.x,t.y-p.y)<TURRET.reach&&(t.ownerId===p.id||!s.players.some(q=>q.id===t.ownerId)))||null;}
+  function turretPlaceOk(s,x,y){
+    if(W().blocked(s.world,x,y,12))return false;
+    for(const t of s.turrets||[])if(Math.hypot(t.x-x,t.y-y)<30)return false;
+    for(const b of s.world.buildings||[])for(const d of b.exteriorDoors.concat(b.interiorDoors))if(x>d.rect.x-18&&x<d.rect.x+d.rect.w+18&&y>d.rect.y-18&&y<d.rect.y+d.rect.h+18)return false;
+    for(const v of s.vehicles||[])if(!v.dead&&Math.hypot(v.x-x,v.y-y)<44)return false;
+    if(s.campaign)for(const action of ['prepare','transmit','gate']){const pt=holdPoint(s,action);if(pt&&Math.hypot(pt.x-x,pt.y-y)<REACH[action]+20)return false;}
+    for(const g of s.world.arenaGates||[])if(x>g.rect.x-24&&x<g.rect.x+g.rect.w+24&&y>g.rect.y-24&&y<g.rect.y+g.rect.h+24)return false;
+    return true;
+  }
+  // deploy (T / LB / L1): with a turret carried, stand still for 0.8 s; next to your own deployed turret, pick it back up
+  function turretInput(s,p,input,dt){
+    if(p.dead||p.vehicle!=null){p.deploying=null;return;}
+    if(s.paused){p.deploying=null;return;}
+    const own=ownTurret(s,p)||(!p.turret?packable(s,p):null);
+    if(input.deploy){
+      if(!p.turret&&own&&Math.hypot(own.x-p.x,own.y-p.y)<TURRET.reach){p.resupply=null;s.turrets=s.turrets.filter(t=>t!==own);p.turret={id:own.id,ammo:own.ammo,durability:own.durability};emit(s,'turret','retrieve');notify(s,p,'Turret packed · '+own.ammo+' rounds','#a8b9b8','turret-retrieve');}
+      else if(p.turret&&!p.deploying){p.deploying={t:0};}
+      else if(!p.turret)notify(s,p,own?'Walk to your turret to pack it':'No turret carried','#8a9a94','turret-none');
+    }
+    if(p.deploying){
+      if(Math.hypot(input.x||0,input.y||0)>.05){p.deploying=null;notify(s,p,'Deploy cancelled · stand still','#8a9a94','turret-cancel');return;}
+      p.deploying.t+=dt;if(p.deploying.t<TURRET.deploy)return;p.deploying=null;
+      const a=p.moveAngle??p.angle??0,x=p.x+Math.cos(a)*26,y=p.y+Math.sin(a)*26;
+      if(!turretPlaceOk(s,x,y)){notify(s,p,'No room to deploy here','#8a9a94','turret-room');emit(s,'reject','turret');return;}
+      (s.turrets||(s.turrets=[])).push({id:p.turret.id,ownerId:p.id,x:Math.round(x),y:Math.round(y),angle:a,ammo:p.turret.ammo,durability:p.turret.durability,cd:0,searchCd:0,target:null,hitCd:0});
+      p.turret=null;emit(s,'turret','deploy');makeNoise(s,p,'equip');notify(s,p,'Turret deployed · '+label(p,'deploy')+' beside it packs it up','#a8b9b8','turret-deploy');
+    }
+  }
+  function turretsTick(s,dt){
+    for(const t of s.turrets||[]){
+      t.cd=Math.max(0,t.cd-dt);t.searchCd-=dt;
+      const ok=e=>e&&!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<TURRET.range+(e.r||10)&&!lineObstacle(s,t.x,t.y,e.x,e.y);
+      if(!ok(t.target)&&t.searchCd<=0){t.searchCd=TURRET.search;t.target=null;let best=TURRET.range+40;for(const e of s.enemies){if(e.dead||e.bossOwned)continue;const d=Math.hypot(e.x-t.x,e.y-t.y);if(d<best&&ok(e)){best=d;t.target=e;}}}
+      if(!ok(t.target)){t.target=null;continue;}
+      t.angle=Math.atan2(t.target.y-t.y,t.target.x-t.x);
+      if(t.cd>0||t.ammo<=0)continue;t.cd=TURRET.interval;t.ammo--;
+      hitEnemy(s,t.target,TURRET.damage,t);makeNoise(s,t,'shot',TURRET.noise);emit(s,'shot','turret');
+      s.shots.push({x:t.x+Math.cos(t.angle)*18,y:t.y-8+Math.sin(t.angle)*18,tx:t.target.x,ty:t.target.y,life:.08,maxLife:.08,type:'turret',color:'#ffd249'});
+    }
+    if(s.turrets&&s.turrets.length){const broken=s.turrets.filter(t=>t.durability<=0);for(const t of broken){effect(s,t.x,t.y-20,'TURRET DESTROYED','#ff8c80');emit(s,'turret','break');s.fx.push({x:t.x,y:t.y,sprite:'vfx/explosion',frames:5,life:.35,maxLife:.35,text:'',color:'#ff8b3d',scale:.8});}
+      if(broken.length)s.turrets=s.turrets.filter(t=>t.durability>0);}
+  }
+  // hold-style resupply started by one interact press: one bullet every 0.03 s from the shared reserve while in reach
+  function turretResupply(s,p,dt){
+    const r=p.resupply;if(!r)return;const t=(s.turrets||[]).find(q=>q.id===r.id);
+    if(!t||p.dead||Math.hypot(t.x-p.x,t.y-p.y)>TURRET.reach+10||t.ammo>=TURRET.cap||s.ammo.bullets<=0){if(t&&t.ammo>=TURRET.cap)notify(s,p,'Turret full · '+t.ammo+' rounds','#a8b9b8','turret-full');p.resupply=null;return;}
+    r.acc=(r.acc||0)+dt;while(r.acc>=TURRET.refill&&t.ammo<TURRET.cap&&s.ammo.bullets>0){r.acc-=TURRET.refill;t.ammo++;s.ammo.bullets--;}
+  }
+  function nearestTurret(s,p){let best=null,d0=TURRET.reach;for(const t of s.turrets||[]){const d=Math.hypot(t.x-p.x,t.y-p.y);if(d<d0){d0=d;best=t;}}return best;}
   // H / B: only ever a personal medkit. A refused press explains itself and consumes nothing.
   function useMedkit(s,p,feedback=false){
     if(s.mode!=='play'||s.paused||p.dead)return false;
@@ -424,6 +478,9 @@
       if(!p.kitHinted){p.kitHinted=true;notify(s,p,'Medkit ×'+p.medkits+' · '+label(p,'heal')+' heals '+MEDKIT_HEAL+' HP when hurt','#79e2cf','hint-kit');}}
     else if(item.type==='provision'&&!s.rationHinted){s.rationHinted=true;notify(s,p,'Squad ration · '+label(p,'eat')+' eats one for stamina','#b8d86b','hint-ration');}
     else if(item.type==='xp')xp(s,item.amount);
+    else if(item.type==='turret'){if(p.turret||ownTurret(s,p)){notify(s,p,'One turret per survivor · leave it for a teammate','#8a9a94','turret-one');return false;}
+      p.turret={id:item.turretId??s.nextId++,ammo:item.ammo??TURRET.start,durability:item.durability??TURRET.durability};effect(s,item.x,item.y,'TURRET','#a8b9b8');
+      if(!p.turretHinted){p.turretHinted=true;notify(s,p,'Turret · '+label(p,'deploy')+' deploys it · '+label(p,'interact')+' beside it reloads from BUL','#a8b9b8','hint-turret');}}
     else if(item.type==='heal'){if(s.players.every(q=>q.dead||q.hp>=q.maxHp))return false;s.players.forEach(q=>{if(!q.dead)q.hp=Math.min(q.maxHp,q.hp+item.amount);});makeNoise(s,p,'heal');effect(s,item.x,item.y,'SQUAD +'+item.amount+' HP','#79e2cf');}
     else if(item.type==='weapon'&&upgradeTarget(s,p,item)>=0){
       // duplicate: the carried instance gains its next attachment and the better quality; the drop's loaded rounds join the reserve
@@ -776,6 +833,7 @@
     if(p.dead){const helper=s.players.find(q=>!q.dead&&dist(p,q)<48);p.revive=helper?p.revive+dt:Math.max(0,p.revive-dt*.5);if(p.revive>=3){p.dead=false;p.hp=p.maxHp*.45;p.invuln=3;p.revive=0;emit(s,'revive');makeNoise(s,p,'revive');effect(s,p.x,p.y,'REVIVED',p.color);s.fx.push({x:p.x,y:p.y,sprite:'vfx/reviveRing',frames:4,life:.5,maxLife:.5,text:'',color:p.color});}return;}
     if(input.heal)useMedkit(s,p,true);
     if(input.eat)eat(s,p,true);
+    turretInput(s,p,input,dt);turretResupply(s,p,dt);
     p.fed=Math.max(0,(p.fed||0)-dt);
     if(p.vehicle!=null){
       if(input.interact)exitVehicle(s,p);
@@ -810,7 +868,8 @@
     if(input.interact){if(p.nearItem!==null){const item=s.loot.find(q=>q.id===p.nearItem);if(item)collect(s,p,item);}
       else if(refuel){startRefuel(s,p,refuel);}
       else if(p.nearVehicle!==null&&enterVehicle(s,s.vehicles.find(v=>v.id===p.nearVehicle),p))return;
-      else if(p.nearDoor!==null)startDoor(s,p,doorById(s,p.nearDoor));}
+      else if(p.nearDoor!==null)startDoor(s,p,doorById(s,p.nearDoor));
+      else{const t=nearestTurret(s,p);if(t){if(t.ammo>=TURRET.cap)notify(s,p,'Turret full','#8a9a94','turret-full');else if(s.ammo.bullets<=0)notify(s,p,'No bullets to load','#8a9a94','turret-empty');else p.resupply={id:t.id,acc:0};}}}
     // XP is pulled from 300u — past every primary's muzzle but the rifle — so
     // kills made into a crowd still pay. A short pull silently voids most of a
     // horde's XP and was why co-op never levelled.
@@ -920,6 +979,7 @@
         e.hitCd=.8;
       }
     }
+    for(const t of s.turrets||[])if(e.type!=='ghost'&&e.hitCd<=0&&Math.hypot(e.x-t.x,e.y-t.y)<(e.r||10)+12){t.durability-=e.damage;e.hitCd=.8;investigate(e,t);}
     const nearest=Math.min(...living.map(p=>dist(e,p)));
     if(nearest>1400&&!s.boss||e.type==='band'&&s.time>(e.expires||Infinity))e.dead=true;
   }
@@ -1100,7 +1160,7 @@
     s.noise=s.noise.filter(n=>{n.audible-=dt;return (n.life-=dt)>0;});s.fx=s.fx.filter(f=>(f.life-=dt)>0);s.shots=s.shots.filter(f=>(f.life-=dt)>0);
     for(const l of s.loot)if(l.lock)l.lock-=dt;
     const ins={};for(const p of s.players)ins[p.id]=conditionInput(p,inputs[p.id]||{});inputs=ins;
-    projectilesTick(s,dt);
+    projectilesTick(s,dt);turretsTick(s,dt);
     for(const v of s.vehicles)vehicleTick(s,v,inputs[v.driver]||{},dt);
     for(const p of s.players)playerTick(s,p,inputs[p.id]||{},dt);
     interiors(s,dt);doorsTick(s,dt);
@@ -1114,5 +1174,5 @@
     if(s.players.length&&s.players.every(p=>p.dead)){s.mode='lost';s.paused=false;}
     camera(s,dt,aspect);
   }
-  root.DSGame={selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
+  root.DSGame={TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
 })(typeof window!=='undefined'?window:globalThis);

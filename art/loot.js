@@ -277,10 +277,20 @@
     rect(g,15,5,18,5,'D');                         // lid edge standing open
     return toRows(g);
   }
+  // turretCase 24x16: folded sentry in an olive carry case, barrel stub poking out, yellow stencil band
+  function makeTurretCase(){
+    var g=mkGrid(24,16);
+    boxDouble(g,1,5,20,15,'K','M','L','D');chamfer(g,1,5,20,15);
+    rect(g,8,2,13,2,'K');setclip(g,8,3,'K');setclip(g,13,3,'K');setclip(g,8,4,'K');setclip(g,13,4,'K'); // carry handle
+    rect(g,21,8,23,10,'K');rect(g,21,9,22,9,'M');   // barrel stub out of the side port
+    rect(g,4,9,17,10,'Y');rect(g,6,9,7,10,'D');rect(g,11,9,12,10,'D');rect(g,15,9,16,10,'D'); // hazard stencil band
+    return toRows(g);
+  }
   A.define('loot',{
     medkit:{rows:makeMedkit(),pal:'MAT.loot',anchor:'feet',note:'20x18, white case double outline, green cross, red latch'},
     ammoBullets:{rows:makeAmmoBullets(),pal:'MAT.loot',anchor:'feet',note:'20x16, olive/gold box with a bullet icon'},
     ammoGrenades:{rows:makeAmmoGrenades(),pal:'MAT.loot',anchor:'feet',note:'20x16, olive ammo can with two brass-banded grenade rounds'},
+    turretCase:{rows:makeTurretCase(),pal:'MAT.loot',anchor:'feet',note:'24x16, olive carry case with a folded sentry turret, handle, yellow stencil band'},
     ammoShells:{rows:makeAmmoShells(),pal:'MAT.loot',anchor:'feet',note:'20x16, red shell box, two shells poking out'},
     fuelCan:{rows:makeFuelCan(),pal:'MAT.loot',anchor:'feet',note:'18x22, orange jerry can, cap, dark handle'},
     weaponCrate:{rows:makeWeaponCrate(),pal:'MAT.loot',anchor:'feet',note:'28x18, gold-latched dark case, slightly open, glint'},

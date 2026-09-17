@@ -49,6 +49,24 @@ try {
     for (let i = 0; i < 7; i++) DSGame.spawn(s, i % 3 ? 'walker' : 'runner', (i - 3) * 14, 2250 - (i % 2) * 14, { alert: true, state: 'chase', target: { x: 0, y: 2400 }, alertT: 1e9 }); });
   await page.waitForFunction(() => DeadSignal.state.fx.some(f => f.sprite === 'vfx/explosion'), null, { polling: 20, timeout: 8000 });
   await page.screenshot({ path: out + '/launcher-burst.png' }); pass('the launcher fires a round that bursts in a lit explosion');
+  // Phase 6: turret pickup, T deploys (prompt shows progress), the turret engages a crowd, E loads it, T packs it up
+  await page.evaluate(() => { const s = DeadSignal.state, p = s.players[0]; s.enemies = []; s.grenades = []; s.fires = []; DSGame.selectWeapon(s, p, 0); p.auto = false; p.x = 0; p.y = 2400; p.moveAngle = 0; p.angle = 0;
+    s.loot.push({ id: 'turret-test', x: p.x + 8, y: p.y, type: 'turret', label: 'turret' }); });
+  await page.waitForFunction(() => DeadSignal.state.players[0].turret, null, { polling: 50, timeout: 4000 });
+  await page.keyboard.down('t'); await page.waitForTimeout(80); await page.keyboard.up('t');
+  await page.waitForFunction(() => DeadSignal.state.players[0].deploying, null, { polling: 20 });
+  await page.waitForTimeout(250); await page.screenshot({ path: out + '/turret-deploying.png' });
+  await page.waitForFunction(() => (DeadSignal.state.turrets || []).length === 1, null, { polling: 50, timeout: 4000 }); pass('T deploys a carried turret after standing still');
+  await page.evaluate(() => { const s = DeadSignal.state, t = s.turrets[0]; t.ammo = 40;
+    for (let i = 0; i < 6; i++) DSGame.spawn(s, 'walker', t.x + 150 + (i % 3) * 16, t.y - 30 + i * 12, { hp: 60, maxHp: 60, speed: 0 }); });
+  await page.waitForFunction(() => DeadSignal.state.turrets[0].ammo < 40, null, { polling: 20, timeout: 4000 });
+  await page.waitForTimeout(300); await page.screenshot({ path: out + '/turret-firing.png' }); pass('the turret engages infected in range from its own rounds');
+  const bul = await page.evaluate(() => DeadSignal.state.ammo.bullets = 200);
+  await page.keyboard.press('e'); await page.waitForTimeout(400);
+  const loaded = await page.evaluate(() => ({ ammo: DeadSignal.state.turrets[0].ammo, bullets: DeadSignal.state.ammo.bullets }));
+  assert.ok(loaded.bullets < bul && loaded.ammo > 0, 'E loads from the squad reserve'); await page.screenshot({ path: out + '/turret-loading.png' }); pass('E beside the turret loads bullets from the shared reserve');
+  await page.waitForTimeout(3500); await page.keyboard.press('t'); await page.waitForFunction(() => !(DeadSignal.state.turrets || []).length && DeadSignal.state.players[0].turret, null, { polling: 50, timeout: 3000 });
+  pass('T beside your own turret packs it up with its rounds');
   assert.deepEqual(errors, []);
   console.log(results.join('\n')); console.log('power browser checks passed');
 } finally { await browser.close(); }

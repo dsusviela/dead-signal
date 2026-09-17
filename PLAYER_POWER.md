@@ -532,38 +532,70 @@ data through feedback, and no progression has an unresolved placeholder.
 
 ### Phase 6 — Implement carryable turrets
 
-- [ ] Define turret pickup ownership and enforce one turret per survivor outside weapon slots.
-- [ ] Define carried, deploying, deployed, retrieving, empty, and broken states with one stable id.
-- [ ] Add controls and prompt priority for pickup, deploy, retrieve, and resupply without stealing
+- [x] Define turret pickup ownership and enforce one turret per survivor outside weapon slots.
+  Evidence: `collect` type `turret` sets `p.turret`; refused (left on the ground) while carrying or owning a
+  deployed one; test "one turret per survivor outside weapon slots".
+- [x] Define carried, deploying, deployed, retrieving, empty, and broken states with one stable id.
+  Evidence: `p.turret {id,ammo,durability}` ↔ `s.turrets[] {id,ownerId,…}`; `p.deploying`, `p.resupply`;
+  empty = `ammo 0` (silent, "EMPTY" label); broken = removed with fx. Retrieval is instant (assumption: no
+  retrieve timer; the 0.8 s cost is paid on deploy only).
+- [x] Add controls and prompt priority for pickup, deploy, retrieve, and resupply without stealing
   interactions intended for weapons, vehicles, doors, refuelling, or campaign holds.
-- [ ] Preserve normal movement speed while carrying a turret.
-- [ ] Apply the Phase 0 rule for whether a carried turret permits normal weapon fire and vehicle
+  Evidence: `deploy` binding (T / LB / L1) in `DSGame.BINDINGS`, main.js key T and pad button 4; resupply is the
+  last branch of the interact chain; placement is refused within reach of campaign hold points, so holds never
+  compete; test "a weapon pickup wins over resupply"; test-input binding table includes `deploy`.
+- [x] Preserve normal movement speed while carrying a turret. Evidence: no speed term reads `p.turret`.
+- [x] Apply the Phase 0 rule for whether a carried turret permits normal weapon fire and vehicle
   boarding; explain refusals in player-owned feedback.
-- [ ] Require the decided deployment time and cancel or preserve progress consistently when the
+  Evidence: carrying never blocks fire or boarding (Phase 0); refusals notify the survivor ("No room to deploy
+  here", "One turret per survivor", "No turret carried", "Turret full", "No bullets to load").
+- [x] Require the decided deployment time and cancel or preserve progress consistently when the
   survivor moves, is hit, is downed, enters a vehicle, opens a menu, or leaves range.
-- [ ] Validate placement against walls, furniture, doors, gates, vehicle lanes, campaign anchors,
+  Evidence: 0.8 s standing still; movement, `hurt`, downing, a seat and pause cancel (progress is not kept);
+  test "deploy takes 0.8 s standing still; moving or being hit cancels".
+- [x] Validate placement against walls, furniture, doors, gates, vehicle lanes, campaign anchors,
   survivors, and other turrets before deployment completes.
-- [ ] Target only eligible living enemies within range, field of fire, player-visibility rules if
+  Evidence: `turretPlaceOk`: `blocked` solids/furniture, door rects +18, arena gates +24, live vehicles 44, hold
+  points reach+20, turrets 30. Survivors are not solid (assumption: a turret may sit beside a teammate).
+- [x] Target only eligible living enemies within range, field of fire, player-visibility rules if
   selected, and unobstructed line of sight.
-- [ ] Choose targets deterministically enough for reproducible tests and avoid rapid target
+  Evidence: 360° field (assumption), range 260 + radius, `lineObstacle` clear, boss-owned adds skipped; no
+  night-visibility rule (the turret lights its own pad in lights.js). Test covers range and LOS.
+- [x] Choose targets deterministically enough for reproducible tests and avoid rapid target
   flicker when two candidates are similar.
-- [ ] Spend loaded turret ammunition per shot and produce the selected firing noise so turret use
-  contributes to pressure.
-- [ ] Hold interact near a deployed turret to transfer standard bullets from the shared reserve,
+  Evidence: nearest-first on a 0.15 s search, sticky until the target dies, leaves range or loses LOS; test "no
+  flicker to a similar candidate".
+- [x] Spend loaded turret ammunition per shot and produce the selected firing noise so turret use
+  contributes to pressure. Evidence: 1 round per 0.22 s, noise radius 300; test asserts both.
+- [x] Hold interact near a deployed turret to transfer standard bullets from the shared reserve,
   up to capacity, over the decided duration.
-- [ ] Make resupply and retrieval unambiguous when the same survivor is in range; show the current
+  Evidence: one press starts a transfer of 1 BUL per 0.03 s while within reach; stops at 120, at 0 BUL or on
+  walking away; test "interact beside a turret loads bullets from the shared reserve".
+- [x] Make resupply and retrieval unambiguous when the same survivor is in range; show the current
   action, progress, ammunition, and result.
-- [ ] Preserve remaining ammunition and durability through retrieval and redeployment.
-- [ ] Apply the selected damage rules, hit feedback, break behavior, repair policy, and cleanup.
-- [ ] Keep owner, targeting, ammunition, and effects valid when the owner is downed, disconnected,
+  Evidence: interact loads, deploy packs up (different buttons); prompt "LOAD TURRET · n/120  [T] PACK UP",
+  progress prompts "DEPLOYING TURRET · %" / "LOADING TURRET · n/120"; artifacts/power/browser/turret-loading.png.
+- [x] Preserve remaining ammunition and durability through retrieval and redeployment. Evidence: test
+  "retrieval keeps rounds and durability".
+- [x] Apply the selected damage rules, hit feedback, break behavior, repair policy, and cleanup.
+  Evidence: non-ghost infected in contact deal their damage on their 0.8 s cooldown; wear bar under the gauge;
+  at 0 the turret is removed with "TURRET DESTROYED", explosion fx and cue; no repair (Phase 0).
+- [x] Keep owner, targeting, ammunition, and effects valid when the owner is downed, disconnected,
   revived, or joined by other players.
-- [ ] Bound target-search work and effect/audio creation with up to four deployed turrets in a
-  full crowd.
-- [ ] Test ownership, carry limit, placement rejection, deploy interruption, targeting, line of
+  Evidence: turrets tick independently of the owner; assumption: a turret whose owner left is orphaned and anyone
+  may pack it; test "owner leaving orphans the turret … a downed owner leaves it firing". Restart = new state.
+- [x] Bound target-search work and effect/audio creation with up to four deployed turrets in a
+  full crowd. Evidence: search at most every 0.15 s per turret, 1 tracer per shot; test "four turrets in a
+  300-infected crowd" asserts < 2 ms per tick.
+- [x] Test ownership, carry limit, placement rejection, deploy interruption, targeting, line of
   sight, shared-ammo transfer, empty reuse, durability, retrieval, disconnect/revive, restart, and
-  four-turret performance.
-- [ ] Browser-check defensive lanes at an objective hold, a blocked doorway, retrieval after a
+  four-turret performance. Evidence: seven Phase 6 tests in tools/test-player-power.mjs.
+- [~] Browser-check defensive lanes at an objective hold, a blocked doorway, retrieval after a
   fight, co-op ownership, empty/resupply feedback, and a turret breaking.
+  Automated: tools/test-power-browser.mjs picks up, deploys (turret-deploying.png), fires on a crowd
+  (turret-firing.png), loads (turret-loading.png) and packs up. **Awaiting human review**: play the Checkpoint
+  Nine hold with a turret covering the approach; deploy beside a doorway; let infected break one; in co-op
+  confirm P2 cannot pack P1's turret and the prompt says so.
 
 Phase 6 exit: a turret provides costly, position-dependent covering fire without becoming free
 ammunition, a permanent autonomous clear, or an interaction trap.
@@ -770,6 +802,8 @@ matching phase item.
 ## Session log
 
 - 2026-09-17 — Phases 3–5: attachment framework, duplicate upgrades, grenade launcher, full catalog.
+- 2026-09-17 — Phase 6: carryable turrets (deploy binding, placement, targeting, resupply, wear, art, HUD, audio,
+  sim + browser tests). Human review of defensive lanes queued.
 
 - 2026-09-17 — Phase 2 shotgun cleave and point-blank hit fix landed.
 
