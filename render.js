@@ -172,9 +172,10 @@
  // a solid obstacle with an art name: vehicles and flat set-piece parts sit centred in their rect, standing props put their feet on the rect's bottom edge
  function drawSolid(g,o,s){
    if(o.driveable||o.vehicleType&&o.vehicleType!=='sedan'){
-     const id='vehicles/'+(o.vehicleType||'sedan')+'_'+(o.h>o.w?'v':'h'),v=(s.vehicles||[]).find(v=>v.obstacle===o);
+     // a parked vehicle heading south uses its _vs art (front face at the south edge) like vehicleDraw, instead of flipping _v
+     const v=(s.vehicles||[]).find(v=>v.obstacle===o),type=o.vehicleType||'sedan',south=v&&o.h>o.w&&Math.sin(v.angle)>0&&hasArt('vehicles/'+type+'_vs'),id='vehicles/'+type+'_'+(o.h>o.w?(south?'vs':'v'):'h');
      if(hasArt(id)){
-       const opt={anchorX:.5,anchorY:.5,variant:v?vehicleVariant(v):0,flip:v&&o.w>o.h&&Math.cos(v.angle)>0,flipY:v&&o.h>o.w&&Math.sin(v.angle)>0};
+       const opt={anchorX:.5,anchorY:.5,variant:v?vehicleVariant(v):0,flip:v&&o.w>o.h&&Math.cos(v.angle)>0,flipY:v&&o.h>o.w&&Math.sin(v.angle)>0&&!south};
        if(!LIT)ART.shadow(g,o.x+o.w/2,o.y+o.h/2+22,o.w*.5,.6);
        ART.draw(g,id,o.x+o.w/2,o.y+o.h/2-5,opt);cast(id,o.x+o.w/2,o.y+o.h/2-5,opt,{kind:'low',src:v||o,occ:true,vid:v?v.id:null});
        if(v)vehicleSmoke(g,v,s);return;

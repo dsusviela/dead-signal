@@ -326,106 +326,167 @@
   }
 
   // =====================================================================
-  // bus 180x72 [180x60] / 60x190 [60x180]: muted teal-grey city bus, long
-  // window strip, one smashed pane, roof hatch. letters: K,D,M,L (glass) H
-  // (iron highlight)
+  // bus 180x72 [180x60] / 60x190 [60x180]: a 12 m city transit bus in the
+  // same oblique 3/4 view as the car wrecks, NOSE-FIRST at low x (_h) / low
+  // y (_v).
+  //   _h: roof plane rows 2-22 (roof hatches, AC pod, engine vent pod), the
+  //       south side face rows 23-65: dead destination sign over the wrapped
+  //       windscreen, front folding door (shut), continuous window band split
+  //       by pillars, centre door forced open, livery stripe, dark skirt,
+  //       rear engine grille, bumpers; front axle x=38, rear axle x=142.
+  //   _v: roof plane rows 0-168 (windscreen sliver + dead sign at the nose,
+  //       hatches, AC pod, engine pod), window strips along both flanks, the
+  //       south rear face rows 169-186 (rear window, tail lamps, engine
+  //       grille, bumper) with the rear tyres under it.
+  // kinds: 'city' teal-grey livery with a faded cream stripe, 'shuttle' faded
+  // cream/olive with a dark teal stripe, 'burnt' basalt+rust shell (blown
+  // windows, sagging roof, bare rims).
   // =====================================================================
-  function busPanes(g,x0,x1,y0,y1,step,gap,D,L,smashIdx,K,H){
-    var x=x0,i=0,px1;
-    while(x<x1){
-      px1=Math.min(x+step-gap-1,x1);
-      if(i===smashIdx){
-        rect(g,x,y0,px1,y1,K);
-        setclip(g,x+1,y0+1,H);setclip(g,x+2,y0+2,'.');setclip(g,x+3,y0+1,H);
-      }else{
-        rect(g,x,y0,px1,y1,D);
-        setclip(g,x+1,y0+1,L);
-      }
-      x+=step;i++;
+  var BUS_W=180,BUS_H_=72,BUS_VW=60,BUS_VH=190;
+  function busLetters(kind){
+    var base={trim:'M',trimL:'L',dark:'D',glass:'G',glint:'g',hub:'L',hubH:'H',rim:'M',tyre:'D',lamp:'R',lampL:'r',sign:'K',signDot:'D',vent:'M',ventL:'L'};
+    if(kind==='shuttle')return Object.assign(base,{top:'C',hi:'c',side:'E',low:'e',stripe:'W',grime:'e'});
+    if(kind==='burnt')return Object.assign(base,{top:'H',hi:'L',side:'L',low:'M',stripe:'M',grime:'M',soot:'M',trim:'D',trimL:'M',glass:'K',glint:'D',hub:'K',hubH:'Y',rim:'X',lamp:'K',lampL:'D',signDot:'K',vent:'D',ventL:'M'});
+    return Object.assign(base,{top:'T',hi:'U',side:'V',low:'W',stripe:'c',grime:'W'});
+  }
+  // side-on bus wheel: tyreSide's rubber and ring, then a big 9x9 steel rim with a lit top
+  // edge, a hub cap and four studs (burnt: a bare rust rim around an empty centre)
+  function busWheel(g,cx,y0,w,h,C,flat,burnt){
+    tyreSide(g,cx,y0,w,h,4,null,null,C.tyre,flat);
+    var hy=flat?y0+Math.floor(h/2):y0+Math.floor(h/2)-1;
+    rect(g,cx-4,hy-4,cx+4,hy+4,C.rim);roundIn(g,cx-4,hy-4,cx+4,hy+4,C.tyre);
+    hline(g,cx-2,cx+2,hy-4,C.hubH);
+    if(burnt){rect(g,cx-2,hy-2,cx+2,hy+2,'K');setclip(g,cx,hy,C.rim);}
+    else{rect(g,cx-2,hy-2,cx+2,hy+2,C.hub);setclip(g,cx,hy,'K');[[-2,-2],[2,-2],[-2,2],[2,2]].forEach(function(p){setclip(g,cx+p[0],hy+p[1],C.rim);});}
+  }
+  function makeBusH(kind){
+    var g=mkGrid(BUS_W,BUS_H_),C=busLetters(kind),burnt=kind==='burnt',x,y,d;
+    var FX=38,RX=142,PANES=[];
+    // ground shadow, roof plane (panel seams, domed front and rear caps), side face
+    rect(g,6,63,173,69,'K');
+    rect(g,3,2,176,22,C.top);cutCorners(g,3,2,176,22,5);
+    for(x=22;x<170;x+=24)swap(g,x,4,x,21,C.top,C.hi);
+    rect(g,3,6,7,22,C.hi);rect(g,172,6,176,22,C.hi);   // near roof corners stay square so the side face continues them
+    swap(g,3,2,7,5,C.top,C.hi);swap(g,172,2,176,5,C.top,C.hi);
+    rect(g,1,23,178,64,C.side);
+    rect(g,1,23,178,26,C.hi);                  // lit upper side over the windows
+    hline(g,4,175,22,C.hi);                    // roof gutter rounding into the side
+    rect(g,1,55,178,64,C.low);                 // skirt in shadow
+    hline(g,1,178,54,'K');                     // rub rail
+    rect(g,1,49,178,51,C.stripe);              // livery stripe
+    [58,76,120,160].forEach(function(sx){vline(g,sx,45,53,C.low);vline(g,sx,56,62,C.side);});   // body panel seams
+    [[64,0],[63,0],[64,179],[63,179]].forEach(function(p){setclip(g,p[1],p[0],'.');});
+    // window band: glass rows 28-43 between K frame lines, pillars every 17
+    rect(g,27,28,172,43,C.glass);hline(g,27,172,44,'K');hline(g,27,172,27,'K');
+    for(x=27;x<172;x+=17){PANES.push(x);if(x>27)rect(g,x-2,28,x-1,43,C.hi);}
+    // windscreen wrapping the nose, A-pillar, dead destination sign above it
+    rect(g,1,27,6,48,C.glass);vline(g,7,27,48,C.hi);hline(g,1,7,49,'K');
+    rect(g,1,23,26,26,C.sign);for(x=4;x<25;x+=3){setclip(g,x,24,C.signDot);setclip(g,x+1,25,C.signDot);}
+    hline(g,1,26,27,'K');
+    // front folding door (shut): two glazed leaves in a trim frame, ahead of the front axle
+    rect(g,9,27,25,56,C.trim);
+    rect(g,10,28,16,53,C.glass);rect(g,18,28,24,53,C.glass);vline(g,17,28,56,'K');
+    hline(g,10,24,41,C.trim);rect(g,9,57,25,62,C.dark);hline(g,9,25,57,C.trimL);
+    // centre door forced open: dark stairwell, one leaf folded flat against the jamb,
+    // the other hanging skewed out of its track, two lit step nosings
+    rect(g,90,27,107,62,'K');
+    rect(g,91,28,93,53,C.trim);vline(g,92,29,52,C.glass);
+    line(g,103,29,106,52,C.trimL);line(g,104,29,107,52,C.trim);
+    rect(g,94,57,102,58,C.dark);hline(g,94,102,57,C.trimL);rect(g,94,60,105,61,C.dark);hline(g,94,105,60,C.trimL);
+    // rear engine grille on the side, tail lamp wrapping the corner, bumpers, dead headlamp
+    rect(g,154,46,171,53,'K');for(y=47;y<=52;y+=2)hline(g,155,170,y,C.vent);hline(g,155,170,47,C.ventL);
+    rect(g,175,43,178,50,C.lamp);hline(g,176,178,43,C.lampL);
+    rect(g,0,55,4,62,C.trim);hline(g,0,4,55,C.trimL);
+    rect(g,175,55,179,62,C.trim);hline(g,175,179,55,C.trimL);
+    rect(g,0,51,3,53,C.trim);hline(g,1,2,52,C.hub);
+    // rounded wheel arches cut through the stripe, tyres (rear one flat)
+    [FX,RX].forEach(function(cx){var hw=[6,9,11,12,13];for(y=47;y<=66;y++){d=hw[y-47]||13;hline(g,cx-d,cx+d,y,'K');}});
+    if(burnt){busWheel(g,FX,53,21,18,C,true,true);busWheel(g,RX,55,21,16,C,true,true);}
+    else{busWheel(g,FX,51,23,20,C,false,false);busWheel(g,RX,54,25,17,C,true,false);}
+    // roof: closed escape hatch, AC pod (lit louvred top, shaded south face), hatch propped open, engine vent pod
+    rect(g,24,8,37,15,C.trim);hline(g,24,37,8,C.trimL);vline(g,24,8,15,C.trimL);hline(g,24,37,16,'K');
+    rect(g,52,4,98,13,C.trimL);rect(g,52,14,98,17,C.trim);hline(g,52,98,18,'K');
+    for(x=56;x<=94;x+=4)vline(g,x,6,11,C.trim);
+    rect(g,118,9,131,16,'K');rect(g,117,4,130,7,C.trimL);hline(g,117,130,8,C.trim);
+    rect(g,148,6,170,15,C.trim);hline(g,148,170,6,C.trimL);for(x=151;x<=167;x+=3)vline(g,x,8,13,'K');hline(g,148,170,16,'K');
+    if(!burnt){
+      // glass sheen, smashed panes, grime drips and blotches, worn stripe
+      [44,112,146].forEach(function(px){line(g,px,30,px-4,38,C.glint);line(g,px+1,30,px-3,38,C.glint);});
+      line(g,4,30,2,34,C.glint);line(g,14,31,11,37,C.glint);
+      [[61,76],[129,144]].forEach(function(p){rect(g,p[0]+1,29,p[1]-2,42,'K');line(g,p[0]+1,29,p[0]+4,34,C.glint);hline(g,p[1]-5,p[1]-2,29,C.glint);setclip(g,p[0]+2,42,C.glint);});
+      [34,48,69,118,137,165].forEach(function(dx,i){vline(g,dx,45,46+(i%3),C.grime);});
+      [[30,59],[64,60],[122,58],[158,60],[112,46]].forEach(function(p){rect(g,p[0],p[1],p[0]+3,p[1]+1,C.dark);setclip(g,p[0]+1,p[1]+2,C.dark);});
+      rect(g,79,49,84,51,C.side);rect(g,121,50,124,51,C.side);
+      [[40,12],[108,19],[140,10],[16,18],[102,5]].forEach(function(p){hline(g,p[0],p[0]+2,p[1],C.hi);setclip(g,p[0]+1,p[1]+1,C.hi);});
+      rect(g,134,17,139,18,C.hi);rect(g,11,3,14,4,C.hi);   // leaf litter and grime pooled on the roof
+    }else{
+      // blown windows (every other pillar melted away), soot above the openings,
+      // roof sagging between the pods, collapsed AC pod, scorched paint and rust
+      for(x=27+17;x<172;x+=34)rect(g,x-2,34,x-1,43,'K');
+      rect(g,10,28,24,53,'K');
+      for(x=30;x<172;x+=11){rect(g,x,24,x+4,26,C.soot);setclip(g,x+2,23,C.soot);}
+      for(x=40;x<=140;x++){d=Math.round(3*Math.sin(Math.PI*(x-40)/100));if(d>0){vline(g,x,22,21+d,C.top);setclip(g,x,22+d,C.hi);}}
+      for(x=62;x<=118;x++){d=Math.round(3*Math.sin(Math.PI*(x-62)/56));if(d>0)vline(g,x,2,1+d,'.');}   // roof line sags in silhouette
+      rect(g,60,15,120,21,C.hi);roundIn(g,60,15,120,21,C.top);line(g,62,20,90,17,C.low);line(g,90,17,118,20,C.low);
+      rect(g,52,4,98,17,C.dark);rect(g,53,5,97,12,C.hi);for(x=56;x<=94;x+=6)vline(g,x,5,12,'K');line(g,53,12,70,8,'K');
+      rustFleck(g,14,12,'R','X','Y');rustFleck(g,70,10,'R','X','Y');rustFleck(g,140,18,'R','X','Y');rustFleck(g,160,10,'R','X','Y');
+      rustFleck(g,50,58,'R','X','Y');rustFleck(g,120,47,'R','X','Y');rustFleck(g,82,60,'R','X','Y');rustFleck(g,166,58,'R','X','Y');rustFleck(g,34,50,'R','X','Y');
+      line(g,155,52,170,47,C.trimL);
     }
+    outlineFromFill(g,'K');
+    return toRows(g);
   }
-  function busPanesV(g,y0,y1,x0,x1,step,gap,D,L,smashIdx,K,H){
-    var y=y0,i=0,py1;
-    while(y<y1){
-      py1=Math.min(y+step-gap-1,y1);
-      if(i===smashIdx){
-        rect(g,x0,y,x1,py1,K);
-        setclip(g,x0+1,y+1,H);setclip(g,x0+2,y+2,'.');setclip(g,x0+1,y+3,H);
-      }else{
-        rect(g,x0,y,x1,py1,D);
-        setclip(g,x0+1,y+1,L);
-      }
-      y+=step;i++;
+  function makeBusV(kind){
+    var g=mkGrid(BUS_VW,BUS_VH),C=busLetters(kind),burnt=kind==='burnt',x,y,W1=BUS_VW-1;
+    // flank tyres (front, rear axle) peeking out on both sides
+    [[28,48],[132,152]].forEach(function(r){tyreEnd(g,0,r[0],4,r[1],C.tyre);tyreEnd(g,W1-4,r[0],W1,r[1],C.tyre);});
+    // roof plane: panel seams, rear dome curving down to the rear face
+    rect(g,3,0,W1-3,168,C.top);cutCorners(g,3,0,W1-3,168,4);rect(g,3,160,W1-3,168,C.top);
+    for(y=38;y<160;y+=24)swap(g,8,y,W1-8,y,C.top,C.hi);
+    swap(g,3,163,W1-3,168,C.top,C.hi);
+    // window strips on both flanks, seen over the roof edge, with pillars
+    rect(g,4,14,6,158,C.glass);rect(g,W1-6,14,W1-4,158,C.glass);
+    for(y=14+15;y<158;y+=17){rect(g,4,y,6,y+1,C.hi);rect(g,W1-6,y,W1-4,y+1,C.hi);}
+    vline(g,7,14,162,C.hi);vline(g,W1-7,14,162,C.hi);
+    // nose: bumper, windscreen wrapping the corners, dead destination sign
+    rect(g,8,0,W1-8,1,C.trim);
+    rect(g,5,2,W1-5,8,C.glass);rect(g,4,6,6,14,C.glass);rect(g,W1-6,6,W1-4,14,C.glass);
+    rect(g,7,9,W1-7,12,C.hi);rect(g,10,9,W1-10,12,C.sign);for(x=12;x<W1-10;x+=3)setclip(g,x,10,C.signDot);
+    hline(g,7,W1-7,13,'K');
+    // roof furniture: closed hatch, AC pod, open hatch, engine vent pod
+    rect(g,22,24,37,32,C.trim);hline(g,22,37,24,C.trimL);vline(g,22,24,32,C.trimL);hline(g,22,37,33,'K');
+    rect(g,12,46,47,80,C.trimL);rect(g,12,81,47,84,C.trim);hline(g,12,47,85,'K');
+    for(y=49;y<=77;y+=4)hline(g,15,44,y,C.trim);
+    rect(g,22,104,37,112,'K');rect(g,24,98,39,102,C.trimL);hline(g,24,39,103,C.trim);
+    rect(g,14,136,45,153,C.trim);hline(g,14,45,136,C.trimL);for(y=139;y<=150;y+=3)hline(g,17,42,y,'K');hline(g,14,45,154,'K');
+    // rear face (south end): rear window, tail lamps, engine grille, bumper
+    rect(g,2,169,W1-2,186,C.side);hline(g,3,W1-3,169,C.hi);
+    rect(g,11,171,W1-11,175,C.glass);
+    rect(g,4,172,8,178,C.lamp);rect(g,W1-8,172,W1-4,178,C.lamp);hline(g,5,8,172,C.lampL);hline(g,W1-7,W1-4,172,C.lampL);
+    rect(g,15,177,W1-15,182,'K');for(y=178;y<=182;y+=2)hline(g,16,W1-16,y,C.vent);hline(g,16,W1-16,178,C.ventL);
+    rect(g,1,183,W1-1,186,C.trim);hline(g,1,W1-1,183,C.trimL);
+    rect(g,7,187,W1-7,187,'K');
+    tyreEnd(g,5,186,15,189,C.tyre);tyreEnd(g,W1-15,186,W1-5,189,C.tyre);
+    if(!burnt){
+      rect(g,4,4,4,5,C.glass);rect(g,W1-4,4,W1-4,5,C.glass);
+      [[16,58],[36,64],[26,90],[14,118],[40,114],[30,128],[20,160],[42,30]].forEach(function(p,i){rect(g,p[0],p[1],p[0]+2+(i%2),p[1]+1,C.hi);setclip(g,p[0]+1,p[1]+2,C.hi);if(i%3===0)setclip(g,p[0]-1,p[1]+1,C.hi);});
+      rect(g,8,40,9,46,C.hi);rect(g,W1-9,96,W1-8,103,C.hi);setclip(g,10,43,C.hi);setclip(g,W1-10,99,C.hi);   // grime pooled along the roof gutters
+      hline(g,9,14,4,C.glint);hline(g,10,13,5,C.glint);hline(g,14,20,172,C.glint);
+      rect(g,4,63,6,77,'K');setclip(g,5,64,C.glint);rect(g,W1-6,114,W1-4,127,'K');setclip(g,W1-5,126,C.glint);  // smashed panes
+      [[18,40],[40,92],[12,120],[44,126],[28,158],[20,60]].forEach(function(p){rect(g,p[0],p[1],p[0]+1,p[1]+1,C.hi);setclip(g,p[0]+2,p[1]+1,C.hi);});
+      rect(g,20,184,24,185,C.dark);rect(g,40,180,41,181,C.dark);
+    }else{
+      rect(g,4,14,6,158,'K');rect(g,W1-6,14,W1-4,158,'K');rect(g,5,2,W1-5,8,'K');rect(g,11,171,W1-11,175,'K');
+      for(y=14+32;y<158;y+=34){rect(g,4,y,6,y+1,'K');rect(g,W1-6,y,W1-4,y+1,'K');}
+      // sagging roof: a dished middle stepping down in value, with buckle creases
+      rect(g,10,88,W1-10,134,C.hi);roundIn(g,10,88,W1-10,134,C.top);
+      rect(g,16,98,W1-16,124,C.low);roundIn(g,16,98,W1-16,124,C.hi);
+      line(g,11,96,26,108,C.dark);line(g,W1-11,94,33,110,C.dark);
+      rect(g,12,46,47,84,C.dark);rect(g,13,47,46,79,C.hi);for(y=50;y<=76;y+=6)hline(g,14,45,y,'K');line(g,13,70,30,79,'K');
+      rustFleck(g,12,20,'R','X','Y');rustFleck(g,44,40,'R','X','Y');rustFleck(g,20,92,'R','X','Y');rustFleck(g,40,128,'R','X','Y');
+      rustFleck(g,16,164,'R','X','Y');rustFleck(g,42,176,'R','X','Y');rustFleck(g,30,60,'R','X','Y');
     }
-  }
-  function makeBusH(){
-    var W_=180,H_=72,c=5;
-    var g=mkGrid(W_,H_);
-    var K='K',D='D',M='M',L='L',H='H';
-    rect(g,0,0,W_-1,13,L);
-    rect(g,0,14,W_-1,49,M);
-    rect(g,0,50,W_-1,H_-1,M);
-    rect(g,0,H_-3,W_-1,H_-1,D);
-    busPanes(g,8,171,17,32,20,2,D,L,3,K,H);
-    rect(g,82,3,97,9,M);setclip(g,82,3,K);setclip(g,97,3,K);setclip(g,82,9,K);setclip(g,97,9,K);setclip(g,89,5,H);
-    setclip(g,2,52,H);setclip(g,3,52,H);setclip(g,4,52,H);
-    wheelPatch(g,30,58,17,13,D,K,H,false);
-    wheelPatch(g,132,58,17,13,D,K,H,false);
-    cutCorners(g,0,0,W_-1,H_-1,c);
-    outlineFromFill(g,K);
-    return toRows(g);
-  }
-  function makeBusV(){
-    var W_=60,H_=190,c=5;
-    var g=mkGrid(W_,H_);
-    var K='K',D='D',M='M',L='L',H='H';
-    rect(g,0,0,W_-1,9,L);
-    rect(g,0,10,W_-1,178,M);
-    rect(g,0,179,W_-1,H_-1,M);
-    rect(g,0,H_-3,W_-1,H_-1,D);
-    busPanesV(g,20,163,8,51,20,2,D,L,3,K,H);
-    rect(g,22,3,37,9,M);setclip(g,22,3,K);setclip(g,37,3,K);setclip(g,22,9,K);setclip(g,37,9,K);setclip(g,29,5,H);
-    setclip(g,2,12,H);setclip(g,2,13,H);setclip(g,2,14,H);
-    wheelPatch(g,6,176,14,13,D,K,H,false);
-    wheelPatch(g,38,176,14,13,D,K,H,false);
-    cutCorners(g,0,0,W_-1,H_-1,c);
-    outlineFromFill(g,K);
-    return toRows(g);
-  }
-  function makeBusBurntH(){
-    var W_=180,H_=72,c=5;
-    var g=mkGrid(W_,H_);
-    var K='K',D='D',M='M',L='L',R='R',X='X',Y='Y';
-    rect(g,0,0,W_-1,13,M);
-    rect(g,0,14,W_-1,49,D);
-    rect(g,0,50,W_-1,H_-1,D);
-    rect(g,0,H_-3,W_-1,H_-1,D);
-    var x=8;while(x<171){rect(g,x,17,Math.min(x+17,171),32,K);x+=20;}
-    rect(g,82,3,97,9,K);
-    rustFleck(g,20,40,R,X,Y);rustFleck(g,60,43,R,X,Y);rustFleck(g,100,38,R,X,Y);rustFleck(g,140,45,R,X,Y);rustFleck(g,165,10,R,X,Y);rustFleck(g,14,8,R,X,Y);
-    setclip(g,0,30,'.');setclip(g,1,30,'.');setclip(g,0,31,'.');setclip(g,2,29,'.');setclip(g,0,29,M);
-    wheelPatch(g,30,58,17,13,D,K,R,false);
-    wheelPatch(g,132,58,17,13,D,K,R,false);
-    cutCorners(g,0,0,W_-1,H_-1,c);
-    outlineFromFill(g,K);
-    return toRows(g);
-  }
-  function makeBusBurntV(){
-    var W_=60,H_=190,c=5;
-    var g=mkGrid(W_,H_);
-    var K='K',D='D',M='M',L='L',R='R',X='X',Y='Y';
-    rect(g,0,0,W_-1,9,M);
-    rect(g,0,10,W_-1,178,D);
-    rect(g,0,179,W_-1,H_-1,D);
-    rect(g,0,H_-3,W_-1,H_-1,D);
-    var y=20;while(y<163){rect(g,8,y,51,Math.min(y+17,163),K);y+=20;}
-    rect(g,22,3,37,9,K);
-    rustFleck(g,15,40,R,X,Y);rustFleck(g,42,90,R,X,Y);rustFleck(g,20,120,R,X,Y);rustFleck(g,45,150,R,X,Y);rustFleck(g,10,10,R,X,Y);rustFleck(g,45,12,R,X,Y);
-    setclip(g,2,60,'.');setclip(g,3,60,'.');setclip(g,2,61,'.');setclip(g,4,59,'.');setclip(g,2,58,M);
-    wheelPatch(g,6,176,14,13,D,K,R,false);
-    wheelPatch(g,38,176,14,13,D,K,R,false);
-    cutCorners(g,0,0,W_-1,H_-1,c);
-    outlineFromFill(g,K);
+    outlineFromFill(g,'K');
     return toRows(g);
   }
 
@@ -437,7 +498,10 @@
     G:MAT.glass.M,g:MAT.glass.L,R:MAT.rust.M,r:MAT.rust.L,B:'#264265',b:'#526773',S:MAT.olive.L,P:'#6a777a',p:'#3d5360',q:'#292e36'};
   var burntPal=Object.assign({},MAT.basalt,{R:MAT.rust.D,X:MAT.rust.M,Y:MAT.rust.L});
   var vanPal=Object.assign({},MAT.concrete,{O:MAT.olive.M,G:MAT.glass.D,g:MAT.glass.L});
-  var busPal=Object.assign({},MAT.glass,{H:MAT.iron.H});
+  // bus liveries: T/U/V/W teal-grey (ramp.mjs --hue 195 --chroma 0.035 --l 0.26,0.66; roof lit re-picked at l 0.62, upper side, side, skirt),
+  // C/c/E/e faded cream-olive (ramp --hue 90 --chroma 0.04 --l 0.3,0.72, roof re-picked at l 0.67); each livery borrows the other ramp for its stripe
+  var busPal={K:MAT.iron.K,D:MAT.iron.D,M:MAT.iron.M,L:MAT.iron.L,H:MAT.iron.H,G:MAT.glass.D,g:MAT.glass.M,R:MAT.rust.M,r:MAT.rust.L,
+    T:"#7d8985",U:"#617b76",V:"#415e5e",W:"#2a4245",C:"#9d938a",c:"#90836e",E:"#6f654c",e:"#4d4a34"};
 
   A.define('wrecks',{
     car_h:{variants:[makeCarH('hatch'),makeCarH('police')],pal:carPal,anchor:'feet',note:'96x58 [96x48], nose at x=0: [0] blue-grey hatchback, rear door sprung ajar with its window smashed, flat rear tyre; [1] black-and-white police cruiser, dead red/blue lightbar, push bar, door shield, cracked windshield, sprung door, flat front tyre'},
@@ -448,9 +512,9 @@
     van_v:{rows:makeVanV(),pal:vanPal,anchor:'feet',note:'52x120 [52x110]: same van, vertical'},
     vanBurnt_h:{rows:makeVanBurntH(),pal:burntPal,anchor:'feet',note:'110x62, burnt van shell'},
     vanBurnt_v:{rows:makeVanBurntV(),pal:burntPal,anchor:'feet',note:'52x120, burnt van shell vertical'},
-    bus_h:{rows:makeBusH(),pal:busPal,anchor:'feet',note:'180x72 [180x60]: teal-grey city bus, window strip, smashed pane, roof hatch'},
-    bus_v:{rows:makeBusV(),pal:busPal,anchor:'feet',note:'60x190 [60x180]: same bus, vertical'},
-    busBurnt_h:{rows:makeBusBurntH(),pal:burntPal,anchor:'feet',note:'180x72, burnt bus shell'},
-    busBurnt_v:{rows:makeBusBurntV(),pal:burntPal,anchor:'feet',note:'60x190, burnt bus shell vertical'}
+    bus_h:{variants:[makeBusH('city'),makeBusH('shuttle')],pal:busPal,anchor:'feet',note:'180x72 [180x60], nose at x=0: [0] teal-grey city bus, cream stripe; [1] faded cream shuttle, teal stripe. Roof hatches + AC pod + engine vent, dead destination sign, wrapped windscreen, shut front door, centre door forced open, smashed panes, flat rear tyre, rear engine grille'},
+    bus_v:{variants:[makeBusV('city'),makeBusV('shuttle')],pal:busPal,anchor:'feet',note:'60x190 [60x180], nose at y=0, rear face at the bottom: same two liveries, roof furniture, flank window strips, rear window/lamps/grille/bumper'},
+    busBurnt_h:{rows:makeBusH('burnt'),pal:burntPal,anchor:'feet',note:'180x72, burnt bus shell: blown windows, sagging roof, bare rims'},
+    busBurnt_v:{rows:makeBusV('burnt'),pal:burntPal,anchor:'feet',note:'60x190, burnt bus shell vertical, dished roof'}
   });
 })();
