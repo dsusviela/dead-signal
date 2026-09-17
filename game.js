@@ -17,7 +17,7 @@
     fireTruck:{len:150,wid:60,probe:28,probes:[-58,-20,20,58],accel:120,brake:260,drag:30,topSpeed:230,reverse:.35,turn:1.8,turnFalloff:1,
       minFuel:1050,maxFuel:6300,emptyChance:0,burn:1.5,idleBurn:0,seats:[[38,-14],[38,14],[8,-14],[8,14]],integrity:180,wreckHp:360,roadkill:22,impact:.6,ram:1.3,noise:[300,360],clears:false,pivot:false,wreckedLabel:'FIRE TRUCK WRECKED'},
     bulldozer:{len:110,wid:80,probe:38,probes:[-32,0,32],accel:160,brake:340,drag:110,topSpeed:140,reverse:.7,turn:2.2,turnFalloff:.6,
-      minFuel:5600,maxFuel:8400,emptyChance:0,burn:1.5,idleBurn:0,seats:[[-10,-16],[-10,16]],integrity:260,wreckHp:520,roadkill:26,impact:.4,ram:1.6,noise:[420,260],clears:true,clearTime:2.5,crushRate:300,pivot:true,wreckedLabel:'BULLDOZER BROKEN'}
+      minFuel:5600,maxFuel:8400,emptyChance:0,burn:1.5,idleBurn:0,seats:[[-10,-16],[-10,16]],integrity:330,wreckHp:620,roadkill:26,impact:.4,ram:1.6,noise:[420,260],clears:true,clearTime:2.5,crushRate:300,pivot:true,wreckedLabel:'BULLDOZER BROKEN'}
   };
   const CAR=VEHICLES.sedan,FUEL=root.DSCity.ECONOMY.fuel; // city.js loads before the simulation everywhere
   const NOISE={pour:110,generatorRun:260,gate:380,walk:90,run:180,heal:140,reload:90,equip:75,revive:160,break:600,radio:500,engine:520,crash:600,pry:220,door:450,strain:480,clear:720,generator:520};
@@ -997,8 +997,11 @@
       }
     }
     for(const t of s.turrets||[])if(e.type!=='ghost'&&e.hitCd<=0&&Math.hypot(e.x-t.x,e.y-t.y)<(e.r||10)+12){t.durability-=e.damage;e.hitCd=.8;investigate(e,t);}
-    const nearest=Math.min(...living.map(p=>dist(e,p)));
-    if(nearest>1400&&!s.boss||e.type==='band'&&s.time>(e.expires||Infinity))e.dead=true;
+    // Culling and band expiry never happen in view: the camera widens while driving and on wide screens, so a flat
+    // radius round the squad used to take infected off the screen in front of the player. Off camera, they go as before.
+    const nearest=Math.min(...living.map(p=>dist(e,p))),c=s.camera;
+    const onCamera=Math.abs(e.x-c.x)<c.w/2+180&&Math.abs(e.y-c.y)<c.h/2+180;
+    if(!onCamera&&(nearest>1400&&!s.boss||e.type==='band'&&s.time>(e.expires||Infinity)))e.dead=true;
   }
   // Outbreak pressure (PLAYER_POWER Phase 0 / 10). The threat follows what the squad has become and how far the run has
   // got, never the clock: shared level - 1, plus (averaged over living survivors) half a point per attachment carried,
@@ -1094,14 +1097,13 @@
     refugeLedger:{learns:['power','prepare'],title:'ST. AUBIN REFUGE LEDGER',body:'Generator dry. It needs 30 L of vehicle fuel (Ashworks machine shop). It feeds the emergency circuit to Blackglass Radio and the checkpoint gate.',reveals:['machine-shop','fuel-store','blackglass-radio']},
     intakeManifest:{learns:['override'],title:'HOLDING · INTAKE MANIFEST',body:'Day 3: 212 names. Day 7: all remaining transferred to disposal. Override logged with the command post.',reveals:['command-post']}
   };
-  const HOLDS={prepare:12,transmit:40,gate:8},REPLY={learns:['gate','escape'],title:'REPLY · LINDEN STREET GROUP',body:'Blackglass, we hear you. Nobody is coming for us either. We are behind the south barrier at Checkpoint Nine. Open it and we run with you.'};
-  const EXIT={x:0,y:3160,w:300,h:260};
+  const HOLDS={prepare:12,transmit:40,gate:8},REPLY={learns:['gate','escape'],title:'REPLY · SOUTH CORDON',body:'Blackglass, this is the cordon. We have your records. Nobody was supposed to be alive in there. Open Checkpoint Nine from your side and walk out slowly. We will not fire.'};
+  // outside the city: the mouth beyond the evacuation gate, the one stretch past the cordon fence (world.js EDGE)
+  const EXIT={x:0,y:3580,w:170,h:48};
   function campaignInit(s){
     const w=s.world;s.campaign=Object.assign(s.campaign||{},{evidence:{},known:[],learned:{},read:[],generator:false,prepared:false,prepareProgress:0,payload:false,override:false,
       transmitted:false,transmitProgress:0,gateOpen:false,gateProgress:0,escaped:false,palletDropped:false,payloadSpawned:false,holding:null});
     for(const b of w.buildings||[])for(const a of b.anchors||[])if(EVIDENCE[a.kind])s.loot.push({id:'evidence-'+a.kind,x:a.x,y:a.y,type:'evidence',evidence:a.kind,amount:1,label:'records',interior:true});
-    // the waiting civilians: behind the south evacuation barrier, safe until the gate opens
-    s.civilians=[-45,-15,15,45].map((dx,i)=>({id:'civilian-'+i,x:dx,y:2945+(i%2)*10,r:9,state:'waiting'}));
     s.document=null;
   }
   function anchorOf(s,kind){for(const b of s.world.buildings||[])for(const a of b.anchors||[])if(a.kind===kind)return a;return null;}
@@ -1124,7 +1126,15 @@
   function learn(s,keys){const c=s.campaign;if(!c)return;c.learned=c.learned||{};for(const k of keys||[])c.learned[k]=true;}
   function journal(s){
     const c=s.campaign||{},L=c.learned||{},ev=c.evidence||{},sup=s.supplies||{},visited=id=>!!s.locationState?.[id]?.visited,power=!!s.circuit?.emergency;
-    const wait=action=>{const why=missing(s,action);return why.length?'Waiting on: '+why.join('; ')+'.':null;};
+    const wait=action=>missing(s,action).length?'Not yet. Everything below has to be done first:':null;
+    // what a held action needs, each explained and ticked: shown under the task in the journal
+    const NEEDS={
+      transmit:[{done:!!c.prepared,text:'A ready station: with the power on, stay in the Blackglass control room (Northline) while it warms up.'},
+        {done:!!c.payload,text:'The transmitter payload: the command post in Central Quarantine, sealed until Patient Furnace is dead.'}],
+      gate:[{done:power,text:'Emergency power: carry '+FUEL.generatorCharge+' L of fuel from Ashworks to the St. Aubin Chapel generator (Old Quarter) and pour it in.'},
+        {done:!!c.override,text:'The Checkpoint override: the command post in Central Quarantine, sealed until Patient Furnace is dead.'},
+        {done:!!c.transmitted,text:'The distress call: ready Blackglass Radio, bring it the payload, then hold the transmitter room while it sends.'}]
+    };
     const tasks={
       power:{title:'Restore emergency power',done:power,known:L.power||power||ev.refugeLedger,
         note:power?'The chapel generator is running the emergency circuit.':ev.refugeLedger?'The St. Aubin Chapel generator (Old Quarter) takes '+FUEL.generatorCharge+' L of vehicle fuel. You carry '+(sup.vehicleFuel||0)+' L; Ashworks has fuel.':'Emergency power runs from the St. Aubin Chapel generator (Old Quarter). Fuel: Ashworks.'},
@@ -1140,11 +1150,30 @@
         note:c.override?'The squad carries it.':c.payloadUnlocked?'The command post in Central Quarantine is open.':ev.furnaceClue?'Held in the command post (Central Quarantine), sealed while the subject is active.':'The command post logged it. Central Quarantine.'},
       gate:{title:'Open the barrier at Checkpoint Nine',done:!!c.gateOpen,known:L.gate||c.gateOpen||c.transmitted||visited('checkpoint-nine'),
         note:c.gateOpen?'The barrier is open.':wait('gate')||'Everything is ready. The barrier has to be held while it opens.'},
-      escape:{title:'Get the Linden Street group out',done:!!c.escaped,known:L.escape||c.transmitted||c.gateOpen,
-        note:c.escaped?'Out of the city.':c.gateOpen?'Walk them south through the barrier. Nobody is left behind.':'They wait behind the south barrier at Checkpoint Nine.'}
+      escape:{title:'Walk out through Checkpoint Nine',done:!!c.escaped,known:L.escape||c.transmitted||c.gateOpen,
+        note:c.escaped?'Out of the city.':c.gateOpen?'The barrier is open. Every survivor walks through it; revive anyone down first.':'The cordon waits on the other side of the south barrier.'}
     };
-    const list=TASKS.map(id=>({id,...tasks[id],known:!!tasks[id].known})).filter(q=>q.known);
+    const list=TASKS.map(id=>({id,...tasks[id],known:!!tasks[id].known,needs:!tasks[id].done&&NEEDS[id]&&missing(s,id).length?NEEDS[id]:[]})).filter(q=>q.known);
     return {goal:'Get everyone out of the city through Checkpoint Nine.',tasks:list,unknown:TASKS.length-list.length,records:(c.read||[]).slice()};
+  }
+  // The live objective card (top left): the whole run as a plain ordered chain, and the first step not yet done.
+  // Text only, never a waypoint; the journal keeps the detail and the records.
+  function objective(s){
+    const c=s.campaign||{},sup=s.supplies||{},power=!!s.circuit?.emergency,fuel=sup.vehicleFuel||0,taken=(c.payload?1:0)+(c.override?1:0);
+    const steps=[
+      {id:'fuel',title:'Get fuel',done:power||fuel>=FUEL.generatorCharge,hint:'The generator takes '+FUEL.generatorCharge+' L of vehicle fuel. Jerrycans at the Ashworks machine shop. Carrying '+fuel+' L.'},
+      {id:'generator',title:'Go to the chapel generator',done:power||!!s.locationState?.chapel?.visited,hint:'St. Aubin Chapel, Old Quarter.'},
+      {id:'power',title:'Turn on the generator',done:power,hint:'Pour the fuel in beside the chapel generator. It powers Blackglass and the checkpoint.'},
+      {id:'furnace',title:'Kill Patient Furnace',done:!!c.bossDown,hint:'The disposal yard, Central Quarantine. The gates seal once the squad commits.'},
+      {id:'records',title:'Take the payload and override',done:taken===2,hint:'The command post, Central Quarantine. '+taken+' of 2 taken.'},
+      {id:'prepare',title:'Ready Blackglass Radio',done:!!c.prepared,hint:'Northline. Stay in the control room while the station warms up.'},
+      {id:'broadcast',title:'Broadcast the distress call',done:!!c.transmitted,hint:'Hold the Blackglass transmitter room while it sends. It is loud.'},
+      {id:'gate',title:'Open Checkpoint Nine',done:!!c.gateOpen,hint:'Hold the south barrier while it opens.'},
+      {id:'escape',title:'Escape',done:!!c.escaped,hint:'Walk the whole squad south through the open barrier. Revive anyone down first.'}
+    ];
+    const i=steps.findIndex(q=>!q.done),boss=!!(s.boss&&s.boss.active);
+    const current=boss?{id:'furnace',title:'Kill Patient Furnace',hint:'Read the tells. Keep the squad alive.'}:i<0?{id:'out',title:'Out of the city',hint:'The cordon has you.'}:steps[i];
+    return {steps,index:i<0?steps.length:i,current};
   }
   function holdPoint(s,action){
     if(action==='prepare')return anchorOf(s,'radioPrepare');if(action==='transmit')return anchorOf(s,'radioTransmit');
@@ -1175,15 +1204,8 @@
       else if(action==='transmit'){c.transmitted=true;s.radio.done=true;announce(s,'DISTRESS CALL SENT · someone answered');emit(s,'transmitted');showDocument(s,REPLY);reveal(s,['checkpoint-nine']);}
       else{c.gateOpen=true;openEvacGate(s);}
     }
-    // after the gate opens: the civilians walk out, the city surges south, and the run ends only when everyone is out
-    if(c.gateOpen&&!c.escaped){
-      for(const v of s.civilians){if(v.state==='safe')continue;v.state='moving';
-        const threat=s.enemies.some(e=>!e.dead&&dist(e,v)<70);if(threat){v.cower=true;continue;}v.cower=false;
-        const tx=v.x<-20?-20:v.x>20?20:v.x,ty=EXIT.y,dx=tx-v.x,dy=ty-v.y,d=Math.hypot(dx,dy)||1,step=Math.min(d,62*dt);W().move(s.world,v,dx/d*step,dy/d*step);
-        if(inExit(v))v.state='safe';}
-      const everyone=s.players.every(p=>!p.dead&&inExit(p)),out=s.civilians.every(v=>v.state==='safe');
-      if(everyone&&out){c.escaped=true;s.mode='won';emit(s,'escape');announce(s,'THROUGH CHECKPOINT NINE · the squad got them out');}
-    }
+    // after the gate opens the city surges south, and the run ends only when every survivor, standing, is through it
+    if(c.gateOpen&&!c.escaped&&s.players.every(p=>!p.dead&&inExit(p))){c.escaped=true;s.mode='won';emit(s,'escape');announce(s,'THROUGH CHECKPOINT NINE · the squad is out');}
   }
   const inExit=q=>Math.abs(q.x-EXIT.x)<EXIT.w/2&&Math.abs(q.y-EXIT.y)<EXIT.h/2;
   function dropPallet(s){
@@ -1197,7 +1219,7 @@
   function openEvacGate(s){
     s.world.obstacles=s.world.obstacles.filter(o=>o.gateId!=='evac-gate');s.navVersion=(s.navVersion||0)+1;
     const g=(s.world.setpieces||[]).find(p=>p.kind==='evacGate');if(g)g.open=true;
-    s.finalPush=true;makeNoise(s,{x:0,y:3000},'gate',700);emit(s,'gate','evac');announce(s,'THE GATE IS OPEN · GET EVERYONE SOUTH');
+    s.finalPush=true;makeNoise(s,{x:0,y:W().EDGE},'gate',700);emit(s,'gate','evac');announce(s,'THE GATE IS OPEN · GET EVERYONE SOUTH');
   }
   function objectives(s,inputs,dt){
     const living=s.players.filter(p=>!p.dead);
@@ -1241,5 +1263,5 @@
     if(s.players.length&&s.players.every(p=>p.dead)){s.mode='lost';s.paused=false;}
     camera(s,dt,aspect);
   }
-  root.DSGame={spawnBudget,pressure,squadPower,campaignSteps,PRESSURE,waveTick,ARMOR,TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,journal,learn,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
+  root.DSGame={spawnBudget,pressure,squadPower,campaignSteps,PRESSURE,waveTick,ARMOR,TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,journal,objective,learn,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
 })(typeof window!=='undefined'?window:globalThis);

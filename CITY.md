@@ -1535,6 +1535,24 @@ vehicle, campaign/boss, and audio suites, all wired into validation scripts:
   JOURNAL shows the list and lets the player reread any record, with the city map one button away. A
   newly learned task is announced once ("JOURNAL · NEW TASK"). Evidence: `test-campaign` journal test,
   `shot.mjs journal`.
+- 2026-09-17 — **Objective card back, top left.** The user asked for the live objective again, as text:
+  `DSGame.objective(s)` walks the full chain in order (fuel, chapel generator, turn it on, Patient Furnace,
+  payload + override, ready Blackglass, broadcast, open the barrier, escape) and the card under the place
+  name shows the first step not done, its number of 9 and one line on what it means. Still no arrow or map
+  highlight. Journal tasks blocked on prerequisites (transmit, gate) now list each one explained and
+  ticked instead of a terse "Waiting on" line. Evidence: `test-campaign` objective test, `shot.mjs records`.
+- 2026-09-17 — **The quarantine cordon, and the gate as the map edge.** The waiting civilians behind the barrier are
+  gone: the squad walks out on its own and the answer to the broadcast now comes from the cordon outside
+  (`REPLY · SOUTH CORDON`). A containment fence (`civic/qFence` strips, `o.cordon`, in 640-unit segments so it culls)
+  runs the whole world edge at `DSWorld.EDGE` 3556, with a floodlight, a quarantine sign and razor wire where every
+  avenue dies against it and watchtowers on the pavements inside. `blocked()` treats that line as the world bound, so
+  the only opening anywhere is Checkpoint Nine's evacuation gate at the south end of the x=0 avenue; `EXIT` is the
+  mouth beyond it. The map draws the cordon as a hard amber ring with the gate red (green once open). The avenue lamp
+  run ends at y=3200, so the approach carries three lamps of its own. Evidence: `test-campaign` cordon test,
+  `shot.mjs gate|cordon|escape`.
+- 2026-09-17 — **Infected are only culled off camera.** `enemyTick` dropped any infected more than 1400 from the
+  nearest survivor; a driving or spread-squad camera is wider than that, so infected vanished in plain sight (worst on
+  wide screens). Culling and band expiry now also require the infected to be off camera. Evidence: `test.mjs` cull test.
 
 ## Human review queue
 

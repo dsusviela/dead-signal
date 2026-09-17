@@ -15,7 +15,7 @@ const w = W.create(1);
 test('every world prop and obstacle art id is defined', () => {
   const missing = new Set();
   for (const o of [...w.obstacles, ...w.props]) if (o.art && !A.spec(o.art)) missing.add(o.art);
-  for (const o of w.obstacles) if (o.type === 'fence') for (const s of ['_h', '_v']) if (!A.spec('lots/' + o.fence + s)) missing.add('lots/' + o.fence + s);
+  for (const o of w.obstacles) if (o.type === 'fence') for (const s of ['_h', '_v']) { const id = (o.strip || 'lots/' + o.fence) + s; if (!A.spec(id)) missing.add(id); }
   for (const id of ['buildings/doorSecured_h', 'buildings/doorSecured_v', 'buildings/sealedFacade_h', 'buildings/sealedFacade_v']) if (!A.spec(id)) missing.add(id);
   assert.deepEqual([...missing].sort(), []);
 });

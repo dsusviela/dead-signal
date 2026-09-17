@@ -1,16 +1,16 @@
 {
   "seeds": "1-50",
   "geometry": {
-    "obstacles": 1528,
+    "obstacles": 1575,
     "obstaclesByType": {
       "wall": 526,
       "door": 5,
       "furniture": 315,
-      "fence": 125,
+      "fence": 173,
       "debris": 4,
-      "rubble": 284,
+      "rubble": 282,
       "building": 57,
-      "car": 160,
+      "car": 161,
       "barrier": 47,
       "gate": 5
     },
@@ -49,8 +49,8 @@
       "industry"
     ],
     "driveableCars": 35,
-    "props": 1473,
-    "lights": 153,
+    "props": 1620,
+    "lights": 186,
     "burningWrecksByDistrict": {
       "industry": 6
     }

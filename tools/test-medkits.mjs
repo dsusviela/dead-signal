@@ -26,7 +26,7 @@ console.log('PASS medkits: inventory, pickup limits, personal healing, cap, paus
 const w=W.create(9);let seed=42;
 const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
 for(let i=0;i<6000;i++){
-  const x=rand()*7100-3550,y=rand()*7100-3550,r=rand()*25;
+  const x=rand()*7040-3520,y=rand()*7040-3520,r=rand()*25; // inside the cordon, where the world bound never pre-empts an obstacle
   const expected=w.obstacles.find(o=>x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h)||null;
   assert.equal(W.blocked(w,x,y,r),expected);
 }

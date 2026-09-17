@@ -1,6 +1,9 @@
 (function (root) {
   'use strict';
   var MIN=-3600, MAX=3600, ROAD=170, AXES=[-2800,-1400,0,1400,2800];
+  // The quarantine cordon: a containment fence the government ran round the whole city, its outer face at EDGE.
+  // Nothing crosses it; the only opening is Checkpoint Nine's evacuation gate across the south end of the x=0 avenue.
+  var EDGE=3556, FENCE_T=12, GATE_HALF=85;
   function rng(seed){var n=(Number(seed)||1)>>>0;return function(){n=(n*1664525+1013904223)>>>0;return n/4294967296;};}
   // breakable street rubble stands as a collapse pile; a breakable barrier is a staggered pair of jersey rows (render.js jerseyRun)
   function wreckArt(o){if(o.type==='rubble'){o.art='props/debrisPile';o.variant=mix(o.x,o.y)*3|0;}else if(o.type==='barrier'){o.art='barricade/jersey';o.jerseyRun=true;}return o;}
@@ -771,7 +774,7 @@
           zz=z+Math.round((mix(a+j*13,z)-.5)*120);
           if(Math.abs(a)<620&&Math.abs(zz)<620)continue;
           // the barricade gaps, Blackglass's avenue end and the whole southbound evac road stay clear of wrecks
-          if(a===0&&(Math.abs(Math.abs(zz)-700)<260||(j===0&&zz>1250&&zz<3000)||Math.abs(zz-2650)<320||Math.abs(zz+2800)<320))continue;
+          if(a===0&&(Math.abs(Math.abs(zz)-700)<260||(j===0&&zz>1250)||Math.abs(zz-2650)<320||Math.abs(zz+2800)<320))continue;
           r=j?mix(zz,a):mix(a,zz);s=mix(a+5+j,zz)<.5?-1:1;
           if(r<.45)continue;
           if(r<.88){
@@ -807,7 +810,7 @@
     if(authored)return;
     for(var a of AXES)for(var z=-2800;z<=2800;z+=400)for(var j=0;j<2;j++){
       if(Math.abs(a)<620&&Math.abs(z)<620)continue;
-      if(a===0&&(Math.abs(Math.abs(z)-700)<260||(j===0&&z>1250&&z<3000)||Math.abs(z-2650)<320||Math.abs(z+2800)<320))continue;
+      if(a===0&&(Math.abs(Math.abs(z)-700)<260||(j===0&&z>1250)||Math.abs(z-2650)<320||Math.abs(z+2800)<320))continue;
       if(mix(a+91+j*13,z)>=.24)continue;
       var side=mix(a+5+j,z)<.5?-1:1;
       if(j)park(z-48,a+side*55-24,false);else park(a+side*55-24,z-48,true);
@@ -915,9 +918,33 @@
     if(clearOfSockets(1640,2124,32,32))solid(w,'industrial/hopper',1668,2124,32,32,'rubble',null,{debris:'decorative',cover:true,locationId:'loading-yard'});
     over('industrial/pipeJoint',2100,1694,{locationId:'machine-shop',mask:2});for(var ix=2112;ix<2172;ix+=32)over('industrial/pipe_h',ix,1694,{locationId:'machine-shop',variant:ix===2144?1:0});over('industrial/pipeJoint',2172,1694,{locationId:'fuel-store',mask:8});
   }
+  // The cordon: containment fence runs along all four edges (solid, seeThrough, drawn from civic/qFence strips), crossing
+  // every avenue end, with a floodlight, a quarantine sign and razor wire where each road meets it and a watchtower on
+  // each corner. The only gap is the evacuation gate (dress). The world edge beyond it is blocked in blocked().
+  function cordon(w){
+    var tag={cordon:true,protected:true,seeThrough:true,fence:'qFence',strip:'civic/qFence'},SEG=640;
+    // in segments, so a run off screen is culled instead of tiling its whole length every frame
+    function run(x,y,ww,hh){var horizontal=ww>=hh,n=Math.ceil((horizontal?ww:hh)/SEG);
+      for(var i=0;i<n;i++){var a=Math.round(i*(horizontal?ww:hh)/n),b=Math.round((i+1)*(horizontal?ww:hh)/n);
+        var o=horizontal?ob(x+a,y,b-a,hh):ob(x,y+a,ww,b-a);o.type='fence';for(var k in tag)o[k]=tag[k];w.obstacles.push(o);}}
+    var I=EDGE-FENCE_T;
+    run(-EDGE,-EDGE,EDGE*2,FENCE_T);run(-EDGE,I,EDGE-GATE_HALF,FENCE_T);run(GATE_HALF,I,EDGE-GATE_HALF,FENCE_T);
+    run(-EDGE,-EDGE+FENCE_T,FENCE_T,EDGE*2-FENCE_T*2);run(I,-EDGE+FENCE_T,FENCE_T,EDGE*2-FENCE_T*2);
+    AXES.forEach(function(a){
+      [[a,-I+40,0,1],[a,I-40,0,-1],[-I+40,a,1,1],[I-40,a,1,-1]].forEach(function(e,k){
+        if(k===1&&a===0)return; // the evacuation gate dresses its own end
+        var x=e[0],y=e[1],vert=e[2];
+        for(var d=-96;d<=96;d+=48)prop(w,'barricade/razorWire',vert?x+(e[3]>0?-22:22):x+d,vert?y+d:y+(e[3]>0?-22:22),{flat:true,rot:vert,cordon:true});
+        prop(w,'barricade/floodlight',vert?x:x-110,vert?y-110:y,{light:{r:150,col:'#ffe0c0',a:'aa'},cordon:true});
+        prop(w,'barricade/signQuarantine',vert?x:x+110,vert?y+110:y,{cordon:true});
+      });
+    });
+    // watchtowers stand on the avenue pavements just inside the fence, where no building can be under them
+    AXES.forEach(function(a,i){if(i%2)return;[[a+128,-I+60],[a-128,I-20],[-I+30,a+150],[I-30,a-150]].forEach(function(p){if(Math.abs(p[0])<200&&p[1]>0)return;if(!blocked(w,p[0],p[1]-6,14))prop(w,'landmarks/watchtower',p[0],p[1],{cordon:true,light:{r:110,col:'#ffd249',a:'aa',dy:83}});});});
+  }
   // Story landmark points: where the map pins each story and the HUD reads it (the radio point is the
   // transmitter console inside Blackglass; its pallet waits at the mast base).
-  var LANDMARKS=[{id:'checkpoint',name:'Checkpoint Nine',x:0,y:2800,color:'#4c9aa0',locationId:'checkpoint-nine'},
+  var LANDMARKS=[{id:'checkpoint',name:'Checkpoint Nine',x:0,y:3500,color:'#4c9aa0',locationId:'checkpoint-nine'},
     {id:'radio',name:'Blackglass Radio',x:430,y:-3300,color:'#d49a42',locationId:'blackglass-radio',pallet:{x:-480,y:-3150}},
     {id:'hospital',name:'St. Orison Hospital',x:1950,y:-470,color:'#72b8a7',locationId:'st-orison'},
     {id:'ruins',name:'The Collapsed Quarter',x:-2800,y:0,color:'#77888c',locationId:'collapsed-quarter'},
@@ -930,15 +957,23 @@
     w.setpieces.push({id:'checkpoint',kind:'checkpoint',x:0,y:2650,locationId:'checkpoint-nine'});
     var CK={setpiece:'checkpoint',locationId:'checkpoint-nine'},RD={setpiece:'radio',locationId:'blackglass-radio'};
     function tag(base,extra){var o={};for(var k in base)o[k]=base[k];for(k in extra||{})o[k]=extra[k];return o;}
-    // city_v2 V2-1: no decorative boom here; the only gate at Checkpoint Nine is the functional evacuation barrier at y=3000
+    // city_v2 V2-1: no decorative boom here; the only gate at Checkpoint Nine is the functional evacuation barrier in the cordon
     prop(w,'landmarks/watchtower',-190,2730,tag(CK,{light:{r:110,col:'#ffd249',a:'cc',dy:83}})); // dy: the cabin window band centre sits 83 texels above the feet (52x104 tower)
     solid(w,'barricade/truckMil',150,2720,120,52,'car',null,tag(CK));solid(w,'barricade/crateMil',-160,2790,24,24,'barrier',120,tag(CK));solid(w,'barricade/sandbagWall',-200,2860,48,20,'barrier',400,tag(CK));solid(w,'barricade/sandbagWall',160,2860,48,20,'barrier',400,tag(CK));
     // the radio tower: mast base and shack are solid; the shack sits east so the transmitter stays reachable
-    // the south evacuation barrier: a locked gate across the avenue and sandbagged pavements, opened by the override
-    w.setpieces.push({id:'evac-gate',kind:'evacGate',x:0,y:3000,locationId:'checkpoint-nine',open:false});
-    solid(w,null,-85,2990,170,20,'gate',null,{gateId:'evac-gate',protected:true,locationId:'checkpoint-nine'});
-    solid(w,'barricade/sandbagWall',-170,2990,85,20,'barrier',400,{protected:true,locationId:'checkpoint-nine'});solid(w,'barricade/sandbagWall',85,2990,85,20,'barrier',400,{protected:true,locationId:'checkpoint-nine'});
-    prop(w,'quarantine/evacBarrier',0,3000,{locationId:'checkpoint-nine',evacGate:true});prop(w,'props/circuitBox',110,2975,{locationId:'checkpoint-nine',circuitBox:true});
+    // the south evacuation barrier: the one gate in the cordon, a locked leaf across the end of the avenue with sandbagged
+    // pavements either side, opened by the override; beyond it is outside the city
+    var GY=EDGE-FENCE_T;
+    w.setpieces.push({id:'evac-gate',kind:'evacGate',x:0,y:EDGE,locationId:'checkpoint-nine',open:false});
+    solid(w,null,-GATE_HALF,GY-4,GATE_HALF*2,FENCE_T+4,'gate',null,{gateId:'evac-gate',protected:true,locationId:'checkpoint-nine'});
+    solid(w,'barricade/sandbagWall',-170,GY-32,85,20,'barrier',400,{protected:true,locationId:'checkpoint-nine'});solid(w,'barricade/sandbagWall',85,GY-32,85,20,'barrier',400,{protected:true,locationId:'checkpoint-nine'});
+    prop(w,'quarantine/evacBarrier',0,EDGE,{locationId:'checkpoint-nine',evacGate:true});prop(w,'props/circuitBox',128,GY-44,{locationId:'checkpoint-nine',circuitBox:true});
+    // Checkpoint Nine now runs from the crossroads staging area down the avenue to the gate (a place, not a reservation)
+    var ck=locationById(w,'checkpoint-nine');if(ck)ck.rect.h=MAX-ck.rect.y;
+    cordon(w);
+    // the evacuation route: the avenue lamp run stops at y=3200, so the last stretch down to the gate keeps its own kerb
+    // lamps (alternating sides, like the run above it) and the gate approach stays readable at night
+    [[112,3280,1],[-112,3400,-1],[112,3500,1]].forEach(function(p){lamp(w,p[0],p[1],-p[2]*16);});
     // South Blocks notices: evacuation paperwork that points at the rest of the chain without a waypoint
     prop(w,'lots/refugeNotice',-150,2620,{flat:true,locationId:'checkpoint-nine',notice:{learns:['power','override','gate'],title:'EVACUATION SUSPENDED · DAY 6',body:'The south barrier needs emergency power and a command override. Emergency power runs from the St. Aubin Chapel generator (Old Quarter). Fuel: Ashworks.',reveals:['chapel','machine-shop']}});
     prop(w,'lots/refugeNotice',-560,1560,{flat:true,locationId:'crossroads-supermarket',notice:{title:'CIVIC NOTICE',body:'St. Orison (Civic Ward) takes casualties. Blackglass Radio (Northline) relays civilian traffic. Central Quarantine is closed to the public.',reveals:['st-orison','blackglass-radio','patient-furnace']}});
@@ -1003,7 +1038,7 @@
     w.lots.forEach(function(L){if(L.kind!=='graveyard')return;var R=L.rect;[[.3,.3],[.7,.55],[.35,.8]].forEach(function(f){glowAt(R.x+R.w*f[0],R.y+R.h*f[1],170,'#9fb0d8','1c',{moonlight:true,locationId:L.locationId});});});
     w.buildings.forEach(function(b){if(b.archetypeId!=='chapel')return;var d=b.exteriorDoors[0].rect;glowAt(d.x+d.w+30,d.y+d.h/2,120,'#ffcf8a','55',{circuit:'emergency',locationId:b.locationId});});
     // Checkpoint Nine: gate floods wired to the emergency circuit (the watchtower lamp runs on its own battery)
-    glowAt(-120,2600,180,'#ffe9bd','88',{circuit:'emergency',locationId:'checkpoint-nine'});glowAt(120,2600,180,'#ffe9bd','88',{circuit:'emergency',locationId:'checkpoint-nine'});
+    glowAt(-120,EDGE-120,180,'#ffe9bd','88',{circuit:'emergency',locationId:'checkpoint-nine'});glowAt(120,EDGE-120,180,'#ffe9bd','88',{circuit:'emergency',locationId:'checkpoint-nine'});
     // Central Quarantine: harsh pools along the ring edges, nothing inside the clinical corners
     [[-300,-585],[300,-585],[-300,585],[300,585],[-585,-300],[-585,300],[585,-300],[585,300]].forEach(function(p){glowAt(p[0],p[1],150,'#ffe0c0','bb',{quarantineRing:true,locationId:'patient-furnace'});});
     // every signed civic entrance keeps a small battery exit marker, so it reads even when its street lamp is dead
@@ -1109,7 +1144,7 @@
     return Array.from(ids).sort(function(a,b){return a-b;}).map(function(i){return w.obstacles[i];});
   }
   function blocked(w,x,y,rad){
-    rad=rad||0;if(x-rad<MIN||x+rad>MAX||y-rad<MIN||y+rad>MAX)return{type:'bounds',x:MIN,y:MIN,w:7200,h:7200};
+    rad=rad||0;if(x-rad<-EDGE||x+rad>EDGE||y-rad<-EDGE||y+rad>MAX||y+rad>EDGE&&(x-rad<-GATE_HALF||x+rad>GATE_HALF))return{type:'bounds',x:MIN,y:MIN,w:7200,h:7200};
     var cells=obstacleIndex(w).cells,first=Infinity;
     for(var gy=Math.floor((y-rad)/CELL);gy<=Math.floor((y+rad)/CELL);gy++)for(var gx=Math.floor((x-rad)/CELL);gx<=Math.floor((x+rad)/CELL);gx++){
       var bucket=cells.get(gx+','+gy);if(!bucket)continue;
@@ -1308,6 +1343,10 @@
     const camp=s.campaign;if(camp){const pending={chapel:!s.circuit?.emergency,'machine-shop':!s.circuit?.emergency,'fuel-store':!s.circuit?.emergency,'st-orison':!Object.values(camp.evidence||{}).some(Boolean),'patient-furnace':!camp.bossDown,'inner-arena':!camp.bossDown,'command-post':!(camp.payload&&camp.override),'holding-building':!camp.bossDown,'blackglass-radio':!camp.transmitted,'checkpoint-nine':!camp.escaped};
       ctx.save();ctx.setLineDash&&ctx.setLineDash([2,3]);for(const id of camp.known||[]){if(!pending[id])continue;const l=byId.get(id);if(!l)continue;const cx=px(l.rect.x+l.rect.w/2),cy=py(l.rect.y+l.rect.h/2);if(!inside(cx,cy,12))continue;
         ctx.strokeStyle='#081014';ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,local?12:9,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#ffd249';ctx.lineWidth=1;ctx.stroke();}ctx.restore();}
+    // the cordon: a hard line round the city, broken only by the evacuation gate (green once it is open)
+    {const e0=px(-EDGE),e1=px(EDGE),f0=py(-EDGE),f1=py(EDGE),gl=px(-GATE_HALF),gr=px(GATE_HALF);ctx.save();
+      for(const [col,lw] of [['#081014',4],['#ff8b3d',1.5]]){ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(gl,f1);ctx.lineTo(e0,f1);ctx.lineTo(e0,f0);ctx.lineTo(e1,f0);ctx.lineTo(e1,f1);ctx.lineTo(gr,f1);ctx.stroke();}
+      ctx.strokeStyle=s.campaign&&s.campaign.gateOpen?'#79e2cf':'#ff543b';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(gl,f1);ctx.lineTo(gr,f1);ctx.stroke();ctx.restore();}
     for(const l of s.world.landmarks||[]){
       const mx=px(l.x),my=py(l.y);if(!inside(mx,my))continue;
       ctx.fillStyle='#081014';ctx.beginPath();ctx.moveTo(mx,my-8);ctx.lineTo(mx+8,my);ctx.lineTo(mx,my+8);ctx.lineTo(mx-8,my);ctx.closePath();ctx.fill();
@@ -1343,5 +1382,5 @@
     ctx.restore();
     return yy-y;
   }
-  root.DSWorld={create:create,surfaceAt:surfaceAt,locationById:locationById,doorFamily:doorFamily,mapState:mapState,mapGlyph:mapGlyph,drawMapLegend:drawMapLegend,fireTruckMarks:fireTruckMarks,district:district,blocked:blocked,queryObstacles:queryObstacles,move:move,removeObstacle:removeObstacle,drawGround:drawGround,drawObjects:drawObjects,drawMap:drawMapRevamp,mapView:mapView,visible:visible,visibleProps:visibleProps,legacy:{roof:roof,wreck:wreck,landmark:landmark,districtMarkings:districtMarkings},hash:hash,mix:mix,THEME:THEME,DISTRICTS:DISTRICTS,districtById:function(id){return DISTRICT_BY_ID[id]||null;},districtCells:districtCells,blockOwner:blockOwner,gridIndex:gridIndex,GRID:GRID,BLOCK_OWNERS:BLOCK_OWNERS,territoryLabel:territoryLabel,AXES:AXES,ROAD:ROAD,MIN:MIN,MAX:MAX};
+  root.DSWorld={create:create,surfaceAt:surfaceAt,locationById:locationById,doorFamily:doorFamily,mapState:mapState,mapGlyph:mapGlyph,drawMapLegend:drawMapLegend,fireTruckMarks:fireTruckMarks,district:district,blocked:blocked,queryObstacles:queryObstacles,move:move,removeObstacle:removeObstacle,drawGround:drawGround,drawObjects:drawObjects,drawMap:drawMapRevamp,mapView:mapView,visible:visible,visibleProps:visibleProps,legacy:{roof:roof,wreck:wreck,landmark:landmark,districtMarkings:districtMarkings},hash:hash,mix:mix,THEME:THEME,DISTRICTS:DISTRICTS,districtById:function(id){return DISTRICT_BY_ID[id]||null;},districtCells:districtCells,blockOwner:blockOwner,gridIndex:gridIndex,GRID:GRID,BLOCK_OWNERS:BLOCK_OWNERS,EDGE:EDGE,GATE_HALF:GATE_HALF,territoryLabel:territoryLabel,AXES:AXES,ROAD:ROAD,MIN:MIN,MAX:MAX};
 })(typeof window!=='undefined'?window:globalThis);

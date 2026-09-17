@@ -2,7 +2,7 @@
 // covers HUD text, menus, glows and the vignette). Run the server first.
 //
 //   node tools/shot.mjs [scene|all] [--url http://127.0.0.1:4177] [--w 1920] [--h 1080] [--seed 12345] [--out artifacts]
-// Scenes: street house barricade radio boss pause map manual end lost compact car night journal
+// Scenes: street house barricade radio boss pause map manual end lost compact car night journal cordon gate
 // PLAYWRIGHT_PATH points at a playwright-core index.mjs; a default is tried.
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -24,7 +24,11 @@ const SCENES={
   records:{setup:PARTY+`s.spawnAcc=-1e9;s.enemies=[];const it=s.loot.find(i=>i.evidence==='patientRecords');for(const p of s.players){p.x=it.x+(p.id?(p.id-1.5)*30:0);p.y=it.y+(p.id?40:0);p.invuln=99;}`,settle:900},
   // the Blackglass transmitter mid-transmission with the circuit live
   transmit:{setup:PARTY+`s.spawnAcc=-1e9;s.enemies=[];s.circuit.emergency=true;Object.assign(s.campaign,{prepared:true,payload:true,holding:'transmit',transmitProgress:18});const a=DSGame.holdPoint(s,'transmit');for(const p of s.players){p.x=a.x+(p.id-1.5)*22;p.y=a.y+14;p.invuln=99;}`,settle:900},
-  // the escape: barrier open, civilians walking south, the squad covering them
+  // the cordon fence on the west edge of the Old Quarter, where the avenue dies against it
+  cordon:{setup:PARTY+`s.spawnAcc=-1e9;s.enemies=[];const E=DSWorld.EDGE;for(const p of s.players){p.x=-E+230+(p.id-1.5)*30;p.y=-1430+(p.id%2)*30;p.invuln=99;}`,settle:900},
+  // Checkpoint Nine from inside: the locked evacuation gate in the cordon, the only way out of the city
+  gate:{setup:PARTY+`s.spawnAcc=-1e9;s.enemies=[];const a=DSGame.holdPoint(s,'gate');for(const p of s.players){p.x=a.x+(p.id-1.5)*36;p.y=a.y-30;p.invuln=99;}`,settle:900},
+  // the escape: barrier open, the squad walking out through the cordon
   escape:{setup:PARTY+`s.spawnAcc=-1e9;s.enemies=[];s.circuit.emergency=true;Object.assign(s.campaign,{prepared:true,payload:true,override:true,transmitted:true,holding:'gate',gateProgress:7.95});const a=DSGame.holdPoint(s,'gate');for(const p of s.players){p.x=a.x+(p.id-1.5)*40;p.y=a.y+10;p.invuln=99;}`,settle:2500},
   // the run's bulldozer on its pad before anyone drives it
   dozer:{setup:PARTY+`s.spawnAcc=-1e9;s.enemies=[];const v=s.vehicles.find(q=>q.vehicleType==='bulldozer');for(const p of s.players){p.x=v.x+90+(p.id-1.5)*26;p.y=v.y+40;p.invuln=99;}`,settle:1200},

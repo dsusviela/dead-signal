@@ -12,7 +12,7 @@
   // district cards read the world's canonical table, in the order the campaign chain visits them
   const CHAIN=['checkpoint','industry','ruins','hospital','quarantine','northline'];
   const districtCards=()=>root.DSWorld.DISTRICTS.filter(d=>d.card).sort((a,b)=>CHAIN.indexOf(a.id)-CHAIN.indexOf(b.id)).map(d=>[d.id,d.mapLabel,d.card.role,d.card.note,d.mapPalette?d.mapPalette.light:d.color]);
-  const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The gate needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way; the Journal in Pause lists what you have learned needs doing and keeps every record you have read. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry four weapons solo, three each in co-op, plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.'],['05 / UPGRADES AND GRENADES','Taking a weapon you already carry adds its next attachment instead (three per gun: +N on your strip). The grenade launcher fires shared GREN rounds that burst on arrival and stagger infected; it never hurts the squad. The shotgun and pierce rounds hit several infected in a line.'],['06 / TURRETS AND ARMOR','One turret each, outside your slots. T / LB deploys it after standing still; T / LB beside it packs it up with its rounds. E / A beside any turret loads it from squad bullets. Infected wear it down. Armor vests soak damage before health, up to 50; armor never regenerates and medkits do not restore it.']];
+  const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The government ringed the whole city with a quarantine cordon; its one gate, the south barrier, needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way; the Journal in Pause lists what you have learned needs doing and keeps every record you have read. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry four weapons solo, three each in co-op, plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.'],['05 / UPGRADES AND GRENADES','Taking a weapon you already carry adds its next attachment instead (three per gun: +N on your strip). The grenade launcher fires shared GREN rounds that burst on arrival and stagger infected; it never hurts the squad. The shotgun and pierce rounds hit several infected in a line.'],['06 / TURRETS AND ARMOR','One turret each, outside your slots. T / LB deploys it after standing still; T / LB beside it packs it up with its rounds. E / A beside any turret loads it from squad bullets. Infected wear it down. Armor vests soak damage before health, up to 50; armor never regenerates and medkits do not restore it.']];
   const SHORT={pistol:'PISTOL',ar:'AR',shotgun:'SHOTGUN',smg:'SMG',rifle:'RIFLE',flame:'FLAMER',launcher:'LAUNCHER'};
   const ui={menu:null,focus:0,stack:[],pointer:{x:-1,y:-1},items:[],hover:null,upgradeFor:null,objective:null,location:null,arrive:0,panels:[]};
   let k=1,u=1,W=0,H=0,bindings={state:()=>null,restart:()=>{},resume:()=>{},toTitle:()=>{}};
@@ -118,8 +118,22 @@
     bar(g,x+8*u,y+18*u,w-16*u,7*u,b.hp/b.maxHp,COL.red,'#3a1218');bar(g,x+8*u,y+27*u,w-16*u,3*u,b.castProgress||0,COL.orange,'#10170e');
     return h+4*u;
   }
-  // The objective is no longer a permanent card and there is no waypoint: the pause menu's JOURNAL holds a to-do list
-  // of what the squad has learned (DSGame.journal) and every record it has read. A newly learned task is announced once.
+  // Top left, under the place name: the current step of the run and one line on what it means (DSGame.objective).
+  // Text only, never a waypoint; the pause menu's JOURNAL holds what the squad has learned (DSGame.journal) and every
+  // record it has read. A newly learned task is announced once. Returns the card's bottom edge.
+  function drawObjective(g,s){
+    if(!s.campaign||!root.DSGame.objective)return last.top;
+    const O=root.DSGame.objective(s),q=O.current,x=6*u,y=last.top+2*u,w=Math.min(W*.3,340*u),inner=w-20*u;
+    const step=O.index<O.steps.length&&!(s.boss&&s.boss.active)?'OBJECTIVE · '+(O.index+1)+' / '+O.steps.length:'OBJECTIVE';
+    const lines=wrap(g,q.hint,11,inner,true).slice(0,3),h=(40+lines.length*14)*u;
+    if(q.id!==ui.objective){ui.objective=q.id;ui.objectiveAt=(root.performance?performance.now():Date.now())/1000;}
+    const fresh=(root.performance?performance.now():Date.now())/1000-(ui.objectiveAt||0)<3;
+    plate(g,x,y,w,h,fresh?COL.orange+'99':undefined);rec('objective',x,y,w,h);g.fillStyle=COL.gold;g.fillRect(Math.round(x),Math.round(y),Math.round(3*u),Math.round(h));
+    utext(g,step,x+12*u,y+5*u,10,COL.orange);
+    utext(g,fit(g,q.title.toUpperCase(),12,inner),x+12*u,y+19*u,12,fresh?COL.gold:COL.paper);
+    lines.forEach((ln,i)=>utext(g,ln,x+12*u,y+(35+i*14)*u,11,COL.muted,'left','normal'));
+    return y+h;
+  }
   function trackObjective(s){
     if(!s.campaign||s.mode!=='play')return;
     const ids=root.DSGame.journal(s).tasks.map(q=>q.id);
@@ -127,11 +141,11 @@
     for(const q of root.DSGame.journal(s).tasks)if(!ui.journalKnown.has(q.id)){ui.journalKnown.add(q.id);if(!q.done)root.DSGame.announce(s,'JOURNAL · NEW TASK · '+q.title.toUpperCase());}
   }
   // one short-lived notice slot under the top edge, plus the last document read (readable evidence)
-  function drawNotices(g,s,below){
+  function drawNotices(g,s,below,left){left=left??last.top;
     let y=last.top+below+6*u;
     if(s.bannerT>0&&s.banner){const w=Math.min(W-40*u,umeasure(g,s.banner,13)+28*u),x=W/2-w/2,h=24*u;
       g.save();g.globalAlpha=Math.min(1,s.bannerT*2);plate(g,x,y,w,h);utext(g,fit(g,s.banner,13,w-20*u),W/2,y+5*u,13,'#fff0dd','center');g.restore();y+=h+6*u;}
-    if(s.document){const d=s.document,dw=Math.min(W*.34,440*u),lines=wrap(g,d.body,12,dw-24*u,true),dh=(28+lines.length*15)*u,dx=6*u,dy=last.top+6*u;
+    if(s.document){const d=s.document,dw=Math.min(W*.34,440*u),lines=wrap(g,d.body,12,dw-24*u,true),dh=(28+lines.length*15)*u,dx=6*u,dy=left+6*u;
       g.save();g.globalAlpha=Math.min(1,(d.t??9)*1.5);plate(g,dx,dy,dw,dh);g.fillStyle=COL.gold;g.fillRect(dx,dy,3*u,dh);utext(g,d.title,dx+12*u,dy+6*u,12,COL.gold);
       lines.forEach((ln,i)=>utext(g,ln,dx+12*u,dy+(23+i*15)*u,12,COL.paper,'left','normal'));g.restore();}
   }
@@ -316,7 +330,7 @@
       const won=s.mode==='won',w=Math.min(460*k,W-40*k);
       const heading=name==='pause'?['Take a breath.']:won?['Out.','On foot.']:['The city','keeps its dead.'];
       const J=s.campaign?root.DSGame.journal(s):{tasks:[]},jd=J.tasks.filter(q=>q.done).length;
-      const body=name==='pause'?(s.boss&&s.boss.active?'CONTAIN PATIENT FURNACE · Read the tells. Keep your squad alive.':(J.tasks.length?'JOURNAL · '+jd+' of '+J.tasks.length+' known tasks done':'JOURNAL · nothing learned yet. Notices and records around the city fill it in')+(J.records&&J.records.length?' · '+J.records.length+(J.records.length===1?' record':' records')+' read':'')+'.'):won?'The squad restored the circuit, sent the evidence and walked the Linden Street group out through Checkpoint Nine. Nobody came for you; the city behind you is still infected.':'The outbreak overwhelmed your squad. Try a different route, conserve supplies, and return stronger.';
+      const body=name==='pause'?(s.boss&&s.boss.active?'CONTAIN PATIENT FURNACE · Read the tells. Keep your squad alive.':(J.tasks.length?'JOURNAL · '+jd+' of '+J.tasks.length+' known tasks done':'JOURNAL · nothing learned yet. Notices and records around the city fill it in')+(J.records&&J.records.length?' · '+J.records.length+(J.records.length===1?' record':' records')+' read':'')+'.'):won?'The squad restored the circuit, sent the evidence and walked out through Checkpoint Nine into the cordon. The city behind you is still infected.':'The outbreak overwhelmed your squad. Try a different route, conserve supplies, and return stronger.';
       const bodyLines=wrap(g,body,9,w-68*k),itemsH=items.reduce((n,it)=>n+(it.quiet?30:44)*k+8*k,0);
       const h=(30+22+heading.length*32+8)*k+bodyLines.length*15*k+(name==='pause'?22*k:0)+(name==='end'?50*k:0)+12*k+itemsH+16*k,d=dialog(g,w,h);let y=d.y+30*k;
       text(g,name==='pause'?'TRANSMISSION HELD':won?'CHECKPOINT NINE OPEN':'TRANSMISSION LOST',d.x+34*k,y,8,COL.orange);y+=22*k;
@@ -346,8 +360,8 @@
     }else if(name==='journal'){
       const J=s.campaign?root.DSGame.journal(s):{goal:'',tasks:[],unknown:0,records:[]},w=Math.min(960*k,W-32*k);
       const gap=28*k,colL=(w-56*k-gap)*.54,colR=w-56*k-gap-colL;
-      const taskLines=J.tasks.map(q=>wrap(g,q.note,8,colL-26*k));
-      const leftH=J.tasks.reduce((n,q,i)=>n+18*k+taskLines[i].length*13*k+10*k,0)+(J.unknown?40*k:0)+(J.tasks.length?0:30*k);
+      const taskLines=J.tasks.map(q=>wrap(g,q.note,8,colL-26*k)),needLines=J.tasks.map(q=>q.needs.map(n=>wrap(g,n.text,8,colL-40*k)));
+      const leftH=J.tasks.reduce((n,q,i)=>n+18*k+taskLines[i].length*13*k+needLines[i].reduce((m,l)=>m+l.length*13*k+4*k,0)+10*k,0)+(J.unknown?40*k:0)+(J.tasks.length?0:30*k);
       const nRec=J.records.length,sel=items[ui.focus]&&items[ui.focus].id.startsWith('record:')?ui.focus:Math.min(ui.record??nRec-1,nRec-1);
       const bodyLines=sel>=0?wrap(g,J.records[sel].body,8,colR-24*k):[];
       const rightH=nRec*26*k+(sel>=0?30*k+bodyLines.length*13*k+20*k:40*k);
@@ -363,7 +377,10 @@
         if(q.done){g.fillStyle=COL.mint;g.fillRect(Math.round(bx+3*k),Math.round(by+3*k),Math.round(bs-5*k),Math.round(bs-5*k));}
         text(g,q.title,x+20*k,ly,9,q.done?COL.muted:COL.paper);
         if(q.done){const tw=measure(g,q.title,9);g.fillStyle=COL.muted;g.fillRect(Math.round(x+20*k),Math.round(ly+4*k),Math.round(tw),Math.max(1,Math.round(k)));}
-        ly+=18*k;for(const line of taskLines[i]){text(g,line,x+20*k,ly,8,q.done?COL.dim:COL.muted,'left','normal');ly+=13*k;}ly+=10*k;
+        ly+=18*k;for(const line of taskLines[i]){text(g,line,x+20*k,ly,8,q.done?COL.dim:COL.muted,'left','normal');ly+=13*k;}
+        q.needs.forEach((n,j)=>{text(g,n.done?'✓':'·',x+26*k,ly,8,n.done?COL.mint:COL.gold);
+          for(const line of needLines[i][j]){text(g,line,x+36*k,ly,8,n.done?COL.dim:COL.paper,'left','normal');ly+=13*k;}ly+=4*k;});
+        ly+=10*k;
       });
       if(J.unknown){for(const line of wrap(g,'More to learn. Notices, records and the places themselves fill this in.',8,colL-20*k)){text(g,line,x+20*k,ly,8,COL.dim,'left','normal');ly+=13*k;}}
       let ry=y;
@@ -467,7 +484,7 @@
   function draw(g,s,width,height){
     if(W!==width||H!==height||!last.u)layout(width,height);W=width;H=height;ui.items=[];ui.panels=[];
     g.save();g.textBaseline='top';
-    if(s.mode!=='title'){trackObjective(s);drawTop(g,s);const below=drawBoss(g,s);drawMinimap(g,s);drawNotices(g,s,below);drawPrompt(g,s);drawDock(g,s);}
+    if(s.mode!=='title'){trackObjective(s);drawTop(g,s);const below=drawBoss(g,s),left=drawObjective(g,s);drawMinimap(g,s);drawNotices(g,s,below,left);drawPrompt(g,s);drawDock(g,s);}
     if((s.mode==='won'||s.mode==='lost')&&ui.menu!=='end'){ui.menu='end';ui.stack=[];ui.focus=0;}
     if(s.mode==='play'&&s.overflowQueue&&s.overflowQueue.length&&ui.menu!=='overflow'){ui.menu='overflow';ui.stack=[];ui.focus=0;ui.overflowPick=null;}
     if(ui.menu){ui.items=[];drawMenu(g,s);}

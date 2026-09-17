@@ -101,5 +101,15 @@ test('boss starts only after the living party gathers', () => { const s=G.create
 test('one, two and four player simulations stay bounded for three waves', () => { for (const n of [1,2,4]) { const s=G.create(10+n); for(let i=1;i<n;i++)G.addPlayer(s,'p'+i); G.addPlayer(s,'p0'); s.mode='play'; s.players.forEach(p=>p.invuln=999); for(let i=0;i<2800;i++)G.step(s,.05,{}); assert.ok(s.wave>=4); const cap=Math.round((75+s.players.filter(p=>!p.dead).length*20)*Math.min(2.5,1+s.time/900)); assert.ok(s.enemies.length<=cap,`${n}p: ${s.enemies.length} enemies over cap ${cap}`); assert.ok(s.loot.length<1000); } });
 test('a level-up glows on every living survivor, and the glow expires', () => { const s=G.create(9); G.addPlayer(s); G.addPlayer(s,'pad'); const [a,b]=s.players; b.dead=true; s.fx=[]; G.collect(s,a,{id:3,x:0,y:0,type:'xp',amount:s.nextXp}); const glows=s.fx.filter(f=>f.kind==='levelUp'); assert.equal(glows.length,1); assert.equal(glows[0].follow,a.id); assert.equal(s.level,2); s.mode='play'; a.invuln=999; const t0=s.time; for(let i=0;i<60;i++)G.step(s,.05,{}); assert.ok(s.time-t0>1.7,'time advanced '+(s.time-t0)); assert.equal(s.fx.filter(f=>f.kind==='levelUp').length,0); });
 
+// the wide camera (driving, a spread squad, a wide screen) must never take infected off a screen the player is looking at
+test('infected are only culled off camera, and a band only expires off camera', () => {
+  const s=G.create(12); G.addPlayer(s,'p0'); s.mode='play'; const p=s.players[0]; p.invuln=999; p.x=0; p.y=2700;
+  const far=G.spawn(s,'walker',p.x+1600,p.y,{alert:true}), band=G.spawn(s,'band',p.x+1600,p.y+40,{alert:true}); band.expires=0;
+  s.camera={x:p.x+1300,y:p.y,w:2400,h:1350}; G.step(s,.05,{});
+  assert.ok(s.enemies.includes(far)&&s.enemies.includes(band),'in view at 1600 units: kept');
+  s.camera={x:p.x,y:p.y,w:740,h:420}; G.step(s,.05,{});
+  assert.ok(!s.enemies.includes(far)&&!s.enemies.includes(band),'off camera and out of range: culled');
+});
+
 for (const line of tests) console.log(line);
 if (tests.some(x => x.startsWith('FAIL'))) process.exitCode = 1;

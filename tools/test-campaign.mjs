@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import nodeFs from 'node:fs';
 const await_fs = () => nodeFs;
 await import('../city.js'); await import('../world.js'); await import('../boss.js'); await import('../game.js');
-const G = globalThis.DSGame, B = globalThis.DSBoss;
+const G = globalThis.DSGame, B = globalThis.DSBoss, W = globalThis.DSWorld;
 const results = [];
 function test(name, fn) { try { fn(); results.push(`PASS ${name}`); } catch (e) { results.push(`FAIL ${name}: ${e.message}`); } }
 
@@ -39,7 +39,7 @@ test('facts start unset; evidence waits where the anchors are; notices point onw
   assert.equal(s.locationState['machine-shop'].discovered, true); // signed civic places are known anyway
   put(s.players[0], notice, 30); run(s, .1);
   assert.ok(notice.read && s.document && s.campaign.known.includes('chapel'), 'reading the notice reveals the chapel');
-  assert.equal(s.civilians.length, 4); assert.ok(s.civilians.every(v => v.state === 'waiting'));
+  assert.ok(!s.civilians, 'nobody waits behind the barrier: the squad walks out alone');
 });
 
 test('illegal orders refuse with reasons and change nothing; exploration stays free', () => {
@@ -75,10 +75,11 @@ test('the full chain in canon order, with retreat and re-entry, ends only at the
   hold(s, 'transmit', 20); const mid = s.campaign.transmitProgress; assert.ok(mid > 15 && !s.campaign.transmitted);
   s.players.forEach(p => Object.assign(p, { x: 0, y: 2800 })); run(s, 5); assert.equal(s.campaign.transmitProgress, mid, 'leaving keeps the progress');
   hold(s, 'transmit', 22); assert.equal(s.campaign.transmitted, true); assert.match(s.document.title, /REPLY/); assert.equal(s.mode, 'play');
-  // 7 checkpoint: open the barrier, the civilians walk out, the squad follows
+  // 7 checkpoint: the barrier is the one gap in the cordon; the squad walks through it into the mouth beyond the fence
+  Object.assign(s.players[0], { x: 0, y: W.EDGE - 60 }); run(s, 1, { [s.players[0].id]: { y: 1 } });
+  assert.ok(s.players[0].y < W.EDGE - 12, 'the closed gate holds the cordon');
   hold(s, 'gate', 9); assert.equal(s.campaign.gateOpen, true); assert.equal(s.finalPush, true); assert.equal(s.mode, 'play', 'opening the gate is not the win');
-  run(s, 8); assert.ok(s.civilians.every(v => v.state === 'safe'), 'the waiting group reaches the exit');
-  assert.equal(s.mode, 'play', 'not won until the squad is out too');
+  run(s, 8); assert.equal(s.mode, 'play', 'not won until the squad is out');
   const [a, b] = s.players; Object.assign(a, { x: 0, y: G.EXIT.y }); Object.assign(b, { x: 0, y: 2700 }); run(s, .2);
   assert.equal(s.mode, 'play', 'co-op regroup: one survivor behind blocks the escape');
   b.dead = true; b.hp = 0; Object.assign(b, { x: 40, y: G.EXIT.y }); run(s, .2); assert.equal(s.mode, 'play', 'a downed survivor must be revived first');
@@ -88,7 +89,7 @@ test('the full chain in canon order, with retreat and re-entry, ends only at the
 
 test('losing mid-chain is a loss; a fresh run starts clean with no duplicates', () => {
   const s = game(1); fuelGenerator(s); s.players[0].dead = true; run(s, .1); assert.equal(s.mode, 'lost');
-  const t = game(1); assert.equal(t.circuit.emergency, false); assert.equal(t.campaign.prepared, false); assert.equal(t.civilians.length, 4);
+  const t = game(1); assert.equal(t.circuit.emergency, false); assert.equal(t.campaign.prepared, false);
   assert.equal(t.loot.filter(i => i.type === 'evidence').length, Object.keys(G.EVIDENCE).length);
 });
 
@@ -192,6 +193,25 @@ test('the journal lists only what the squad has learned, ticks tasks off, and ke
   assert.ok(G.journal(s).records.some(r => /REPLY/.test(r.title)), 'the reply is kept as a record');
   assert.deepEqual(ids(), ['power', 'prepare', 'subject', 'payload', 'transmit', 'override', 'gate', 'escape'], 'tasks keep the chain order');
   assert.equal(G.journal(s).unknown, 0);
+});
+
+test('the cordon: fence on every edge, nothing crosses it, the gate mouth is the only way out', () => {
+  const s = game(1), w = s.world, E = W.EDGE, p = s.players[0];
+  assert.ok(w.obstacles.filter(o => o.cordon).length >= 5, 'fence runs on all four sides');
+  for (const [x, y, dx, dy] of [[-1400, -E + 40, 0, -1], [-E + 40, 1400, -1, 0], [E - 40, -1400, 1, 0], [1400, E - 40, 0, 1]]) { Object.assign(p, { x, y }); run(s, 2, { [p.id]: { x: dx, y: dy } }); assert.ok(Math.abs(p.x) < E - 12 && Math.abs(p.y) < E - 12, `held at the fence near ${x},${y}: ${p.x},${p.y}`); }
+  assert.ok(W.blocked(w, 300, E + 20, 8), 'outside the fence is blocked'); assert.ok(!W.blocked(w, 0, E + 20, 8), 'the gate mouth is open ground');
+});
+
+test('the objective card walks the whole chain in order: fuel, generator, furnace, command post, radio, gate, escape', () => {
+  const s = game(), cur = () => G.objective(s).current.id;
+  assert.equal(cur(), 'fuel'); assert.equal(G.objective(s).steps.length, 9);
+  fuelGenerator(s); assert.equal(cur(), 'furnace', 'powering the chapel completes the fuel and generator steps');
+  killBoss(s); run(s, .1); assert.equal(cur(), 'records'); assert.match(G.objective(s).current.hint, /0 of 2/);
+  takeItem(s, 'payload'); assert.match(G.objective(s).current.hint, /1 of 2/); takeItem(s, 'override'); assert.equal(cur(), 'prepare');
+  hold(s, 'prepare', 13); assert.equal(cur(), 'broadcast'); hold(s, 'transmit', 42); assert.equal(cur(), 'gate');
+  const gate = G.objective(s).steps.find(q => q.id === 'gate'); assert.equal(gate.done, false);
+  G.learn(s, ['gate']); assert.ok(G.journal(s).tasks.find(q => q.id === 'gate').needs.length === 0, 'a ready barrier lists nothing left to do');
+  s.campaign.override = false; assert.deepEqual(G.journal(s).tasks.find(q => q.id === 'gate').needs.map(n => n.done), [true, false, true], 'the barrier ticks off what it needs');
 });
 
 console.log(results.join('\n'));

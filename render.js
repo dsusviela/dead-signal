@@ -93,14 +93,6 @@
  }
  const INFECTED_FPS={walker:8,runner:12,ghost:8,brute:6,carrier:6,band:12};
  // sedans alternate paint by id; service vehicles show their damage: intact, damaged, wrecked (the bulldozer: working/broken)
- function civilian(g,v,s){
-   const id='survivors/civilian',frame=v.state==='moving'&&!v.cower?Math.floor(s.time*6+v.x)%2:0;
-   if(!LIT)ART.shadow(g,v.x,v.y+2,8,.5);
-   // four distinct people, three frames each (walk A, walk B, cower): a stable person per civilian id
-   const who=(parseInt(String(v.id).split('-').pop(),10)||0)%4;
-   if(hasArt(id,v))ART.draw(g,id,v.x,v.y,{frame:(v.cower?2:frame)+3*who,flip:v.x>0});
-   else{rect(g,v.x-5,v.y-18,10,16,v.cower?'#5b6468':'#8a9a94');rect(g,v.x-4,v.y-24,8,7,'#c9b9a0');}
- }
  function vehicleVariant(v){
    if((v.vehicleType||'sedan')==='sedan')return parseInt(String(v.carId).split('-').pop(),10)%2||0;
    if(v.vehicleType==='bulldozer')return v.dead||v.integrity<v.maxIntegrity*.35?1:0;
@@ -390,7 +382,7 @@
    const W=root.DSWorld,w=s.world,items=[],push=(y,fn)=>items.push({y,fn});
    for(const o of W.visible(w,c)){
      if(o.type==='building')push(o.y+o.h,()=>{hasArt('buildings/roofFillBig')?bigRoof(g,o):W.legacy.roof(g,o);if(o.facade)sealedFacade(g,o);});
-     else if(o.type==='fence')push(o.y+o.h,()=>drawStrip(g,o,'lots/'+o.fence));
+     else if(o.type==='fence')push(o.y+o.h,()=>drawStrip(g,o,o.strip||'lots/'+o.fence));
      else if(o.type==='door')push(o.y+o.h,()=>drawStrip(g,o,'buildings/doorSecured'));
      // gates (city_v2 V2-1): the Checkpoint barrier is one prop assembly, so its collision strip draws nothing; an open
      // arena gate shows its posts and parked leaves around the centre bollard; post solids are drawn by those sprites
@@ -412,8 +404,6 @@
    // infected outside every survivor's cone and every light stay hidden (lights.js seen); they fade in as they enter light
    for(const e of s.enemies)if(Math.abs(e.x-c.x)<c.w/2+70&&Math.abs(e.y-c.y)<c.h/2+70){const a=L?L.seen(s,e):1;if(a<.03)continue;push(e.y,()=>{if(a>=.99){enemy(g,e,s);return;}g.save();g.globalAlpha=a;enemy(g,e,s);g.restore();});}
    for(const v of s.vehicles||[])if(!v.obstacle&&!v.removed&&Math.abs(v.x-c.x)<c.w/2+100&&Math.abs(v.y-c.y)<c.h/2+130)push(v.y+26,()=>vehicleDraw(g,v,s));
-   // the waiting civilians: grey survivors, cowering when infected are close
-   for(const v of s.civilians||[])if(Math.abs(v.x-c.x)<c.w/2+60&&Math.abs(v.y-c.y)<c.h/2+60)push(v.y,()=>civilian(g,v,s));
    for(const t of s.turrets||[])if(Math.abs(t.x-c.x)<c.w/2+60&&Math.abs(t.y-c.y)<c.h/2+60)push(t.y+6,()=>turret(g,t,s));
    for(const p of s.players)if(p.vehicle==null&&Math.abs(p.x-c.x)<c.w/2+70&&Math.abs(p.y-c.y)<c.h/2+70)push(p.y,()=>survivor(g,p,s));
    if(s.boss)push(s.boss.y+20,()=>root.DSBoss.drawBody(g,s));
@@ -459,6 +449,13 @@
    }g.globalAlpha=1;
  }
  let vignette=null,vignetteKey='';
+ // past the cordon fence is outside the city: a scraped no-man's-land strip, then dark (the gate mouth reads the same)
+ function outside(g,v){
+   const E=root.DSWorld.EDGE,l=v.x-v.w/2,t=v.y-v.h/2,r=v.x+v.w/2,b=v.y+v.h/2;if(l>-E&&r<E&&t>-E&&b<E)return;
+   const band=(x0,y0,x1,y1)=>{x0=Math.max(x0,l);y0=Math.max(y0,t);x1=Math.min(x1,r);y1=Math.min(y1,b);if(x1>x0&&y1>y0)g.fillRect(x0,y0,x1-x0,y1-y0);};
+   g.save();g.fillStyle='#1b1d18d0';band(l,t,r,-E);band(l,E,r,b);band(l,-E,-E,E);band(E,-E,r,E);
+   g.fillStyle='#050708';band(l,t,r,-E-60);band(l,E+60,r,b);band(l,-E-60,-E-60,E+60);band(E+60,-E-60,r,E+60);g.restore();
+ }
  function scene(g,s,width,height,viewport={top:0,bottom:0}){
    const c=s.camera,scale=width/c.w,playHeight=height-viewport.top-viewport.bottom;g.clearRect(0,0,width,height);g.fillStyle='#070a0d';g.fillRect(0,0,width,height);g.save();g.translate(width/2,viewport.top+playHeight/2);g.scale(scale,scale);g.translate(-c.x,-c.y);g.imageSmoothingEnabled=false;
    // the ground and the night cover the HUD bands too (the world shows through their translucent panels), so pad the camera rect by them
@@ -468,7 +465,7 @@
    const v=ground,left=v.x-v.w/2,top=v.y-v.h/2;if(L)L.begin(s,c,pad);ambient(g,s,c);containment(g,s,v);
    const radio=s.world.landmarks.find(l=>l.id==='radio');if(radio&&Math.abs(radio.x-v.x)<v.w/2+140&&Math.abs(radio.y-v.y)<v.h/2+180){ART.glow(g,radio.x,radio.y-20,105,s.radio.done?'#79e2cf':'#ffd249','24');g.strokeStyle=s.radio.done?'#79e2cf':'#ffd249';g.lineWidth=2;g.beginPath();g.arc(radio.x,radio.y,95,0,TAU);g.stroke();if(s.radio.active){g.lineWidth=5;g.beginPath();g.arc(radio.x,radio.y,95,-Math.PI/2,-Math.PI/2+TAU*s.radio.progress/32);g.stroke();}text(g,s.radio.done?'SIGNAL RESTORED':'BLACKGLASS RADIO',radio.x,radio.y+117,s.radio.done?'#79e2cf':'#ffd249',9);}
    if(hasArt('vfx/bloodDecal'))for(const d of s.decals||[])if(Math.abs(d.x-v.x)<v.w/2+30&&Math.abs(d.y-v.y)<v.h/2+30)ART.draw(g,'vfx/bloodDecal',d.x,d.y,{variant:d.variant,alpha:.85});
-   root.DSBoss.drawGround(g,s);
+   root.DSBoss.drawGround(g,s);outside(g,v);
    worldPass(g,s,v);projectiles(g,s);
    for(const f of s.fx){if(f.kind==='levelUp'){levelUp(g,s,f);continue;}g.globalAlpha=Math.min(1,f.life*2);if(f.sprite&&hasArt(f.sprite)){ART.draw(g,f.sprite,f.x,f.y,{frame:Math.min(f.frames-1,Math.floor((1-f.life/f.maxLife)*f.frames)),variant:f.variant||0,scale:f.scale||1});continue;}text(g,f.text,f.x,f.y-(1-f.life/f.maxLife)*22,f.color,8);}g.globalAlpha=1;
    // DS_DIAGNOSTIC_LIGHT (development only, city_v2 art review): skip the night so materials are judged in neutral light

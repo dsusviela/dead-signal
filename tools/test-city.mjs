@@ -786,7 +786,7 @@ test('circuit-switched practicals light the chapel, Blackglass and Checkpoint Ni
   for (const id of ['chapel', 'blackglass-radio', 'checkpoint-nine']) assert.ok(circuit.some(p => p.locationId === id), `${id} has circuit lights`);
   const nave = s.world.buildings.find(b => b.archetypeId === 'chapel').rooms.find(r => r.id.endsWith('nave')).rect, pt = { x: nave.x + nave.w * .5, y: nave.y + nave.h * .45 };
   assert.equal(G.litAt(s, pt.x, pt.y), false, 'dark before the generator'); s.circuit.emergency = true; assert.equal(G.litAt(s, pt.x, pt.y), true, 'lit after');
-  s.circuit.emergency = false; const gate = { x: 0, y: 2600 }; const before = s.world.lights.filter(l => l.circuit && Math.hypot(l.x - gate.x, l.y - gate.y) < 200).length; assert.ok(before >= 2, 'gate floods are circuit lights');
+  s.circuit.emergency = false; const gate = { x: 0, y: W.EDGE - 120 }; const before = s.world.lights.filter(l => l.circuit && Math.hypot(l.x - gate.x, l.y - gate.y) < 200).length; assert.ok(before >= 2, 'gate floods are circuit lights');
 });
 
 test('walls occlude point lights for the simulation; chain-link does not; headlights light ahead', () => {
