@@ -857,21 +857,39 @@ the six territories immediately, and supplies/roads/danger remain readable.
   named lot (scenes-pilot). Ashworks structure: `PILOT_BLOCKS['block-5-4']` — two workshops on the avenue with rear
   doors onto a truck-width loading lane, dispatch office and sheds, a fenced Loading Court with three gates, north truck
   lane; coverage 60% → 73% (target 55–75). Art dressing with the new families pending.*
-- [ ] Include a connected rear alley, authored trash/debris clusters and finished ground joins
+- [x] Include a connected rear alley, authored trash/debris clusters and finished ground joins
   in those pilots. Review the South Blocks residential park and its street edge alongside them
   to prove grass, paths and planting before replicating the surface treatment citywide.
-- [ ] Prove the watchtower and police-car revisions in a checkpoint/street context, and the
+  *South Blocks north alley (bags/boxes at the mouth, paper along the wall, grime strips) opens into Police Staff Parking;
+  the Rear Court has a dumpster, bags, tipped bin, notice and pole light. Ashworks Loading Court: dock apron, drums,
+  pallets, hazard paint and a battery work light. Captures: scenes-pilot/, scenes-pilot-diag/ (pilotSouthAlley,
+  pilotSouthCourt, pilotAshLane, pilotAshCourt); Linden Park in scenes-parks/.*
+- [x] Prove the watchtower and police-car revisions in a checkpoint/street context, and the
   later 00:34 reference's ground/edge/place readability in its reproduced scene. These focused
   reviews accompany the two block pilots; do not postpone them to a generic final polish pass.
-- [ ] Add only the art modules needed by those scenes, then review at normal camera zoom with
+  *scenes-checkpoint/checkpointBoom.png (lit tower, police car on the evac road), scenes-facades-diag/ashworks-exit.png
+  (police wrecks on the avenue), scenes-ground2-diag/void0034b.png and scenes-pilot/ (the 00:34 block now staff
+  parking with bays, lamps, kerb and alley).*
+- [x] Add only the art modules needed by those scenes, then review at normal camera zoom with
   labels and district lighting tint suppressed for diagnosis, using V2-0A's accepted HUD.
-- [ ] Measure frontage coverage, unused/unexplained areas, traversal and render/light cost.
+  *`window.DS_DIAGNOSTIC_LIGHT` / `v2-scenes --diag` skips the night lightmap for neutral review; all *-diag captures.*
+- [x] Measure frontage coverage, unused/unexplained areas, traversal and render/light cost.
   *Tool ready: `node tools/v2-frontage.mjs`. Before (artifacts/city/v2/baseline/frontage-before.json): South Blocks
   49% (target 65–80, 0/8 blocks in range), Ashworks 41% (55–75), Civic 50%, Quarantine 50%, open filler 50–62% of
-  block ground in every district.*
-- [ ] Tune the density targets and module sizes from those two scenes before expanding the city.
-- [ ] Record measured iteration cost and frame/voice headroom on a named target machine and
+  block ground in every district.* *After: block-3-4 73%, block-5-4 73%, open filler 22–27%; traversal, door,
+  socket and actor-size reachability tests pass. Browser cost (bench-browser, 1920×1080, AMD Ryzen 9 9950X, headless):
+  before v2 (pre-v2 tar build on :4178) four 3.71 ms render / 3.60 ms step, circuit4 3.37 / 3.51, truck4 3.82 / 0.35,
+  arena4 8.43 / 0.20; after four 3.79 / 0.35, circuit4 4.63 / 0.37, truck4 4.95 / 0.42, arena4 7.54 / 0.17, all 240
+  frames. Profiling found `nearestVehicle` casting a wall ray to every car in the city each tick; it now checks
+  distance first (four-player step 6.2 → 0.35 ms).*
+- [x] Tune the density targets and module sizes from those two scenes before expanding the city.
+  *`COMPOSE` per district (parcel run, opening width, fill share, wing, court and pocket names) derived from the
+  pilots; see the V2-4 alley/trash note for the measured city-wide result.*
+- [x] Record measured iteration cost and frame/voice headroom on a named target machine and
   supported viewport; use those results to scope the six district passes and set budgets.
+  *Machine: AMD Ryzen 9 9950X, Windows 10, headless Chromium, 1920×1080. Worst render p95 9.8 ms (arena4), peak
+  voices 15/48. A district pass (generator rule + kit + dressing + captures + tests) took roughly one working hour;
+  the six passes were therefore done as shared generator rules plus per-district set pieces, not six hand-authored cities.*
 
 Exit: the residential/commercial and industrial blocks are unmistakably different, both feel
 purposeful, and extra composition has not blocked movement or added unbudgeted supplies.

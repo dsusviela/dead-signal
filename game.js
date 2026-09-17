@@ -396,10 +396,10 @@
     let best=null,range=60;
     for(const v of s.vehicles){
       if(v.dead||v.integrity<=0||v.obstacle?.hp<=0||Math.abs(v.speed)>=60||(v.driver==null?0:1)+v.riders.length>=vdef(v).seats.length)continue;
-      const d=carDistance(v,p);
+      const d=carDistance(v,p);if(d>=range)continue; // distance first: the wall ray is only for cars within reach
       // A wall between a survivor and the door must not become a teleport shortcut.
       const wall=lineObstacle(s,p.x,p.y,v.x,v.y);
-      if(d<range&&(!wall||wall.obstacle===v.obstacle)){range=d;best=v;}
+      if(!wall||wall.obstacle===v.obstacle){range=d;best=v;}
     }return best;
   }
   function seatPlayers(s,v){

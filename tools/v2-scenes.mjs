@@ -28,6 +28,8 @@ const SCENES={};
 for(const [d,views] of Object.entries(STREETS))for(const [v,[x,y,a]] of Object.entries(views))SCENES[`${d}-${v}`]={setup:at(x,y,a),settle:900};
 Object.assign(SCENES,{
   fullmap:{setup:`DeadSignal.ui.open('fullmap');`,settle:400},
+  // V2-3 pilots: the South Blocks north alley into police staff parking, and the Ashworks loading lane into the loading court
+  pilotSouthAlley:{setup:at(725,1760,Math.PI/2),settle:900},pilotSouthCourt:{setup:at(900,1990,Math.PI),settle:900},pilotAshLane:{setup:at(3100,2200,0),settle:900},pilotAshCourt:{setup:at(3380,1990,-Math.PI/2),settle:900},
   // parks and the graveyard (city_v2 Section 2 finish review): each from inside its main path cross
   parkLinden:{setup:at(-2100,2120,-Math.PI/2),settle:900},parkNorthline:{setup:at(-1020,-2360,-Math.PI/2),settle:900},graveyard:{setup:at(-2310,-740,-Math.PI/2),settle:900},chapelApproach:{setup:at(-1500,-890,Math.PI),settle:900},chapelGraveyardPath:{setup:at(-1960,-860,Math.PI),settle:900},
   // city_v2 set pieces: St. Orison canopy + glass link, the Ashworks gantry, the quarantine processing link, Blackglass front, fire apron

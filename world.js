@@ -481,6 +481,20 @@
         flat('tiles/decalOil',R.x+R.w*.6,R.y+R.h*.7);
         sockets([[R.x+R.w*.3,R.y+R.h*.55],[R.x+R.w*.62,R.y+R.h*.75]],2);return;
       }
+      // V2-3 pilot yards: a working loading court (dock apron, pallets, skip, drums, one flood) and the terrace rear court (bins, washing-line posts)
+      if(id==='ashworks-loading-court'){
+        zone('dock',R.x+20,R.y+20,R.w-40,120);zone('storage',R.x+20,R.y+R.h-160,R.w-40,140);
+        block('industrial/palletCluster',R.x+R.w-70,R.y+R.h-60,38,16,{cover:true});block('industrial/ashSkip',R.x+30,R.y+R.h-70,38,16,{cover:true});block('industrial/drumCluster',R.x+R.w-60,R.y+140,30,14,{cover:true});
+        flat('industrial/loadingDock_h',R.x+30,R.y+20);flat('industrial/ashSpill',R.x+60,R.y+R.h-40);flat('lots/hazardPaint',R.x+60,R.y+150);
+        block('barricade/floodlight',R.x+R.w-50,R.y+R.h*.45,20,14,{light:{r:170,col:'#ffb040',a:'ff',dy:60},lit:true});L.lightAnchors.push({x:R.x+R.w-40,y:R.y+R.h*.45,r:170,lit:true});
+        sockets([[R.x+R.w*.5,R.y+R.h*.35],[R.x+R.w*.35,R.y+R.h*.75]],2);return;
+      }
+      if(id==='linden-rear-court'){
+        zone('court',R.x,R.y,R.w,R.h);
+        block('props/dumpster',R.x+20,R.y+40,40,26,{variant:1});flat('streetlife/binBags',R.x+80,R.y+56,{variant:2});flat('streetlife/tippedBin',R.x+R.w-50,R.y+R.h-60);flat('lots/refugeNotice',R.x+R.w-40,R.y+30);
+        lamp('lots/lightPole',R.x+R.w-30,R.y+R.h/2,110);
+        sockets([[R.x+R.w*.5,R.y+R.h*.5]],1);return;
+      }
       if(L.bare){zone('apron',R.x,R.y,R.w,R.h);sockets([[R.x+40,R.y+R.h-50],[R.x+R.w-40,R.y+R.h-50]],1);return;}
       if(k==='park'&&id==='northline-park'){
         // Transmitter Park, the municipal one: an ordered avenue of trees and beds lined along both paths, benches facing the walk
