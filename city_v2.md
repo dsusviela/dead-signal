@@ -610,9 +610,9 @@ registry and absent in the browser if its script was never registered.
 - [x] Residential and shop frontage modules: corners, attached sections, entrance recesses,
   shutters, awnings, windows, rear extensions and court walls.
   *art/frontage.js (35 ids, reviewed). Integrated: render.js KITS draws brick rows, shopfronts + awnings, shutters and eaves on South Blocks generated street faces; rear walls, back doors and bin nooks on service sides (REAR kit).*
-- [~] Old Quarter terrace/party-wall modules and fresh collapse cross-sections; revise rubble
+- [x] Old Quarter terrace/party-wall modules and fresh collapse cross-sections; revise rubble
   spill so the source of the damage is visible.
-  *Terrace faces and collapse ends + collapseSpill drawn on Old Quarter faces and collapsed masses; brick spill decal under collapses. Full party-wall gap composite not yet used.*
+  *Terrace faces and collapse ends + collapseSpill drawn on Old Quarter faces and collapsed masses; brick spill decal under collapses; street-row demolition gaps get the full composite (collapseFloor, papered party walls both sides, spill) — scenes-p2/collapseGap.png.*
 - [x] Hospital wing roofs, public canopy, covered links, service frontage and medical facade
   modules. Establish a campus silhouette larger than a cross sign.
   *art/civic.js drawn and reviewed; ward roofs, canopy, glass link and ambulance bay placed on St. Orison.*

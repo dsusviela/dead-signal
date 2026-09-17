@@ -31,7 +31,7 @@ Object.assign(SCENES,{
   // wide ground review: a camera about 2.5x wider than play over courts and fillers in each district (use with --diag)
   ...Object.fromEntries([['South',-2100,2700],['Ruins',-3000,-1900],['Ward',3050,-2600],['North',650,-900],['Ash',3200,2450],['Quar',-800,850]].map(([n,x,y])=>['wide'+n,{setup:at(x,y,0)+`;DeadSignal.state.camera.w=1900;DeadSignal.state.players[0].x=${x};`,settle:1200}])),
   // P2 art in place: the supermarket sales floor (aisles, trolley) and the police sign
-  p2Market:{setup:at(-500,1850,-Math.PI/2),settle:900},p2Police:{setup:at(150,2300,0),settle:900},p2Rubble:{setup:at(-2800,-600,Math.PI/2),settle:900},
+  p2Market:{setup:at(-500,1850,-Math.PI/2),settle:900},p2Police:{setup:at(150,2300,0),settle:900},p2Rubble:{setup:at(-2800,-600,Math.PI/2),settle:900},collapseGap:{setup:at(-1995,120,Math.PI/2),settle:900},
   // V2-3 pilots: the South Blocks north alley into police staff parking, and the Ashworks loading lane into the loading court
   pilotSouthAlley:{setup:at(725,1760,Math.PI/2),settle:900},pilotSouthCourt:{setup:at(900,1990,Math.PI),settle:900},pilotAshLane:{setup:at(3100,2200,0),settle:900},pilotAshCourt:{setup:at(3380,1990,-Math.PI/2),settle:900},
   // parks and the graveyard (city_v2 Section 2 finish review): each from inside its main path cross

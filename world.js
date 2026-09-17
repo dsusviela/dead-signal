@@ -861,6 +861,14 @@
       if(d.id==='industry'){solidAt('industrial/palletCluster',R.x+24,R.y+R.h-40,38,16,tag);solidAt(mix(R.x,R.y)<.5?'industrial/drumCluster':'industrial/ashSkip',R.x+R.w-60,R.y+30,mix(R.x,R.y)<.5?30:38,14,tag);flat('industrial/ashSpill',R.x+R.w/2,R.y+R.h/2,{lotId:L.id,variant:v3(R.x,R.y)%2});}
       else if(d.id==='quarantine'){if(R.w>=160&&R.h>=120)solidAt('civic/tentGroup',R.x+R.w/2-56,R.y+R.h/2-10,112,24,tag);solidAt('civic/requisitionBoard',R.x+20,R.y+R.h-10,22,4,tag);}
       else if(d.id!=='hospital'){flat(mix(R.x,R.y+7)<.5?'streetlife/tippedBin':'streetlife/timberScrap',R.x+R.w*.3,R.y+R.h*.35,{lotId:L.id,variant:v3(R.y,R.x)});}});
+    // Old Quarter demolition gaps read as a fresh terrace collapse: exposed cellar floor, papered party walls on both
+    // sides, torn terrace ends and a spill onto the pavement (only on east-west rows, where the terrace faces the street)
+    w.lots.forEach(function(L){if(L.kind!=='courtyard'||!/pocket-[ns]/.test(L.id)||district(L.rect.x+L.rect.w/2,L.rect.y+L.rect.h/2).id!=='ruins')return;
+      var R=L.rect,south=/pocket-s/.test(L.id),x,y,tag={lotId:L.id,locationId:L.locationId,flat:true};
+      for(y=R.y;y<R.y+R.h-8;y+=32)for(x=R.x;x<R.x+R.w-8;x+=32)prop(w,'frontage/collapseFloor',x,y,Object.assign({variant:v3(x,y)},tag));
+      for(y=R.y;y<R.y+R.h-24;y+=32){prop(w,'frontage/partyWall_v',R.x+4,y,Object.assign({variant:v3(R.x,y)%2},tag));prop(w,'frontage/partyWall_v',R.x+R.w-4,y,Object.assign({variant:v3(R.x+1,y)%2,flip:true},tag));}
+      if(south)prop(w,'frontage/collapseSpill',R.x+R.w/2,R.y+R.h,Object.assign({variant:0},tag));
+    });
     // the Utility Yard: transformers on plinths, a cable drum and the pole line that feeds them
     var U=w.lots.filter(function(L){return L.locationId==='utility-yard';})[0];
     if(U){var R=U.rect,tag={lotId:U.id,locationId:U.locationId};solidAt('civic/transformer',R.x+60,R.y+90,40,20,tag);solidAt('civic/transformer',R.x+140,R.y+90,40,20,tag);
