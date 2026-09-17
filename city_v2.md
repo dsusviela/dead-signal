@@ -965,11 +965,27 @@ alone does not complete this phase.
   *Implemented as sparse one-shots, not beds (AUDIO.md records the user's earlier removal of continuous
   ambience): seven source- and condition-bound incidentals in `audio.js`, covered by test-audio (sources,
   circuit condition, no-source silence, boss quiet, no loops, voice cap). Bulldozer engine pitch follows its
-  new 140 top speed. Listening review and new-scene sources (after V2-4) pending.*
-- [ ] Compose entrance/landmark lights and test restored power, open gates and final evacuation
+  new 140 top speed. Sources bind to the new geometry automatically (collapsed masses, hospital/clinic buildings, utility
+  yard, burning wrecks, quarantine fences). **Awaiting human listening review.** Check steps: `npm run serve`, open
+  http://127.0.0.1:4177/?seed=12345 with sound on; (1) stand 5 min each beside a South Blocks dumpster, an Old Quarter
+  collapse, St. Orison, the Utility Yard with the circuit off then on (fuel the chapel generator), a burning Ashworks
+  wreck and the quarantine fence — each should give an occasional short cue, silence between, and no continuous bed;
+  (2) drive the sedan, fire truck and bulldozer back to back — three clearly different engines, dozer track clatter only
+  while moving; (3) pause, alt-tab and mute during each cue — all sound stops at once.*
+- [x] Compose entrance/landmark lights and test restored power, open gates and final evacuation
   against the new surroundings. Retain functional occlusion and Day 9 fire rules.
-- [ ] Check interrupted interactions, backtracking, boarding/dismounting, vehicle breakdown,
+  *New pools only where something explains them: St. Orison canopy (teal, on the canopy), Loading Court battery work
+  light, Furnace Plant gate flood, Rear Court pole, arena gate lamps (amber/cyan). Captures scenes-v25/: generatorOff,
+  generatorOn (chapel door spill and nave lit), transmitting (Blackglass rack), escape and evacBarrier (open barrier,
+  civilians), gate-s-open, pieceHospital. test-city "only Ashworks still burns" and district light checks pass;
+  lights 157 → 152 in the fixture.*
+- [x] Check interrupted interactions, backtracking, boarding/dismounting, vehicle breakdown,
   arena commitment/reopening and final escape with the denser geometry.
+  *All run against the composed city in `npm test` (exit 0): "the full chain in canon order, with retreat and re-entry,
+  ends only at the escape", "spending all optional fuel still powers the chapel; cleared places, the arena and a restart
+  behave", "damage reduces driving distance and breakdown permanently ejects the whole squad", "safe dismount at every
+  heading beside a wall and a parked car", "refuelling: … interruptions … lose nothing", "arena cover leaves open lanes",
+  plus test-city reachability for survivors, brutes, doors, sockets, gates, the fire truck and all dozer pads.*
 
 Exit: sound and light explain the same physical spaces and states that the player can see.
 
