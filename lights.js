@@ -69,7 +69,7 @@
    }
    for(i=0;i<s.shots.length;i++){var sh=s.shots[i];if(sh.type!=='flame')continue;addLight(sh.x+Math.cos(sh.angle)*52,sh.y+Math.sin(sh.angle)*52,90,'#ff7b35',.5*Math.max(0,sh.life/sh.maxLife));}
    if(s.boss&&s.boss.active)addLight(s.boss.x,s.boss.y,260,'#ff6a2a',.9,s.boss);
-   for(i=0;i<s.fx.length;i++){var fx=s.fx[i];if(fx.sprite==='vfx/explosion'&&inView(fx.x,fx.y,160))addLight(fx.x,fx.y,150,'#ff9a45',Math.min(1,fx.life/fx.maxLife*1.6));}
+   for(i=0;i<s.fx.length;i++){var fx=s.fx[i];if(fx.sprite==='vfx/explosion'&&inView(fx.x,fx.y,160))addLight(fx.x,fx.y,150,'#ff9a45',Math.min(1,fx.life/fx.maxLife*1.6));else if(fx.kind==='levelUp'){var fp=null;for(var j=0;j<s.players.length;j++)if(s.players[j].id===fx.follow)fp=s.players[j];fp=fp||fx;if(inView(fp.x,fp.y,130))addLight(fp.x,fp.y-10,120,'#ffd249',Math.min(1,fx.life/fx.maxLife*1.5));}}
    for(i=0;i<(s.turrets||[]).length;i++){var tu=s.turrets[i];if(inView(tu.x,tu.y,90))addLight(tu.x,tu.y-4,tu.target&&tu.ammo?78:46,tu.target&&tu.ammo?'#ffd9a0':'#a8c4c0',tu.target&&tu.ammo?.75:.5);}
    for(i=0;i<(s.fires||[]).length;i++){var fr=s.fires[i];if(inView(fr.x,fr.y,70))addLight(fr.x,fr.y,64,'#ff6a2a',.6);}
    if(Math.abs(c.x)<c.w/2+430&&Math.abs(c.y)<c.h/2+430)addLight(0,0,320,'#ff543b',.45);

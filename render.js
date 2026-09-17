@@ -48,6 +48,21 @@
    }
    g.restore();
  }
+ // Level up: a golden flash that swells in fast and fades slowly, a ring opening on the ground, a column of light and
+ // sparks spiralling up. It follows its survivor; lights.js adds a matching light so it still glows at night.
+ function levelUp(g,s,f){
+   const p=s.players.find(q=>q.id===f.follow)||f,k=1-f.life/f.maxLife,x=p.x,y=p.y-10,swell=k<.2?k/.2:1-(k-.2)/.8;
+   g.globalAlpha=Math.max(0,swell);ART.glow(g,x,y,30+swell*34,'#ffd249','77');
+   const ring=10+k*48;g.globalAlpha=Math.max(0,1-k)*.9;g.strokeStyle='#ffe58a';g.lineWidth=1+2*(1-k);
+   g.beginPath();g.ellipse(x,p.y+2,ring,ring*.42,0,0,TAU);g.stroke();
+   const h=24+k*56,beam=g.createLinearGradient(0,y-h,0,p.y+4);beam.addColorStop(0,'rgba(255,229,138,0)');beam.addColorStop(1,'rgba(255,229,138,.55)');
+   g.globalAlpha=Math.max(0,swell);g.fillStyle=beam;g.fillRect(x-5,y-h,10,h+14);
+   for(let i=0;i<12;i++){
+     const a=i/12*TAU+k*4,r=(11+5*Math.sin(i*1.7))*(1-k*.5),py=p.y-4-k*(34+i*3)-(i%3)*5;
+     g.globalAlpha=Math.max(0,1-k*k)*(i%2?.95:.6);g.fillStyle=i%3?'#ffe58a':'#fff6c8';g.fillRect(Math.round(x+Math.cos(a)*r)-1,Math.round(py)-1,2,2);
+   }
+   g.globalAlpha=1;
+ }
  function survivor(g,p,s,seated=false){
    const moving=p.moving&&!p.dead,fresh=!!ART.spec('survivors/body');
    if(!seated)ART.shadow(g,p.x,p.y+2,p.dead?19:13,.62);
@@ -454,7 +469,7 @@
    if(hasArt('vfx/bloodDecal'))for(const d of s.decals||[])if(Math.abs(d.x-v.x)<v.w/2+30&&Math.abs(d.y-v.y)<v.h/2+30)ART.draw(g,'vfx/bloodDecal',d.x,d.y,{variant:d.variant,alpha:.85});
    root.DSBoss.drawGround(g,s);
    worldPass(g,s,v);projectiles(g,s);
-   for(const f of s.fx){g.globalAlpha=Math.min(1,f.life*2);if(f.sprite&&hasArt(f.sprite)){ART.draw(g,f.sprite,f.x,f.y,{frame:Math.min(f.frames-1,Math.floor((1-f.life/f.maxLife)*f.frames)),variant:f.variant||0,scale:f.scale||1});continue;}text(g,f.text,f.x,f.y-(1-f.life/f.maxLife)*22,f.color,8);}g.globalAlpha=1;
+   for(const f of s.fx){if(f.kind==='levelUp'){levelUp(g,s,f);continue;}g.globalAlpha=Math.min(1,f.life*2);if(f.sprite&&hasArt(f.sprite)){ART.draw(g,f.sprite,f.x,f.y,{frame:Math.min(f.frames-1,Math.floor((1-f.life/f.maxLife)*f.frames)),variant:f.variant||0,scale:f.scale||1});continue;}text(g,f.text,f.x,f.y-(1-f.life/f.maxLife)*22,f.color,8);}g.globalAlpha=1;
    // DS_DIAGNOSTIC_LIGHT (development only, city_v2 art review): skip the night so materials are judged in neutral light
    if(L&&!root.DS_DIAGNOSTIC_LIGHT)L.draw(g,s,c); // the night: multiply the lightmap over everything in the world, before the vignette and the HUD
    g.restore();

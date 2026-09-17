@@ -16,7 +16,7 @@ procedural.
 - [x] Mix bus: saturation, a dark 4.2 s hall, a short room, a filtered echo, and a duck under gunfire
 - [x] Stealth-aware director (calm / suspense / fight / overrun / boss) with dwell times
 - [x] Six quarter palettes; the Patient Furnace rewritten on the new kit
-- [x] `tools/test-score.mjs` (31 checks), `tools/test-crowd.mjs` state distribution, `test-audio` overrun case
+- [x] `tools/test-score.mjs` (33 checks), `tools/test-crowd.mjs` state distribution, `test-audio` overrun case
 - [x] Listening bench: `npm run bench:music` builds `artifacts/music-bench.html`
 - [ ] **User listening pass on the bench, one quarter at a time**
 - [ ] In-game pass (`npm run serve`): sneak, get spotted, fight, lose them, cross a quarter, boss
@@ -51,7 +51,7 @@ One **conductor** (a sixteen-step lookahead clock) drives one arrangement in **l
 | overrun | off-grid second ostinato, brass blasts, a sub on every bar | overrun |
 | boss | the Patient Furnace | boss |
 | sting | contact, release, CREST, boss phase | events |
-| down | survivor down, on its own bus past the duck: the score hushes to 18% for 2.2 s, a 5.4/6.1 kHz ring, a low FM bell tolled twice (same pitch in every quarter), a sub hit | events |
+| down | its own bus past the duck. **Level up** (cue `level`): the score hushes to 18% for 2.2 s, a 5.4/6.1 kHz ring, a low FM bell (98 Hz) tolled twice, a sub; with music off it plays on effects without the hush. **Survivor down** (any survivor newly dead, detected in `update()` so it also plays with music off, then on effects): about 1.5 s, a kill landing. The score hushes to 20% for 1.5 s. A detuned saw pair (880/932 Hz) slashes down with 5.4 k blade air; the cut is wet, with two narrow bandpass `squelch` gushes (1300→260, 900→170 Hz) and a 330→72 Hz gloop; the body lands with a 50 Hz thud, a three-burst splatter and a bounce; then the drama, a dying breath on an 'ah' choir falling a fifth from 220 Hz over a 73/78/110 Hz saw cluster and a 30 Hz boom. **Full wipe** (cue `lost`, effects bus): a D-minor-plus-flat-second saw chord over a 30 Hz boom, echoed 7 times every 0.36 s, each quieter (x0.6), darker (cutoff x0.66) and panned wider, over a sinking low D saw | events |
 
 Sends: bed/texture/motif live in the hall (motif and texture also in the echo); combat and overrun
 stay in the short room so the fast material doesn't smear. The old swarm song showed what a long tail
@@ -157,7 +157,7 @@ clipping. Hearing is simulation-only: `game.js` never reads `DSAudio`.
   Music off calls `droneStop()` every frame, so the drone never holds voices while silent.
 - `DSAudio.musicBus` exposes the layer gains plus the drone bus for the tests and the bench. Don't
   route effects through it.
-- The **down** sting is meant NOT to blend in (user, 2026-09-17). Keep it outside the arrangement: its own bus, fixed pitch, and gunfire does not un-duck the hush.
+- The **down** bus is for moments that must NOT blend in (user, 2026-09-17). The ring-and-bell was first written for survivor down; the user heard it as a notification and moved it to level-up. Survivor down was then a klaxon, then a short kill-landing slash and body fall, then ("more slushing, more drama") the wet squelches, the splatter, the choir breath and the dread cluster (references: an Among Us kill, a "character fall impact" effect). The full wipe was modelled on a "dramatic synth echo". Keep all of them fixed-pitch and outside the arrangement.
 - `cue('boss')` is a separate **effects**-bus stinger, not part of the score.
 
 ## Open

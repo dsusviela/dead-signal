@@ -47,7 +47,7 @@ try{
   }
   const crowd=[];for(let i=0;i<4;i++)crowd.push({type:'explosion'},{type:'shot',detail:'launcher'},{type:'armor',detail:'hit'},{type:'shot',detail:'shotgun'});for(let i=0;i<24;i++)crowd.push({type:'shot',detail:'turret'});
   const stacked=await render(crowd);assert.ok(stacked.peak<1,'four-player power combat does not clip ('+stacked.peak.toFixed(3)+')');assert.ok(stacked.voices<=48,'voices '+stacked.voices);
-  for(const type of ['heal','hurt','pickup','reload','level','revive','engine','crash']){
+  for(const type of ['heal','hurt','pickup','reload','level','revive','engine','crash','lost']){
     const out=await render([{type}]);assert.ok(Math.abs(out.signature-baseline.signature)>.01,type+' changes the waveform');assert.ok(out.peak<1);
   }
   const boss=await render([],{boss:true});assert.notEqual(boss.signature,baseline.signature);

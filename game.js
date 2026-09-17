@@ -246,7 +246,7 @@
     }
     return nearest?{obstacle:nearest,t:hitT}:null;
   }
-  function xp(s,n){s.xp+=n;while(s.xp>=s.nextXp){s.xp-=s.nextXp;s.level++;s.nextXp=Math.round(s.nextXp*1.22+4);s.players.forEach(p=>p.upgrades++);emit(s,'level');announce(s,'LEVEL '+s.level+' · UPGRADES WAIT IN PAUSE');}}
+  function xp(s,n){s.xp+=n;while(s.xp>=s.nextXp){s.xp-=s.nextXp;s.level++;s.nextXp=Math.round(s.nextXp*1.22+4);s.players.forEach(p=>{p.upgrades++;if(!p.dead)s.fx.push({kind:'levelUp',follow:p.id,x:p.x,y:p.y,life:1.6,maxLife:1.6,text:'',color:'#ffd249'});});emit(s,'level');announce(s,'LEVEL '+s.level+' · UPGRADES WAIT IN PAUSE');}}
   function hitEnemy(s,e,n,source){
     if(e.dead)return;if(source&&!e.bossOwned)investigate(e,source);e.hp-=n;e.flash=.08;
     if(random(s)<.5)s.fx.push({x:e.x+(random(s)-.5)*10,y:e.y-14,sprite:'vfx/bloodHit',frames:3,life:.25,maxLife:.25,text:'',color:'#fff'});

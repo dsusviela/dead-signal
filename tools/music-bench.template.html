@@ -55,7 +55,7 @@
   <header class="top">
     <div>
       <h1>Score bench · <span id="qname">South Blocks</span></h1>
-      <p class="lede">This runs the real <code>audio.js</code> from the game. Pick a quarter and a danger state, then listen. Gunfire, CREST and a downed survivor fire the same events the game sends.</p>
+      <p class="lede">This runs the real <code>audio.js</code> from the game. Pick a quarter and a danger state, then listen. Gunfire, CREST, a level-up, a downed survivor and a full wipe fire the same events the game sends.</p>
     </div>
     <button id="power" type="button">Start listening</button>
   </header>
@@ -85,6 +85,8 @@
         <button id="guns" type="button">Fire rifles (3 s)</button>
         <button id="crest" type="button">CREST surge</button>
         <button id="down" type="button">Survivor down</button>
+        <button id="level" type="button">Level up</button>
+        <button id="wipe" type="button">Full wipe</button>
         <button id="tour" type="button">Play a scene (60 s)</button>
       </div>
       <p class="label" style="margin-top:16px">Boss phase</p>
@@ -166,6 +168,8 @@
 
   $('guns').onclick=()=>{guns=performance.now()+3000;};
   $('crest').onclick=()=>{st.surge='CREST';setTimeout(()=>{st.surge='SWELL';},3000);};
+  $('wipe').onclick=()=>{stopTour();st.mode='lost';setTimeout(()=>{st.mode='play';},5000);};
+  $('level').onclick=()=>{st.audioEvents.push({type:'level'});};
   $('down').onclick=()=>{st.players[1].dead=true;setTimeout(()=>{st.players[1].dead=false;},6000);};
   function stopTour(){tourTimers.forEach(clearTimeout);tourTimers=[];$('tour').setAttribute('aria-pressed','false');}
   $('tour').onclick=()=>{

@@ -147,9 +147,19 @@ st.players.push({ id: 1, x: 10, y: 0, dead: false }); run(1);
 const downFrom = now; st.players[1].dead = true; run(3);
 const downVoices = sched.filter((r) => r.at >= downFrom && layerFor(r) === 'down');
 ok('a survivor going down plays its own sting on its own bus', downVoices.length >= 5, downVoices.length + ' voices');
-ok('the down sting rings above the guns and never inside their band', downVoices.some((r) => r.freq > 4000) && downVoices.every((r) => r.freq < 1500 || r.freq > 4000),
+ok('the down sting stays out of the gun band', downVoices.every((r) => r.freq < 1500 || r.freq > 4000),
   downVoices.map((r) => Math.round(r.freq)).join(' '));
 st.players.pop(); run(1);
+// with the music off a survivor going down still sounds, on the effects bus
+A.toggleMusic(); st.players.push({ id: 1, x: 10, y: 0, dead: false }); run(.5);
+const offFrom = now; st.players[1].dead = true; run(1);
+const offDown = sched.filter((r) => r.at >= offFrom);
+ok('with the music off a survivor going down still sounds, off the music bus', offDown.length >= 5 && offDown.every((r) => !layerFor(r)), offDown.length + ' voices');
+st.players.pop(); A.toggleMusic(); run(1);
+// a level-up is the notification chime, on the same bus: a ring far above the guns and a low bell
+const levelFrom = now; st.audioEvents.push({ type: 'level' }); run(1);
+const chime = sched.filter((r) => r.at >= levelFrom && layerFor(r) === 'down');
+ok('a level-up chimes: a ring above 4 kHz and a low bell, nothing in the gun band', chime.some((r) => r.freq > 4000) && chime.some((r) => r.freq < 120) && chime.every((r) => r.freq < 1500 || r.freq > 4000), chime.map((r) => Math.round(r.freq)).join(' '));
 
 // ---- the boss takes the room ----
 st.boss = { active: true, phase: 1, hp: 100, maxHp: 100, ai: { mode: 'active' } };

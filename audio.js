@@ -4,7 +4,7 @@
   // responses and a handful of periodic waves; bounded voices, short lookahead: no downloads, timers, or audio work
   // in the simulation.
   let ctx=null,master=null,music=null,effects=null,noiseBuffer=null,muted=false,musicMuted=false;
-  let lastState=null,lastMode='',lastBoss=false,lastWave=1,running=false;
+  let lastState=null,lastMode='',lastBoss=false,lastWave=1,lastDead=0,running=false;
   // the score's mix graph (buildScore) and its one long-lived drone
   let layers=null,droneBus=null,downBus=null,duck=null,echo=null,drone=null,lastDuck=0,hushUntil=0;
   const voices=new Set(),cooldowns=new Map(),engines=new Map(),loops=new Map();
@@ -88,9 +88,13 @@
     }else if(type==='heal'||type==='revive'){
       noise(.22,.045,2000,t,effects,'bandpass');
       [261.63,329.63,392,523.25].forEach((f,i)=>tone(f,.3,.09,'sine',t+i*.085));
-    }else if(type==='level'||type==='won'){
+    }else if(type==='level'){
+      levelChime(t);
+    }else if(type==='won'){
       [196,293.66,392,587.33].forEach((f,i)=>tone(f,.5,.11,'triangle',t+i*.14));
-    }else if(type==='boss'||type==='lost'){
+    }else if(type==='lost'){
+      wipe(t);
+    }else if(type==='boss'){
       tone(73.42,1.4,.25,'sawtooth',t,effects,36.71,.05);tone(77.78,1.5,.13,'sine');noise(.8,.17,380);
     // ---- city actions (Phase 12A) ----
     }else if(type==='board'){
@@ -534,15 +538,52 @@
     bowed(hz(Q.R+12),t,4,.05,layers.sting,{wave:'cello',cut:500,glide:.94,attack:.3,release:3});
     drum(hz(Q.R)*.6,t,.12,layers.sting,{dur:1.4,drop:1.3});
   }
-  // A survivor going down must NOT blend in. The whole score drops away for two seconds, a ringing tone opens far
-  // above the guns (the ear after a blast), and a low inharmonic bell tolls twice, the same pitch in every quarter so
-  // it is learned as one sound. It bypasses the duck, so nothing in the mix pulls it down.
-  function stingDown(Q,t){
-    const B=downBus;hushUntil=t+2.2;
-    duck.gain.setTargetAtTime(.18,t,.04);duck.gain.setTargetAtTime(1,t+2.2,.7);
+  // hush the score under a moment that has to be heard; gunfire cannot lift it early
+  function hush(t,depth,hold){if(!duck||musicMuted)return;hushUntil=t+hold;duck.gain.setTargetAtTime(depth,t,.04);duck.gain.setTargetAtTime(1,t+hold,.7);}
+  // Level up: a notification, not an alarm. The score steps back, a ring opens far above the guns and a low
+  // inharmonic bell tolls twice, the same pitch everywhere so it is learned as one sound. With the music off it still
+  // plays, on the effects bus and without the hush.
+  function levelChime(t){
+    const B=downBus&&!musicMuted?downBus:effects;hush(t,.18,2.2);
     tone(5400,2.8,.03,'sine',t,B,5150,.02,-.2);tone(6100,2.2,.014,'sine',t+.05,B,5900,.03,.25);
     fm(98,t+.02,.2,B,{ratio:1.41,index:2.2,dur:3.4,bright:.5});fm(98,t+1.3,.14,B,{ratio:1.41,index:1.8,dur:3,bright:.5,detune:-30});
     drum(36,t,.3,B,{dur:1.8,drop:2});
+  }
+  // a wet tearing gush: noise through a narrow bandpass that closes fast, starting under the gun band
+  function squelch(t,dur,lvl,bus,from,to,q){
+    const s=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+    s.buffer=noiseBuffer;s.loop=true;filter.type='bandpass';filter.Q.value=q||5;
+    filter.frequency.setValueAtTime(from,t);filter.frequency.exponentialRampToValueAtTime(to,t+dur);
+    gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(lvl,t+.006);gain.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    s.connect(filter);filter.connect(gain);gain.connect(bus);voice(s,[filter,gain],t,dur);
+  }
+  // A survivor going down: a kill landing, told in about a second and a half. A detuned saw pair slashes down with
+  // blade air above it; the cut itself is wet -- two bandpass gushes closing downward and a throat-like gloop; the
+  // body hits the ground with a thud and a splatter; and the drama arrives after it: a dying breath on an 'ah' choir
+  // falling a fifth over a low minor-second saw cluster and a sub boom. Fixed pitches everywhere; its own bus past
+  // the duck with the score hushed, or the effects bus when the music is off.
+  function stingDown(t){
+    const B=downBus&&!musicMuted?downBus:effects;hush(t,.2,1.5);
+    [880,932.3].forEach((f,i)=>bowed(f,t,.34,.075,B,{wave:'sawtooth',cut:1400,glide:.07,attack:.004,release:.24,pan:i?.3:-.3}));
+    noise(.22,.035,5400,t,B,'highpass');
+    squelch(t+.08,.24,.42,B,1300,260,5);squelch(t+.17,.32,.34,B,900,170,6);tone(330,.2,.12,'sine',t+.12,B,72,.004);
+    drum(50,t+.34,.42,B,{dur:.55,drop:3.2,skin:1});noise(.14,.12,280,t+.34,B,'lowpass');
+    squelch(t+.35,.1,.26,B,720,200,4);squelch(t+.42,.13,.2,B,520,150,4);squelch(t+.55,.08,.14,B,1100,380,5);
+    drum(62,t+.53,.14,B,{dur:.2,drop:2});
+    choir(220,t+.3,1.2,.3,B,{vowel:'ah',glide:.667});
+    [73.42,77.78,110].forEach((f,i)=>bowed(f,t+.34,1.6,.06,B,{wave:'sawtooth',cut:700,attack:.02,release:1.2,glide:.8,pan:(i-1)*.45}));
+    drum(30,t+.34,.3,B,{dur:1.4,drop:2.5});
+  }
+  // Full wipe: a dramatic synth hit that echoes into the dark. A detuned saw chord (D minor with the flat second the
+  // score leans on) struck over a sub boom, then repeated six times, each echo quieter, darker and further across
+  // the stereo field, under a long low saw that sinks. The score has already stopped, so it has the room alone.
+  function wipe(t){
+    drum(30,t,.42,effects,{dur:2.4,drop:3,skin:.8});noise(.5,.1,240,t,effects,'lowpass');
+    bowed(36.71,t,3.8,.1,effects,{wave:'sawtooth',cut:220,glide:.84,attack:.01,release:3});
+    for(let k=0;k<7;k++){
+      const at=t+k*.36,lvl=.075*Math.pow(.6,k),cut=1400*Math.pow(.66,k),pan=k?(k%2?.6:-.6):0;
+      [73.42,110,174.61,77.78].forEach((f,i)=>bowed(f,at,k?.3:.42,lvl*(i===3?.6:1),effects,{wave:'sawtooth',cut,attack:.004,release:.24,detune:i%2?9:-9,pan}));
+    }
   }
   function stingCrest(Q,t){swell(t,.9,.07,layers.sting);anvil(hz(Q.R+24),t+.9,.07,layers.sting);}
 
@@ -563,7 +604,6 @@
     else if(here!==cond.cand){cond.cand=here;cond.candAt=now;}
     else if(now-cond.candAt>=3){cond.pending=here;cond.cand=null;}
     let Q=QUARTERS[cond.q];
-    if(c.dead>cond.dead&&!s.boss?.active)stingDown(Q,now+.03);cond.dead=c.dead;
     if(s.boss?.active){if(cond.state!==4)enter(4,now,Q);furnace(s);return;}
     if(cond.state===4){enter(Math.min(cond.level,3),now+.05,Q);cond.n=0;cond.next=now+.05;}
     if(s.surge!==cond.surge){if(crest&&cond.state>=2)stingCrest(Q,now+.03);cond.surge=s.surge;}
@@ -735,12 +775,14 @@
   }
   function update(s){
     const events=s.audioEvents.splice(0);
-    if(s!==lastState){stopVoices();resetScore();lastState=s;lastMode=s.mode;lastBoss=false;lastWave=1;cooldowns.clear();}
+    if(s!==lastState){stopVoices();resetScore();lastState=s;lastMode=s.mode;lastBoss=false;lastWave=1;lastDead=0;cooldowns.clear();}
     const active=s.mode==='play'&&!s.paused&&!document.hidden;
     if(!ctx||ctx.state!=='running')return;
     if(active!==running){running=active;master.gain.setTargetAtTime(muted||!active?0:.65,ctx.currentTime,.035);if(!active)stopVoices();}
     if(!muted&&active){
       updateEngines(s);updateLoops(s);updateIncidentals(s);
+      // a survivor going down is gameplay information: it sounds with the music on or off
+      const dead=(s.players||[]).filter(p=>p.dead).length;if(dead>lastDead)stingDown(ctx.currentTime+.03);lastDead=dead;
       if(!musicMuted)score(s,events);else droneStop();
       for(const event of events){duckFor(event.type);cue(event.type,event.detail);}
       if(s.boss?.active&&!lastBoss)cue('boss');
