@@ -330,7 +330,7 @@
       text(g,name==='pause'?'TRANSMISSION HELD':won?'CHECKPOINT NINE OPEN':'TRANSMISSION LOST',d.x+34*k,y,8,COL.orange);y+=22*k;
       for(const line of heading){display(g,line,d.x+34*k,y,30,COL.paper);y+=32*k;}y+=8*k;
       for(const line of bodyLines){text(g,line,d.x+34*k,y,9,name==='pause'?COL.paper:COL.muted,'left','normal');y+=15*k;}
-      if(name==='pause'){const tier=s.boss&&s.boss.difficulty?s.boss.difficulty.tier:s.threat;text(g,'OUTBREAK '+tier+' · '+(s.boss?'DIFFICULTY LOCKED':'ESCALATES IN '+clock(90-s.time%90))+' · the outbreak clock is paused',d.x+34*k,y+4*k,8,COL.muted,'left','normal');y+=22*k;}
+      if(name==='pause'){const tier=s.boss&&s.boss.difficulty?s.boss.difficulty.tier:s.threat;text(g,'OUTBREAK '+tier+' · '+(s.boss?'DIFFICULTY LOCKED':'grows as the squad gets stronger and the city answers'),d.x+34*k,y+4*k,8,COL.muted,'left','normal');y+=22*k;}
       if(name==='end'){y+=10*k;let sx=d.x+34*k;for(const [v,l] of [[clock(s.time),'SURVIVED'],[String(s.kills),'INFECTED KILLED'],[String(s.opened),'SUPPLIES FOUND']]){text(g,v,sx,y,12,COL.orange);text(g,l,sx,y+16*k,7,COL.muted,'left','normal');sx+=Math.max(measure(g,l,7,'normal'),measure(g,v,12))+24*k;}y+=40*k;}
       y+=12*k;items.forEach((it,i)=>{const bh=it.quiet?30*k:44*k;button(g,it.id,it.label,d.x+34*k,y,w-68*k,bh,ui.focus===i,it.quiet,it.run);if(it.id.startsWith('upgrade:')){const p=s.players.find(q=>'upgrade:'+q.id===it.id);g.fillStyle=p.color;g.fillRect(d.x+34*k,y+6*k,3*k,bh-12*k);}y+=bh+8*k;});
     }else if(name==='overflow'){

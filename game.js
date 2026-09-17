@@ -318,7 +318,12 @@
   }
   function fire(s,p,dt){fireWeapon(s,p,dt);saveWeapon(p);}
   function fireWeapon(s,p,dt){
-    const key=p.backup||!p.weapon?'pistol':p.weapon, def=key==='pistol'?WEAPONS.pistol:weaponStats(key,p.attachments);
+    // a carried weapon that is empty with nothing in the squad reserve falls back to the unlimited pistol shot by shot,
+    // so autofire never goes silent; the selection stays and the gun reloads as soon as its ammunition returns
+    const own=p.backup||!p.weapon?null:weaponStats(p.weapon,p.attachments),dry=!!(own&&own.ammo&&p.mag<=0&&!p.reload&&!(s.ammo[own.ammo]>0));
+    if(dry&&p.auto&&p.target&&p.dryNotice!==p.weapon){p.dryNotice=p.weapon;notify(s,p,'No '+({bullets:'BUL',shells:'SHL',fuel:'INCEND',grenades:'GREN'}[own.ammo]||own.ammo)+' · firing the pistol · '+label(p,'cycle')+' cycles','#edc37c','dry');}
+    if(!dry&&p.dryNotice===p.weapon)p.dryNotice=null;
+    const key=p.backup||!p.weapon||dry?'pistol':p.weapon, def=key==='pistol'?WEAPONS.pistol:own;
     p.shotCd=Math.max(0,p.shotCd-dt);
     if(p.reload>0){p.reload=Math.max(0,p.reload-dt);if(!p.reload&&p.reloadWeapon===p.weapon){const own=weaponStats(p.weapon,p.attachments),n=Math.max(0,Math.min(own.mag-p.mag,s.ammo[own.ammo]||0));p.mag+=n;s.ammo[own.ammo]-=n;} }
     if(!p.auto||p.shotCd>0||(!p.backup&&p.reload>0))return;
@@ -967,7 +972,7 @@
             for(const [nx,ny] of [[gx-1,gy],[gx+1,gy],[gx,gy-1],[gx,gy+1]]){if(nx<0||ny<0||nx>=NAV_SIZE||ny>=NAV_SIZE)continue;const c=cost[ny*NAV_SIZE+nx];if(c>=0&&c<best){best=c;bx=nx;by=ny;}}
             dx=NAV_MIN+(bx+.5)*NAV_CELL-e.x;dy=NAV_MIN+(by+.5)*NAV_CELL-e.y;
           }
-          const length=Math.hypot(dx,dy)||1,sp=e.speed*(1+Math.min(.35,s.time/1800)),step=Math.min(sp*dt,length);
+          const length=Math.hypot(dx,dy)||1,sp=e.speed*(1+Math.min(PRESSURE.speedMax,(s.pressure||0)/PRESSURE.speedPer)),step=Math.min(sp*dt,length);
           if(e.type==='ghost'){e.x+=dx/length*step;e.y+=dy/length*step;}else W().move(s.world,e,dx/length*step,dy/length*step);
           e.angle=Math.atan2(dy,dx);
         }
@@ -995,17 +1000,37 @@
     const nearest=Math.min(...living.map(p=>dist(e,p)));
     if(nearest>1400&&!s.boss||e.type==='band'&&s.time>(e.expires||Infinity))e.dead=true;
   }
+  // Outbreak pressure (PLAYER_POWER Phase 0 / 10). The threat follows what the squad has become and how far the run has
+  // got, never the clock: shared level - 1, plus (averaged over living survivors) half a point per attachment carried,
+  // armor/50 and half a point for a carried or deployed turret, plus 1.5 per campaign step done. Waves, surges and
+  // migrations keep their time rhythm; only their size and the infected mix read pressure.
+  function squadPower(s){
+    const living=s.players.filter(p=>!p.dead);if(!living.length)return 0;let sum=0;
+    for(const p of living){const att=(p.weaponInventory||[]).reduce((n,w)=>n+(w.attachments||[]).length,0);sum+=att*.5+(p.armor||0)/50+(p.turret||(s.turrets||[]).some(t=>t.ownerId===p.id)?.5:0);}
+    return Math.max(0,(s.level||1)-1)+sum/living.length;
+  }
+  function campaignSteps(s){const c=s.campaign||{};return (s.circuit&&s.circuit.emergency?1:0)+(Object.keys(c.evidence||{}).length?1:0)+(c.bossDown?1:0)+(c.payload?1:0)+(c.prepared?1:0)+(c.transmitted?1:0);}
+  function pressure(s){return squadPower(s)+1.5*campaignSteps(s);}
+  // Phase 10 tuning (tools/power-sim.mjs holds over seeds 1,7,21,42,3,11,33,50): cap per 12 -> 18, rate per .35 -> .25, speed per 40 -> 60
+  const PRESSURE={tierStep:3,maxTier:9,capPer:18,capMax:2.5,rateBase:.9,ratePer:.25,runners:1,brutes:2,speedPer:60,speedMax:.35};
+  // live crowd cap and spawns per second for the current pressure, party size and surge phase
+  function spawnBudget(s,n){const P=s.pressure||0;
+    return {cap:Math.round((75+n*20)*Math.min(PRESSURE.capMax,1+P/PRESSURE.capPer)*(.5+.5*(s.convergence??1))*(s.finalPush?1.3:1)),
+      rate:(PRESSURE.rateBase+PRESSURE.ratePer*P)*(.65+.35*n)*(s.surge==='CREST'?2.6:s.surge==='EBB'?.35:1)*(s.convergence??1)*(s.finalPush?2:1),
+      speed:1+Math.min(PRESSURE.speedMax,P/PRESSURE.speedPer),tier:Math.min(PRESSURE.maxTier,1+Math.floor(P/PRESSURE.tierStep))};}
   function waveTick(s,dt){
-    s.wave=1+Math.floor(s.time/45);{const t=1+Math.floor(s.time/90);if(s.threat&&t>s.threat)announce(s,'OUTBREAK ESCALATES · TIER '+t);s.threat=t;}
+    s.wave=1+Math.floor(s.time/45);s.pressure=pressure(s);
+    {const t=Math.min(PRESSURE.maxTier,1+Math.floor(s.pressure/PRESSURE.tierStep));if(s.threat&&t>s.threat)announce(s,'OUTBREAK ESCALATES · TIER '+t);s.threat=Math.max(s.threat||1,t);}
+    const P=s.pressure;
     const phase=s.time%15;s.surge=phase<8?'SWELL':phase<11?'CREST':'EBB';s.waveProgress=(s.time%45)/45;
     const living=s.players.filter(p=>!p.dead);if(!living.length)return;
-    const cap=Math.round((75+living.length*20)*Math.min(2.5,1+s.time/900)*(.5+.5*(s.convergence??1))*(s.finalPush?1.3:1)),rate=(.9+s.time/150)*(.65+.35*living.length)*(s.surge==='CREST'?2.6:s.surge==='EBB'?.35:1)*(s.convergence??1)*(s.finalPush?2:1);
+    const {cap,rate}=spawnBudget(s,living.length);
     s.spawnAcc+=dt*rate;
     while(s.spawnAcc>=1){s.spawnAcc--;if(s.enemies.length>=cap)break;
       const p=living[Math.floor(random(s)*living.length)],angle=random(s)*Math.PI*2,rad=Math.max(s.camera.w*.65,440);let x=p.x+Math.cos(angle)*rad,y=p.y+Math.sin(angle)*rad;
       for(let k=0;k<15&&W().blocked(s.world,x,y,17);k++){x=p.x+(random(s)-.5)*rad*2;y=p.y+(random(s)-.5)*rad*2;}
       if((s.world.buildings||[]).some(h=>x>h.x&&x<h.x+h.w&&y>h.y&&y<h.y+h.h)||W().blocked(s.world,x,y,17)||Math.hypot(x-p.x,y-p.y)<250)continue;
-      const district=W().district(p.x,p.y),roll=random(s);spawn(s,roll<.12&&s.time>60?'brute':roll<.42?district.enemy:roll<.62&&s.time>30?'runner':'walker',x,y);
+      const district=W().district(p.x,p.y),roll=random(s);spawn(s,roll<.12&&P>=PRESSURE.brutes?'brute':roll<.42?district.enemy:roll<.62&&P>=PRESSURE.runners?'runner':'walker',x,y);
     }
     if(s.wave%3===2&&s.bandWave!==s.wave&&s.time%45>8){const p=living[0],vertical=Math.abs(p.x-Math.round(p.x/1400)*1400)<Math.abs(p.y-Math.round(p.y/1400)*1400);s.band={vertical,coord:Math.round((vertical?p.x:p.y)/1400)*1400,at:s.time,spawn:0};s.bandWave=s.wave;} // no announcement: the migration is discovered on the street
     if(s.band){const b=s.band,age=s.time-b.at;if(age>3&&age<17){b.spawn+=dt*5;while(b.spawn>=1){b.spawn--;const p=living[0],off=(random(s)-.5)*95,along=(b.vertical?p.y:p.x)-500;spawn(s,'band',b.vertical?b.coord+off:along,b.vertical?along:b.coord+off,{vx:b.vertical?0:140,vy:b.vertical?140:0,expires:s.time+9});}}if(age>20)s.band=null;}
@@ -1186,5 +1211,5 @@
     if(s.players.length&&s.players.every(p=>p.dead)){s.mode='lost';s.paused=false;}
     camera(s,dt,aspect);
   }
-  root.DSGame={ARMOR,TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
+  root.DSGame={spawnBudget,pressure,squadPower,campaignSteps,PRESSURE,waveTick,ARMOR,TURRET,turretsTick,nearestTurret,turretPlaceOk,selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
 })(typeof window!=='undefined'?window:globalThis);

@@ -274,5 +274,40 @@ test('world loot carries every new power source: launchers, armor, grenade round
   }
 });
 
+// ---- Phase 10: pressure-scaled threat and run simulations ----
+test('outbreak threat follows squad power and campaign progress, never the clock', () => {
+  const at = (time, setup = () => {}) => { const s = solo(31); s.time = time; setup(s, s.players[0]); G.waveTick(s, 1 / 30); const b = G.spawnBudget(s, 1); return { P: s.pressure, tier: s.threat, cap: b.cap, rate: +b.rate.toFixed(6), speed: b.speed }; };
+  const early = at(300), late = at(1500);
+  assert.deepEqual({ ...late }, { ...early }, 'twenty idle minutes change nothing'); assert.equal(early.P, 0);
+  const strong = at(300, (s, p) => { s.level = 4; equip(s, p, [gun('ar', 1, { attachments: ['ar_pierce', 'ar_extmag'] }), gun('shotgun', 1, { attachments: ['sg_choke'] })]); p.armor = 50; p.turret = { id: 1, ammo: 60, durability: 150 }; });
+  assert.equal(strong.P, 3 + 1.5 + 1 + .5, 'level-1 + half per attachment + armor/50 + half for a turret');
+  assert.ok(strong.cap > early.cap && strong.rate > early.rate && strong.speed > early.speed && strong.tier === 3);
+  const progressed = at(300, s => { s.circuit.emergency = true; s.campaign.bossDown = true; s.campaign.evidence = { a: true }; });
+  assert.equal(progressed.P, 4.5, 'three campaign steps at 1.5 each');
+  const duo = solo(31); G.addPlayer(duo, 'pad:0'); duo.overflowQueue = []; duo.players[0].armor = 50; assert.equal(G.squadPower(duo), .5, 'power is averaged over living survivors');
+  const P = G.PRESSURE; assert.ok(G.spawnBudget({ pressure: 1e3 }, 1).speed <= 1 + P.speedMax && G.pressure(duo) >= 0);
+});
+const SIM_SEEDS = [1, 7, 21, 42];
+const { route, clearTime, hold, snapshot } = await import('./power-sim.mjs');
+const runs = SIM_SEEDS.map(seed => ({ seed, five: route(seed, 5), twenty: route(seed, 20) }));
+test('a 20-minute scavenging run is stronger than a 5-minute run on every sampled seed', () => {
+  for (const { seed, five, twenty } of runs) {
+    const a = snapshot(five), b = snapshot(twenty);
+    assert.ok(b.power >= a.power + 4, `seed ${seed} power ${a.power} -> ${b.power}`);
+    assert.ok(b.attachments > a.attachments && b.level > a.level && b.armor >= a.armor, `seed ${seed} ${JSON.stringify(a)} -> ${JSON.stringify(b)}`);
+    const c5 = clearTime(five, seed), c20 = clearTime(twenty, seed); assert.ok(c20 <= c5, `seed ${seed} clear ${c5} -> ${c20}`);
+    five.clear = c5; twenty.clear = c20;
+  }
+  const mean = k => runs.reduce((n, r) => n + r[k].clear, 0) / runs.length; assert.ok(mean('twenty') < mean('five') * .8, `mean clear ${mean('five')} -> ${mean('twenty')}`);
+});
+test('solo is survivable: a kiting bot holds an open street for three minutes under pressure-scaled spawns', () => {
+  const out = [];
+  for (const { seed, five, twenty } of runs) for (const [label, r] of [['5 min', five], ['20 min', twenty]]) out.push({ seed, label, ...hold(r, seed, 180) });
+  const downs = out.map(o => o.downs), total = downs.reduce((a, b) => a + b, 0);
+  assert.ok(total <= 8, 'downs per hold ' + downs.join(',')); assert.ok(downs.filter(d => d === 0).length >= 4, 'most holds end without a down: ' + downs.join(','));
+  for (const o of out) assert.ok(o.kills >= 150, `${o.seed} ${o.label} held the street (${o.kills} kills)`);
+  for (const { seed } of runs) { const [a, b] = out.filter(o => o.seed === seed); assert.ok(b.pressure > a.pressure && b.kills > a.kills, `seed ${seed}: the stronger kit meets more pressure and still kills more`); }
+});
+
 console.log(results.join('\n'));
 if (failed) { console.log(failed + ' player-power tests failed'); process.exitCode = 1; } else console.log('player-power tests passed');

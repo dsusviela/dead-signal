@@ -403,11 +403,11 @@
     // squad meets a bigger furnace but still kills it measurably faster. That
     // is what makes time spent levelling worth spending.
     //
-    // Damage prices the CLOCK: it still climbs every 90s of outbreak. Dawdling
-    // does not give the furnace more health to chew through, it gives it a
-    // harder swing. You can out-prepare a long run; you cannot out-prepare
-    // being slow.
-    var tier = 1 + Math.floor(Math.max(0, Number(s.time) || 0) / 90);
+    // Damage prices the OUTBREAK TIER the squad has pushed the city to (power
+    // plus campaign progress, see game.js pressure): a stronger, further-along
+    // squad meets a harder swing. Waiting alone never makes the furnace worse.
+    // the outbreak tier the squad reached through power and progress (PLAYER_POWER Phase 10), never the clock
+    var tier = Math.max(1, Number(s.threat) || 1);
     var level = Math.max(1, Number(s.level) || 1);
     var partyScale = 1 + 0.9 * (n - 1);
     var hpScale = Math.pow(1.13, (level - 1) / 6);

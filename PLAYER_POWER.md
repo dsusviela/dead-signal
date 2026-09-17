@@ -770,32 +770,66 @@ and combat state remains legible when four players use the new systems together.
 
 ### Phase 10 — Balance, performance, and final review
 
-- [ ] Run the full automated suite: `npm test`, `npm run test:browser`, and
-  `npm run art:lint:all`.
-- [ ] Run `npm run bench` and `npm run bench:browser`; compare projectile, explosion, four-turret,
+- [x] Replace wall-clock threat scaling with the Phase 0 pressure model (owner constraint: threat scales with player
+  power or run progress, never wall-clock alone).
+  Evidence: game.js `squadPower`, `campaignSteps`, `pressure`, `spawnBudget`, `PRESSURE`; waveTick tier/cap/rate and the
+  runner/brute gates, enemy speed, and boss.js damage tier all read pressure; wave/surge/migration rhythm still uses
+  the clock but not their size. The pause line reads "grows as the squad gets stronger and the city answers".
+  Tuned values (assumption, tunable): cap × min(2.5, 1 + P/18), rate 0.9 + 0.25·P, speed × (1 + min(.35, P/60)),
+  tier 1 + ⌊P/3⌋ (max 9), runners from P 1, brutes from P 2 — the Phase 0 per-point slopes (12 / .35 / 40) left a
+  kiting solo bot with 29 downs over 16 three-minute holds; the tuned slopes give 9 (median 0).
+  Test "outbreak threat follows squad power and campaign progress, never the clock" (idle 300 s vs 1500 s identical).
+  test-boss now checks an idle late entry meets the same furnace and only a pushed outbreak tier hits harder.
+- [x] Add simulation tests showing solo is survivable and a 20-minute run is stronger than a 5-minute run.
+  Evidence: tools/power-sim.mjs (route / clearTime / hold) and two tests in tools/test-player-power.mjs over seeds 1, 7,
+  21, 42. Measured (`node tools/power-sim.mjs`): power 5 min → 20 min: 8.5→17, 9.5→17, 5.5→14.5, 8→16.5; attachments
+  5→11, 4→11, 2→10, 6→12; best 24-walker clear 6.7→4.65, 6.1→4.05, 8.45→3.15, 6.1→6.1 s. Three-minute open-street
+  holds under the live spawner: downs 0,1 / 4,0 / 0,1 / 0,0 (5 min, 20 min), kills 242–425, the 20-minute kit meets
+  higher pressure and still kills more on every seed.
+- [x] Fix found during the simulations: an empty carried weapon with no reserve made autofire go silent (a freshly
+  found launcher with 0 GREN locked a survivor out of shooting). It now fires the pistol shot by shot with a one-time
+  "No GREN · firing the pistol · Q cycles" notice and reloads normally once ammunition returns.
+- [x] Run the full automated suite: `npm test`, `npm run test:browser`, and
+  `npm run art:lint:all`. Evidence: all exit 0 on 2026-09-17 after the pressure change; lint 0 errors, within budget.
+- [x] Run `npm run bench` and `npm run bench:browser`; compare projectile, explosion, four-turret,
   lingering-effect, crowd, rendering, and voice results with Phase 0 budgets.
-- [ ] Repeat the fixed-crowd weapon matrix for base and fully attached weapons at all qualities.
-- [ ] Repeat the seeds 1–50 economy measurement and confirm every Phase 8 distribution envelope.
-- [ ] Play isolated prototypes before judging the combined set: shotgun cleave, attachments,
-  grenade launcher, turret, and armor.
-- [ ] Play full runs solo and with two and four survivors, mixing keyboard and controllers, with
-  ordinary exploration, objective holds, vehicles, the boss, and the final escape.
-- [ ] Confirm a solo player can reclaim a crowded street instead of only circling it.
-- [ ] Confirm preparation with a turret or grenade launcher can create enough space to complete an
-  objective interaction, but cannot sustain every hold without resource loss.
-- [ ] Confirm duplicate drops produce noticeable, understandable growth at a useful cadence.
-- [ ] Confirm shotgun cleave and explosive/penetrating attachments do not erase walls, range,
-  brutes, Patient Furnace, or crowd positioning as meaningful constraints.
-- [ ] Confirm grenades and turrets reward positioning while consuming meaningful ammunition and
-  attracting appropriate pressure.
-- [ ] Confirm armor lets a survivor recover from some mistakes while health attrition, medkits,
-  downing, and revival stay relevant.
-- [ ] Confirm all systems remain useful and readable in co-op without making four-player damage
-  and survivability scale beyond intended pressure.
-- [ ] Confirm a new player understands capacity, duplicate previews, turret state, grenade ammo,
-  and armor from the game rather than developer explanation.
-- [ ] Record final values, test/benchmark outputs, screenshots, known limitations, and each manual
-  review result in the session log.
+  Evidence: sim1 p95 0.141 ms, sim4 p95 0.332 ms; browser render p95 solo 2.9, four 4.0, circuit4 4.9, truck4 5.4, arena4
+  8.6 ms (V2 worst was 9.8 ms), peak voices ≤ 15 of 48. Four turrets in a 300-infected crowd < 2 ms per tick (Phase 6
+  test); grenades capped at 12 and fire patches at 8 (Phase 4/5 tests); stacked power audio below clipping (Phase 9).
+- [x] Repeat the fixed-crowd weapon matrix for base and fully attached weapons at all qualities.
+  Evidence: artifacts/power/phase10.json (tools/power-bench.mjs); crowd timings identical to phase5.json, since no
+  weapon numbers changed after Phase 5; pressure section now reports pressure instead of time.
+- [x] Repeat the seeds 1–50 economy measurement and confirm every Phase 8 distribution envelope.
+  Evidence: test-city envelope test and fixture comparison pass (launchers 3–4, armor 150–225, grenade rounds 19–38,
+  turrets 2, pickups ≤ 310).
+- [~] Play isolated prototypes before judging the combined set: shotgun cleave, attachments,
+  grenade launcher, turret, and armor. **Awaiting human review**: for each, start a run, give yourself the item from the console
+  (`DeadSignal.state.loot.push({...})` beside you), and fight one street block.
+- [~] Play full runs solo and with two and four survivors, mixing keyboard and controllers, with
+  ordinary exploration, objective holds, vehicles, the boss, and the final escape. **Awaiting human review**.
+- [~] Confirm a solo player can reclaim a crowded street instead of only circling it. **Awaiting human review**: the simulated
+  kiting bot holds an open street for 3 minutes (see above); confirm it feels true with walls and a human.
+- [~] Confirm preparation with a turret or grenade launcher can create enough space to complete an
+  objective interaction, but cannot sustain every hold without resource loss. **Awaiting human review**: deploy a turret at the
+  Blackglass transmit hold and watch its rounds and wear by the end.
+- [~] Confirm duplicate drops produce noticeable, understandable growth at a useful cadence. **Awaiting human review**: the route
+  simulation finds 2–6 attachments by minute 5 and 10–12 by minute 20.
+- [~] Confirm shotgun cleave and explosive/penetrating attachments do not erase walls, range,
+  brutes, Patient Furnace, or crowd positioning as meaningful constraints. **Awaiting human review** (automated: walls stop rays and
+  blasts, brutes and the boss stop cleave, Phase 2/4 tests).
+- [~] Confirm grenades and turrets reward positioning while consuming meaningful ammunition and
+  attracting appropriate pressure. **Awaiting human review** (automated: both spend shared ammunition and make noise; turrets and
+  attachments raise pressure).
+- [~] Confirm armor lets a survivor recover from some mistakes while health attrition, medkits,
+  downing, and revival stay relevant. **Awaiting human review**.
+- [~] Confirm all systems remain useful and readable in co-op without making four-player damage
+  and survivability scale beyond intended pressure. **Awaiting human review**: power is averaged over living survivors, so a
+  four-player squad raises pressure only by its average kit; watch the 4-player spawn cap (215 at P 12).
+- [~] Confirm a new player understands capacity, duplicate previews, turret state, grenade ammo,
+  and armor from the game rather than developer explanation. **Awaiting human review**: hand the build to someone new, no briefing.
+- [x] Record final values, test/benchmark outputs, screenshots, known limitations, and each manual
+  review result in the session log. Evidence: session log entry 2026-09-17 Phase 10 below; manual review results are
+  pending the [~] items above.
 
 Phase 10 exit: measured and human review agree that the selected power tools create recoverable
 combat and preparation choices while preserving scarcity, threat, and co-op readability.
@@ -885,6 +919,12 @@ matching phase item.
   salvage pool), baseline fixture rewritten after diff review, envelopes extended.
 - 2026-09-17 — Phase 9: controls row, manual cards 05/06 with adaptive layout, README, audio cue tests, HUD matrix
   power4 state. Human listening pass queued.
+- 2026-09-17 — Phase 10: pressure-scaled threat replaces the outbreak clock (tuned slopes 18 / .25 / 60), dry-weapon
+  pistol fallback, tools/power-sim.mjs with 5-vs-20-minute and solo-hold tests, bench/bench:browser/crowd matrix
+  re-run (artifacts/power/phase10.json). Known limitations: the hold bot fights on open ground without walls or doors,
+  so its downs are a floor on difficulty, not a verdict; campaign steps count toward pressure but the route simulation
+  never completes objectives, so late-campaign pressure is untested by simulation; the pressure constants and loot
+  counts are tunable assumptions awaiting the human playtests listed in Phase 10.
 
 - 2026-09-17 — Phase 2 shotgun cleave and point-blank hit fix landed.
 

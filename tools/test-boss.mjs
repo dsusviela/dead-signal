@@ -16,11 +16,11 @@ for (const file of ['city.js', 'world.js', 'game.js', 'boss.js']) {
 const { DSWorld, DSGame, DSBoss } = context;
 assert.ok(DSWorld && DSGame && DSBoss, 'world, game and boss modules load in one browser-like VM');
 
-function makeState(players = 4, startTime = 0) {
+function makeState(players = 4, startTime = 0, threat = 1) {
   const s = DSGame.create(12345);
   for (let i = 0; i < players; i++) DSGame.addPlayer(s, `test-${i}`);
   s.mode = 'play';
-  s.time = startTime;
+  s.time = startTime; s.threat = threat;
   const raw = DSGame.api(s);
   const announcements = [];
   const api = {
@@ -64,15 +64,17 @@ function step(s, api, seconds, dt = 0.05) {
   assert.equal(JSON.stringify(b.difficulty), locked, 'late elapsed time cannot retune boss difficulty');
 }
 
-// Two prices, both locked at entry. The clock buys the furnace a harder swing;
-// it must NOT buy it more health, or levelling up would never pay for itself.
-// Squad power is what sizes the health bar.
+// Two prices, both locked at entry. The outbreak tier (squad power + campaign progress, PLAYER_POWER Phase 10)
+// buys the furnace a harder swing but never more health; the clock alone buys nothing.
 {
   const early = makeState(2, 0).s;
-  const latePack = makeState(2, 360);
+  const idleLate = makeState(2, 360).s;
+  assert.equal(idleLate.boss.difficulty.tier, 1, 'waiting alone does not raise the tier');
+  assert.equal(JSON.stringify(idleLate.boss.difficulty), JSON.stringify(early.boss.difficulty), 'an idle late entry meets the same furnace');
+  const latePack = makeState(2, 360, 5);
   assert.equal(latePack.s.boss.difficulty.tier, 5);
-  assert.equal(latePack.s.boss.maxHp, early.boss.maxHp, 'a late entry at the same level meets the same health bar');
-  assert.ok(latePack.s.boss.difficulty.damageScale > early.boss.difficulty.damageScale, 'late entry captures higher mechanic damage pressure');
+  assert.equal(latePack.s.boss.maxHp, early.boss.maxHp, 'a higher tier at the same level meets the same health bar');
+  assert.ok(latePack.s.boss.difficulty.damageScale > early.boss.difficulty.damageScale, 'a pushed outbreak captures higher mechanic damage pressure');
   const lateLocked = JSON.stringify(latePack.s.boss.difficulty);
   latePack.s.time = 9999;
   DSBoss.update(latePack.s, 0.05, latePack.api);
