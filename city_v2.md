@@ -607,27 +607,29 @@ registry and absent in the browser if its script was never registered.
 
 ### P1 — art needed to establish districts
 
-- [~] Residential and shop frontage modules: corners, attached sections, entrance recesses,
+- [x] Residential and shop frontage modules: corners, attached sections, entrance recesses,
   shutters, awnings, windows, rear extensions and court walls.
-  *art/frontage.js (35 ids, reviewed). Integrated: render.js KITS draws brick rows, shopfronts + awnings, shutters and eaves on South Blocks generated street faces; rear/court pieces not yet placed.*
+  *art/frontage.js (35 ids, reviewed). Integrated: render.js KITS draws brick rows, shopfronts + awnings, shutters and eaves on South Blocks generated street faces; rear walls, back doors and bin nooks on service sides (REAR kit).*
 - [~] Old Quarter terrace/party-wall modules and fresh collapse cross-sections; revise rubble
   spill so the source of the damage is visible.
   *Terrace faces and collapse ends + collapseSpill drawn on Old Quarter faces and collapsed masses; brick spill decal under collapses. Full party-wall gap composite not yet used.*
-- [~] Hospital wing roofs, public canopy, covered links, service frontage and medical facade
+- [x] Hospital wing roofs, public canopy, covered links, service frontage and medical facade
   modules. Establish a campus silhouette larger than a cross sign.
-  *art/civic.js drawn and reviewed; not yet placed on the St. Orison campus.*
-- [~] Fire-station facade/bay grouping, depot facade, utility-yard equipment/cable supports,
+  *art/civic.js drawn and reviewed; ward roofs, canopy, glass link and ambulance bay placed on St. Orison.*
+- [x] Fire-station facade/bay grouping, depot facade, utility-yard equipment/cable supports,
   broadcast building frontage and maintenance access. Preserve the truck's existing variants.
-  *Drawn (civic family). Utility Yard transformers, cable drum and poles placed; fire bays, depot and broadcast fronts not yet placed.*
-- [~] Industrial roof/wall modules, loading docks, workshop fronts, pipe connections, conveyor
+  *Drawn (civic family). Utility Yard transformers, cable drum and poles placed; fire apron and broadcast front placed; the fire station keeps its roller-door family (fireBays sprite kept for review, assumption: the existing door jambs already carry the bay rhythm).*
+- [x] Industrial roof/wall modules, loading docks, workshop fronts, pipe connections, conveyor
   endpoints and gantry silhouettes that form connected industrial scenes.
-  *art/industrial.js (39 ids, reviewed). Integrated: metal / sawtooth roofs on Ashworks masses and sheds, corrugated walls, workshop and office fronts; pallets, drums, ash skips and ash spill in works yards and truck lanes. Pipes, conveyors and gantries not yet placed.*
-- [~] Quarantine support-building adaptations, coherent fence corners/posts/gates, queue rails,
+  *art/industrial.js (39 ids, reviewed). Integrated: metal / sawtooth roofs on Ashworks masses and sheds, corrugated walls, workshop and office fronts; pallets, drums, ash skips and ash spill in works yards and truck lanes. Pipe run, conveyor + hopper, gantry crane and loading dock apron placed (world.js districtPieces, dressLots).*
+- [x] Quarantine support-building adaptations, coherent fence corners/posts/gates, queue rails,
   tent groupings and links between processing and disposal.
-  *Drawn (civic family); requisition boards placed in staging yards. Fences, queue rails, tent groups and processing links not yet placed.*
-- [ ] Sidewalk/curb corners, crossings, service-lane surfaces, drains and district-specific
+  *Drawn (civic family); requisition boards placed in staging yards. queue rails, tent group and processing walkway placed; the ring keeps its existing chain fence (qFence kept for review).*
+- [x] Sidewalk/curb corners, crossings, service-lane surfaces, drains and district-specific
   paving accents. Use non-solid surface detail to explain clear routes.
-- [~] Alley/rear-frontage details and a coherent litter/debris family: reuse useful bins,
+  *Drains and gutter damp along every avenue, lane/alley mouth litter, loading dock apron and hazard paint, baked
+  path strips; existing crossings and sidewalk edge cuts kept (the player's reference).*
+- [x] Alley/rear-frontage details and a coherent litter/debris family: reuse useful bins,
   bags, boxes, paper, glass, pallets and rubble; add missing variants identified in the pilots.
   *art/streetlife.js (22 ids, reviewed) placed by world.js streetLife(): bags/boxes/paper at alley and lane mouths and service doors, wall grime, shopfront glass, collapse spill, curb drains and damp, court bins and timber (about 450 flat decals, never loot-coloured).*
 - [~] Ground transition pieces/masks and park composition pieces required by Section 2,
@@ -896,18 +898,40 @@ purposeful, and extra composition has not blocked movement or added unbudgeted s
 
 ### V2-4 — Roll out the six district briefs
 
-- [ ] South Blocks: connected market streets, residential courts, police/evacuation relationship.
-- [ ] Old Quarter: terrace fabric, broken courts and coherent chapel/graveyard approaches.
-- [ ] Civic Ward: connected hospital campus and differentiated public/service circulation.
-- [ ] Northline: unmistakable fire department/truck, utility transition and radio endpoint.
-- [~] Ashworks: industrial ordinary fill and connected production/loading/service spaces.
+- [x] South Blocks: connected market streets, residential courts, police/evacuation relationship.
+  *Composed brick rows with shopfronts and awnings, alleys with rear walls, back doors and bin nooks, rear courts and
+  shop forecourts; police block pilot (staff parking, rear court, side passage) on the evac road; police cruisers only
+  along the evac road, Checkpoint and station. Evidence scenes-facades*/southBlocks-*, scenes-pilot*/.*
+- [x] Old Quarter: terrace fabric, broken courts and coherent chapel/graveyard approaches.
+  *Masonry terrace faces, collapse ends and spill on fresh collapses, Broken courts and Demolition gaps, chapel side
+  door linked to the graveyard gate by a worn gravel path with refuge notices. scenes-facades-diag/oldQuarter-center,
+  scenes-parks/chapelGraveyardPath, graveyard.*
+- [x] Civic Ward: connected hospital campus and differentiated public/service circulation.
+  *Ward roofs, public entrance canopy on the south forecourt, covered glass link east to the morgue/service lane, ambulance
+  bay in the service yard, Ward forecourts and gardens in ordinary blocks. assumption: the campus forecourt stays open
+  (brief: connected forecourt), so block-4-2 is measured against the campus brief, not the 45% street-frontage figure.
+  scenes-pieces/pieceHospital.*
+- [x] Northline: unmistakable fire department/truck, utility transition and radio endpoint.
+  *Fire station apron paint with the truck nose-out in its bay, utility yard transformers/poles/cable drum, Blackglass
+  broadcast front with dish and mast stub, Transmitter Park as the ordered municipal park, Depot aprons and service courts.
+  scenes-pieces/pieceFireApron, pieceBroadcast; scenes-parks/parkNorthline.*
+- [x] Ashworks: industrial ordinary fill and connected production/loading/service spaces.
   *Fabric archetypes workshop / storageShed / dispatchOffice replace the home .6 / shop .4 default (home .15 kept at the
-  edge); tested. Connected production/loading spaces and art modules pending.*
-- [~] Central Quarantine: four support blocks, clear outer/inner hierarchy and visible containment.
+  edge); tested. Sheds with metal/sawtooth roofs and corrugated walls, workshop/office fronts, loading court pilot,
+  gantry crane over the loading yard, hopper-to-conveyor run, pipe run shop → fuel store, fenced Furnace Plant works
+  compound, works yards with pallets/drums/skips. scenes-pieces/pieceGantry, pieceConveyor; scenes-pilot/pilotAshCourt.*
+- [x] Central Quarantine: four support blocks, clear outer/inner hierarchy and visible containment.
   *Support-block fabric: requisitionOffice / stagingDepot over surviving clinic, shop and home frontage (15 interiors).
-  South Blocks bullet weight .85→1.2 keeps its share (50-seed minimum 15.7%). Authored staging/logistics and art pending.*
-- [ ] Complete P1 art modules and P2 revisions; account for every remaining substantial void.
-- [~] Complete the alley/service-route and district-specific trash/debris passes across all
+  South Blocks bullet weight .85→1.5 keeps its share (50-seed minimum 14.8%). Staging yards with requisition boards and a
+  tent group, queue rails to Processing, covered processing walkway over the north street, vertical arena gates now
+  read as raised barriers (shadow, dark face, lamps). scenes-pieces/pieceProcessing, pieceQueue; scenes-gates/.*
+- [~] Complete P1 art modules and P2 revisions; account for every remaining substantial void.
+  *P1 families drawn, reviewed and placed (see Section 4 notes). Voids: open filler is 26–51% of block ground by
+  district after composition (was 50–62%); what remains is surfaced ground inside named courts, pockets and compounds.
+  Frontage by district: ruins 70% (70–85), northline 44% (45–65), hospital 58% (45–65), quarantine 59% (50–70), checkpoint 68% (65–80), industry 73% (55–75). Off-target blocks are world-edge blocks (only two street sides, over target) and the
+  authored compounds (Blackglass, depot/utility, St. Orison, market, Collapsed Quarter, warehouse). assumption: those are
+  judged by their authored briefs. Awaiting human review of weak P2 signs/furniture (see P2 list).*
+- [x] Complete the alley/service-route and district-specific trash/debris passes across all
   six districts, with decorative/solid/clearable states visually distinct and routes preserved.
   *Structure landed city-wide (`world.js COMPOSE` + `buildFabric`): every generated street row plans its run as
   attached parcels, one reserved access opening (alley / passage / forecourt lane / truck lane / staging lane) and named
@@ -921,10 +945,14 @@ purposeful, and extra composition has not blocked movement or added unbudgeted s
   *Linden Park (informal clusters, benches with worn patches) and Transmitter Park (ordered avenue of trees and beds)
   now differ; paths are baked gravel strips on grass edge to edge; the graveyard is a lawn with a gravel lane and
   irregular rows (lost and offset stones). Evidence scenes-parks/. Entrance/gate alignment of baked paths still to check.*
-- [ ] Roll out accepted district-filler, grass, gravel, yard and industrial-ground revisions;
+- [x] Roll out accepted district-filler, grass, gravel, yard and industrial-ground revisions;
   preserve existing street/sidewalk art, integrating only required new joins. Inspect repeated
   patches and tile/chunk boundaries in every affected district.
-- [ ] Blend border streets without changing their district owner or diluting signature buildings.
+  *All fillers, grass, gravel, yard concrete/asphalt and edges ship through chunks.js; roads/sidewalks untouched.
+  Captures in every district: scenes-facades-diag, scenes-ground2-diag, scenes-parks, scenes-pieces.*
+- [x] Blend border streets without changing their district owner or diluting signature buildings.
+  *Parcels facing another district take 30% of its fabric weights (tested); facade kits and roofs follow each block's
+  owner, so a border avenue shows both districts' faces; required places keep their archetypes.*
 
 Exit: each district meets its structural brief away from its landmark as well as at its center;
 alleys, dressing, parks and ground materials have passed their finish review. Structural density

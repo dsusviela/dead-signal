@@ -33,7 +33,8 @@ test('landmarks are reachable from spawn on the walkable grid', () => {
 test('loot sites avoid solid obstacle footprints', () => { const w = W.create(8); for (const s of w.sites) for (const i of s.loot) assert.equal(W.blocked(w, i.x, i.y, 0), null, `${s.id}/${i.id}`); });
 
 test('ammo, firing and reload conserve ammunition', () => {
-  const s = G.create(2); G.addPlayer(s); s.mode = 'play'; const p = s.players[0]; p.auto = true; p.weapon = 'ar'; p.backup = false; p.mag = 1; s.ammo.bullets = 10; const e = G.spawn(s, 'walker', p.x + 35, p.y, { alert: true });
+  const s = G.create(2); G.addPlayer(s); s.mode = 'play'; s.loot = []; // nothing underfoot: only firing and reloading move ammunition
+  const p = s.players[0]; p.auto = true; p.weapon = 'ar'; p.backup = false; p.mag = 1; s.ammo.bullets = 10; const e = G.spawn(s, 'walker', p.x + 35, p.y, { alert: true });
   G.step(s, .05, { 0: input() }); assert.equal(p.mag, 0); assert.equal(s.ammo.bullets, 10); assert.ok(e.hp < e.maxHp); p.auto=false;
   for(let i=0;i<45;i++) G.step(s, .05, { 0: input() }); assert.ok(p.mag > 0); assert.equal(p.mag + s.ammo.bullets, 10);
 });

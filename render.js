@@ -256,6 +256,10 @@
    industry:{h:'industrial/corrugatedWall_h',v:'industrial/corrugatedWall_v',vEast:true,northFlip:true,
      workshop:{h:'industrial/workshopFront_h',v:'industrial/workshopFront_v'},dispatchOffice:{h:'industrial/officeFront_h',v:'industrial/officeFront_v'}}
  };
+ // back walls per district (north faces show eaves only, as the street kit does)
+ const REAR={checkpoint:{h:'frontage/rearWall_h',v:'frontage/rearWall_v',n:'frontage/brickEaves_n',doorH:'frontage/backDoor_h',doorV:'frontage/backDoor_v',nookH:'frontage/binNook_h'},
+   ruins:{h:'frontage/rearWall_h',v:'frontage/rearWall_v',n:'frontage/masonryEaves_n',doorH:'frontage/backDoor_h',doorV:'frontage/backDoor_v'},
+   industry:{h:'industrial/corrugatedWall_h',v:'industrial/corrugatedWall_v',vEast:true,northFlip:true,doorH:'industrial/loadingDoor_h',doorV:'industrial/loadingDoor_v'}};
  function kitFor(d,arch,sealed){const k=KITS[d.id];if(!k)return null;return Object.assign({},k,(sealed?k.sealed:k[arch])||{});}
  function variants(id){const sp=ART.spec(id);return sp&&sp.variants?sp.variants.length:1;}
  // one face of rect r along side, skipping tiles that overlap a doorway; returns false when the kit has no art for it
@@ -285,6 +289,11 @@
    const kit=kitFor(root.DSWorld.district(b.x+b.w/2,b.y+b.h/2),b.archetypeId,false);if(!kit)return;
    const pub=b.exteriorDoors.find(d=>d.kind==='public')||b.exteriorDoors[0];if(!pub)return;
    facadeFace(g,b,pub.side,kit,b.exteriorDoors);
+   // rear frontage: a building with a service door shows its back wall on that side (rear wall, back door, bin nook)
+   const rear=b.exteriorDoors.find(d=>d.kind==='service');const R=REAR[root.DSWorld.district(b.x+b.w/2,b.y+b.h/2).id];
+   if(rear&&R&&rear.side!==pub.side){facadeFace(g,b,rear.side,R,[rear]);const hz=rear.side==='n'||rear.side==='s',id=hz?R.doorH:R.doorV;
+     if(id&&hasArt(id)){const d=rear.rect;if(hz&&rear.side==='s')ART.draw(g,id,Math.round(d.x+d.w/2-16),b.y+b.h,{anchorX:0,anchorY:1});else if(!hz)ART.draw(g,id,rear.side==='e'?b.x+b.w-12:b.x,Math.round(d.y+d.h/2-16),{anchorX:0,anchorY:0,flip:rear.side==='e'});}
+     if(R.nookH&&hz&&rear.side==='s'&&hasArt(R.nookH))ART.draw(g,R.nookH,Math.round(rear.rect.x+rear.rect.w/2+24),b.y+b.h,{anchorX:0,anchorY:1});}
  }
  // background masses read as sealed from their street face: shuttered/boarded frontage along the facade edge
  function sealedFacade(g,o){
@@ -332,6 +341,13 @@
    if(o.w>240&&hasArt('buildings/roofBillboard')&&h>.6)ART.draw(g,'buildings/roofBillboard',o.x+o.w-40,o.y+o.h-8);
  }
  // status lamps on arena gate posts: amber closed, cyan open, a small glow so the state reads at night
+ // a closed gate running north-south is seen almost edge-on: give it height with a cast shadow on the ground, the leaf strip
+ // raised by its top rail and a dark face below, so it reads as a barrier and not as lane paint
+ function verticalGate(g,o){
+   const H=18,x=o.x+o.w/2;g.save();g.fillStyle='#05090c8c';g.fillRect(Math.round(x+2),o.y+6,12,o.h-4);g.fillStyle='#0b1216';g.fillRect(Math.round(x-5),o.y+4,10,o.h-4);g.restore();
+   const top={x:o.x,y:o.y-H,w:o.w,h:o.h};drawStrip(g,top,'quarantine/gate');
+   g.save();g.fillStyle='#ffad3655';for(let y=o.y-H+8;y<o.y+o.h-H;y+=16)g.fillRect(Math.round(x-5),y,10,2);g.restore();
+ }
  function gateLamps(g,ag,open){const r=ag.rect,hz=r.w>=r.h,col=open?'#79e2cf':'#ffad36',pts=hz?[[r.x+3,r.y+r.h-29],[r.x+r.w-3,r.y+r.h-29]]:[[r.x+r.w/2,r.y+3],[r.x+r.w/2,r.y+r.h-3]];for(const [x,y] of pts)ART.glow(g,x,y,12,col,'70');}
  // overhead pieces: tile anchors at their top-left (centre for trolleys), a flat dark copy offset onto the ground below
  function overheadOpt(p){return {anchorX:p.center||p.feet?.5:0,anchorY:p.feet?1:p.center?.5:0,variant:p.variant||0,mask:p.mask||0};}
@@ -347,7 +363,7 @@
      else if(o.type==='gate'&&(o.gateId==='evac-gate'||o.post)){}
      else if(o.type==='gate'){const ag=o.bollard&&(w.arenaGates||[]).find(q=>q.id===o.gateId);
        if(ag&&hasArt('quarantine/gateOpen_h')){const r=ag.rect,hz=r.w>=r.h;push(r.y+r.h,()=>{if(hz)ART.draw(g,'quarantine/gateOpen_h',r.x+r.w/2,r.y+r.h);else ART.draw(g,'quarantine/gateOpen_v',r.x+r.w/2,r.y+r.h/2);drawStrip(g,o,'quarantine/bollard');gateLamps(g,ag,true);});}
-       else push(o.y+o.h,()=>{drawStrip(g,o,o.bollard?'quarantine/bollard':'quarantine/gate');const ag2=(w.arenaGates||[]).find(q=>q.id===o.gateId);if(ag2)gateLamps(g,ag2,false);});}
+       else push(o.y+o.h,()=>{if(o.h>o.w&&!o.bollard)verticalGate(g,o);else drawStrip(g,o,o.bollard?'quarantine/bollard':'quarantine/gate');const ag2=(w.arenaGates||[]).find(q=>q.id===o.gateId);if(ag2)gateLamps(g,ag2,false);});}
      else if(o.type==='wall')push(o.y+o.h,()=>drawWall(g,o));
      else if(o.type==='furniture')push(o.y+o.h,()=>{
        // campaign states: the chapel generator runs once fuelled; Blackglass's transmitter rack lights once prepared

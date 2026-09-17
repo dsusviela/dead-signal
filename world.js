@@ -489,6 +489,13 @@
         block('barricade/floodlight',R.x+R.w-50,R.y+R.h*.45,20,14,{light:{r:170,col:'#ffb040',a:'ff',dy:60},lit:true});L.lightAnchors.push({x:R.x+R.w-40,y:R.y+R.h*.45,r:170,lit:true});
         sockets([[R.x+R.w*.5,R.y+R.h*.35],[R.x+R.w*.35,R.y+R.h*.75]],2);return;
       }
+      // the Furnace Plant works compound: slag and scrap against the fence, a warm ash skip by the furnace house, one flood on the gate
+      if(k==='compoundYard'){
+        zone('works',R.x+20,R.y+20,R.w-40,R.h-40);
+        block('industrial/scrapPile',R.x+30,R.y+R.h-60,40,14,{cover:true});block('industrial/ashSkipWarm',R.x+R.w-80,R.y+R.h-50,38,16,{cover:true,light:{r:30,col:'#ff7b35',a:'14',dy:10}});
+        block('props/slagPile',R.x+40,R.y+60,36,18,{cover:true});flat('industrial/ashSpill',R.x+R.w*.5,R.y+80);
+        lamp('barricade/floodlight',R.x+R.w*.5+90,R.y+40,150,'#ffb040');return;
+      }
       if(id==='linden-rear-court'){
         zone('court',R.x,R.y,R.w,R.h);
         block('props/dumpster',R.x+20,R.y+40,40,26,{variant:1});flat('streetlife/binBags',R.x+80,R.y+56,{variant:2});flat('streetlife/tippedBin',R.x+R.w-50,R.y+R.h-60);flat('lots/refugeNotice',R.x+R.w-40,R.y+30);
@@ -598,8 +605,8 @@
   // per district: parcel run length, the one opening per side (alley / forecourt width), whether a big core keeps a
   // sealed rear wing, and the courtyard's name and surface (city_v2 Section 2 density targets)
   var COMPOSE={
-    checkpoint:{parcel:[230,300],gap:[70,90],fill:.74,opening:'alley',wing:true,court:'Rear court',pocket:'Shop forecourt',surface:'concrete'},
-    ruins:{parcel:[220,290],gap:[60,80],fill:.8,opening:'passage',wing:true,court:'Broken court',pocket:'Demolition gap',surface:'gravel'},
+    checkpoint:{parcel:[230,300],gap:[70,90],fill:.8,opening:'alley',wing:true,court:'Rear court',pocket:'Shop forecourt',surface:'concrete'},
+    ruins:{parcel:[220,290],gap:[60,80],fill:.88,opening:'passage',wing:true,court:'Broken court',pocket:'Demolition gap',surface:'gravel'},
     hospital:{parcel:[240,310],gap:[120,160],fill:.56,opening:'forecourt lane',wing:false,court:'Ward garden',pocket:'Ward forecourt',surface:'grass'},
     northline:{parcel:[240,310],gap:[110,150],fill:.56,opening:'service lane',wing:true,court:'Service court',pocket:'Depot apron',surface:'concrete'},
     industry:{parcel:[260,320],gap:[110,140],fill:.66,opening:'truck lane',wing:true,court:'Works yard',pocket:'Yard apron',surface:'gravel'},
@@ -657,7 +664,7 @@
         var horizontal=side==='n'||side==='s',len=horizontal?R.w:R.h,has0=b.frontage.indexOf(horizontal?'w':'n')>=0,has1=b.frontage.indexOf(horizontal?'e':'s')>=0;
         var start=horizontal?0:(has0?FD:0),stop=horizontal?len:len-(has1?FD:0),avail=stop-start,avg=(K.parcel[0]+K.parcel[1])/2;
         var gapW=avail>=K.parcel[1]+K.gap[1]+180?K.gap[0]+(g()*(K.gap[1]-K.gap[0])|0):0,rest=avail-gapW,parcelLen=rest*K.fill,pocketLen=rest-parcelLen;
-        var pockets=pocketLen>=110?Math.max(1,Math.round(pocketLen/230)):0;if(!pockets)parcelLen=rest;
+        var pockets=pocketLen>=80?Math.max(1,Math.round(pocketLen/230)):0;if(!pockets)parcelLen=rest;
         var count=parcelLen<150?0:Math.max(1,Math.round(parcelLen/avg));if(count&&parcelLen/count<160)count=Math.max(1,Math.floor(parcelLen/160));
         var segs=[],openAfter=Math.floor(count*(.3+g()*.4));
         for(var si=0;si<count;si++){segs.push({t:'p',len:parcelLen/count});
@@ -672,7 +679,7 @@
           if(sg.t!=='p'){
             var sd=220,ox=horizontal?R.x+pos:(side==='w'?R.x:R.x+R.w-sd),oy=horizontal?(side==='n'?R.y:R.y+R.h-sd):R.y+pos,ow=horizontal?pw:sd,oh=horizontal?sd:pw;
             if(sg.t==='a'){if(!reservedAt(w,ox,oy,ow,oh+40*(horizontal?1:0),0))reserve(w,ox,oy,ow,horizontal?FD+20:oh,'approach',b.id+'/'+K.opening+'-'+side);}
-            else if(pw>=90&&!reservedAt(w,ox,oy,ow,oh,10)){var kloc=location(w,b.id+'/pocket-'+side+gi,'lot',ox,oy,ow,oh,{name:K.pocket,lotKind:'courtyard',discoveryRule:'visit'});
+            else if(pw>=80&&!reservedAt(w,ox,oy,ow,oh,10)){var kloc=location(w,b.id+'/pocket-'+side+gi,'lot',ox,oy,ow,oh,{name:K.pocket,lotKind:'courtyard',discoveryRule:'visit'});
               courts.push(lot(w,kloc,{id:'pocket',kind:'courtyard',rect:[ox,oy,ow,oh],entrances:[],surface:K.surface}));}
             pos+=pw;continue;
           }

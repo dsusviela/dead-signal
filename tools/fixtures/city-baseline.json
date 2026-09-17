@@ -1,16 +1,16 @@
 {
   "seeds": "1-50",
   "geometry": {
-    "obstacles": 1521,
+    "obstacles": 1527,
     "obstaclesByType": {
       "wall": 526,
       "door": 5,
       "furniture": 315,
-      "fence": 119,
+      "fence": 125,
       "debris": 4,
-      "rubble": 283,
+      "rubble": 284,
       "building": 57,
-      "car": 160,
+      "car": 159,
       "barrier": 47,
       "gate": 5
     },
@@ -21,12 +21,12 @@
       "civic": 5,
       "chapel": 1,
       "hospital": 1,
-      "clinic": 10,
+      "clinic": 11,
       "industrial": 8,
       "military": 4,
       "shop": 20,
       "terrace": 13,
-      "row": 20,
+      "row": 19,
       "shack": 2
     },
     "byDistrict": {
@@ -37,8 +37,8 @@
       "industry": 7,
       "quarantine": 9
     },
-    "locations": 231,
-    "lots": 54,
+    "locations": 232,
+    "lots": 56,
     "vehicleSlots": 40,
     "sites": 200,
     "landmarks": [
@@ -49,8 +49,8 @@
       "industry"
     ],
     "driveableCars": 35,
-    "props": 1417,
-    "lights": 151,
+    "props": 1431,
+    "lights": 152,
     "burningWrecksByDistrict": {
       "industry": 5
     }
@@ -135,7 +135,7 @@
     },
     "shotgun/q1": {
       "min": 1,
-      "median": 5.5,
+      "median": 5,
       "max": 11
     },
     "shotgun/q2": {

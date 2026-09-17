@@ -53,6 +53,7 @@
     serviceYard:{label:'Service yard',perimeter:'fence',surface:'concrete',profiles:['utility'],icon:'utility'},
     demolitionLot:{label:'Demolition lot',perimeter:'hoarding',surface:'gravel',profiles:['utility'],icon:'utility'},
     machineryYard:{label:'Machinery yard',perimeter:'fence',surface:'gravel',profiles:['vehicleFuel','utility'],icon:'vehicleFuel'},
+    compoundYard:{label:'Works compound',perimeter:'fence',surface:'gravel',profiles:[],icon:null},
     courtyard:{label:'Courtyard',perimeter:'kerb',surface:'concrete',profiles:[],icon:null},
     burnYard:{label:'Disposal yard',perimeter:'fence',surface:'concrete',profiles:[],icon:null}
   };
@@ -159,7 +160,8 @@
         {id:'dozer-pad-2',vehicleType:'bulldozer',rect:[2250,2400,90,120],heading:'s'},{id:'dozer-pad-3',vehicleType:'bulldozer',rect:[2460,2400,90,120],heading:'s'}]},
     {id:'loading-yard',rect:[1590,2020,540,600],lots:[{kind:'serviceYard',rect:[1600,2030,520,580],entrances:[['w',.5,160],['s',.5,160],['n',.58,130]]}]},
     {id:'warehouse',rect:[1590,2990,580,400],buildings:[{archetype:'warehouse',rect:[1640,3010,480,340],doors:[['n',.5,130,'vehicleBay'],['w',.5,90,'public']]}]},
-    {id:'furnace-plant',rect:[2970,2970,570,570]},
+    // city_v2: the plant is a fenced works compound with a north truck gate and a west personnel gate, not an open corner
+    {id:'furnace-plant',rect:[2970,2970,570,570],lots:[{id:'works',kind:'compoundYard',rect:[2990,2990,530,530],entrances:[['n',.5,140],['w',.25,90]]}]},
     // Central Quarantine: four processing corners around the disposal yard
     {id:'patient-furnace',rect:[-620,-620,1240,1240]},
     {id:'command-post',rect:[380,-615,235,215],buildings:[{archetype:'commandPost',rect:[390,-610,220,200],doors:[['s',.5,90,'public']]}]},
@@ -204,9 +206,9 @@
     },
     classes:{civic:3,landmark:2.4,lot:1.3,street:1.1,fabric:.55},
     uses:{stock:{provision:3,vehicleFuel:1.5},vending:{provision:2},pocket:{provision:.35,xp:1.5},refuge:{provision:1.5,medkit:1.5}},
-    districts:{industry:{vehicleFuel:3.5,incendiary:2.2},checkpoint:{provision:.4,bullets:1.2,shells:.85},ruins:{xp:1.3},hospital:{medkit:1.3},quarantine:{weaponQ2:1.5,bullets:1.3}},
-    // city_v2: South Blocks lost its four central blocks to Quarantine, so its bullet weight rose from .85 to 1.2 to keep
-    // its per-seed share after Ashworks gained utility workshops (min 15.7% over seeds 1-50); global counts are unchanged.
+    districts:{industry:{vehicleFuel:3.5,incendiary:2.2},checkpoint:{provision:.4,bullets:1.5,shells:.85},ruins:{xp:1.3},hospital:{medkit:1.3},quarantine:{weaponQ2:1.5,bullets:1.3}},
+    // city_v2: South Blocks lost its four central blocks to Quarantine, so its bullet weight rose from .85 to 1.5 to keep
+    // its per-seed share after Ashworks gained workshops and the frontage composition pass (min 14.8% over seeds 1-50); global counts are unchanged.
     // placed before the weighted spread: Ashworks always holds enough fuel for the chapel generator, and
     // South Blocks always offers a first medkit
     guarantees:[{resource:'vehicleFuel',district:'industry',count:2},{resource:'medkit',district:'checkpoint',count:1},{resource:'provision',location:'crossroads-supermarket',count:2}],

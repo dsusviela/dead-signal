@@ -417,7 +417,7 @@ test('roof zones fade independently and standing inside marks the location visit
 });
 
 // ---- Phase 4: open lots ----
-const FENCED = { park: 'hedge', graveyard: 'stone', serviceYard: 'chain', demolitionLot: 'hoarding', machineryYard: 'chain', burnYard: 'chain' };
+const FENCED = { park: 'hedge', graveyard: 'stone', serviceYard: 'chain', demolitionLot: 'hoarding', machineryYard: 'chain', burnYard: 'chain', compoundYard: 'chain' };
 test('lot perimeters match their kind and open exactly at the gates', () => {
   for (const kind of ['park', 'parkingLot', 'graveyard', 'serviceYard', 'demolitionLot', 'machineryYard']) assert.ok(world.lots.some(l => l.kind === kind), `a ${kind} exists`);
   for (const l of world.lots) {
