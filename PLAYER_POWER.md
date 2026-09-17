@@ -381,27 +381,34 @@ can destroy, duplicate, or silently select a weapon.
 
 ### Phase 2 — Add baseline shotgun cleave
 
-- [ ] Separate pellet travel distance from the nearest victim so one pellet can enumerate ordered
+- [x] Separate pellet travel distance from the nearest victim so one pellet can enumerate ordered
   intersections along its ray until range or a solid obstruction ends it.
-- [ ] Apply the Phase 0 distance falloff from muzzle to each target rather than using only the
+- [x] Apply the Phase 0 distance falloff from muzzle to each target rather than using only the
   distance to the initially acquired target.
-- [ ] Apply the decided successive-target retention rule independently per pellet.
-- [ ] Ensure one pellet damages one enemy at most once, including large hit circles and overlapping
+- [x] Apply the decided successive-target retention rule independently per pellet.
+- [x] Ensure one pellet damages one enemy at most once, including large hit circles and overlapping
   enemies.
-- [ ] Preserve six-pellet spread, ammunition use, reload behavior, quality scaling, firing noise,
+- [x] Preserve six-pellet spread, ammunition use, reload behavior, quality scaling, firing noise,
   aim acquisition, and obstacle damage unless Phase 0 explicitly changes one.
-- [ ] Stop pellets at walls, fences, closed doors/gates, protected obstacles, and other solids
+- [x] Stop pellets at walls, fences, closed doors/gates, protected obstacles, and other solids
   under the same collision rules as existing gunfire.
-- [ ] Implement the decided brute and boss interaction without allowing boss size to multiply one
+- [x] Implement the decided brute and boss interaction without allowing boss size to multiply one
   pellet's damage.
-- [ ] Render a trace that communicates continued travel through a crowd and still terminates at a
+- [x] Render a trace that communicates continued travel through a crowd and still terminates at a
   wall.
-- [ ] Add fixed-line tests for two aligned walkers, dense overlapping walkers, a walker behind a
+- [x] Add fixed-line tests for two aligned walkers, dense overlapping walkers, a walker behind a
   wall, falloff at several distances, brute interaction, boss interaction, and total damage from
   all six pellets.
-- [ ] Compare isolated and packed-target damage to the Phase 0 baseline; document the intended
+- [x] Compare isolated and packed-target damage to the Phase 0 baseline; document the intended
   increase instead of compensating with an unrelated global nerf.
-- [ ] Browser-check doorway, alley, open-street, wall, brute, and boss shots at gameplay zoom.
+- [~] Browser-check doorway, alley, open-street, wall, brute, and boss shots at gameplay zoom.
+
+*2026-09-17: `game.js rayHits` (shared by every hitscan weapon; shotgun cleave 3, retain 60%, falloff 100% → 50% past 40%
+of range, brutes/boss stop the pellet, point-blank overlap counts). Trace flag `cleave` on shots. Tests: five cleave
+cases in test-player-power. Bench (artifacts/power/phase2.json vs baseline.json): shotgun q1 walkers 90 s not cleared → 4.9 s
+0 reloads; mixed 90 s → 7.1 s; AR q1 walkers 90 s → 8.6 s (the point-blank fix, intended); brutes q1 7.1 → 8.0 s (a brute
+now absorbs the whole pellet). No compensating nerf. Browser: artifacts/power/browser/cleave.png (open street, lit, traces
+through five walkers). Awaiting human review: doorway, alley, wall, brute and boss shots in play.*
 
 Phase 2 exit: a packed short-range line is a reliably favorable shotgun situation, while cover,
 range, shells, reload time, and strong targets still limit it.
@@ -755,6 +762,8 @@ matching phase item.
    confirm the city rewards exploration without guaranteeing a full build early.
 
 ## Session log
+
+- 2026-09-17 — Phase 2 shotgun cleave and point-blank hit fix landed.
 
 - 2026-09-17 — Phase 0 decisions, harness and baseline; Phase 1 capacity and overflow landed (commits after 123bc57).
 

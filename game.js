@@ -26,7 +26,7 @@
   const WEAPONS = {
     pistol: {name:'BACKUP PISTOL', ammo:null, damage:15, interval:.58, range:245, mag:Infinity, reload:0, noise:220},
     ar: {name:'ASSAULT RIFLE', ammo:'bullets', damage:16, interval:.18, range:325, mag:30, reload:1.8, noise:400},
-    shotgun: {name:'PUMP SHOTGUN', ammo:'shells', damage:17, pellets:6, spread:.46, interval:.95, range:190, mag:6, reload:2.2, noise:520},
+    shotgun: {name:'PUMP SHOTGUN', ammo:'shells', damage:17, pellets:6, spread:.46, interval:.95, range:190, mag:6, reload:2.2, noise:520, cleave:3, retain:.6},
     smg: {name:'SUBMACHINE GUN', ammo:'bullets', damage:10, interval:.105, range:220, mag:36, reload:1.6, noise:350},
     rifle: {name:'MARKSMAN RIFLE', ammo:'bullets', damage:65, interval:.8, range:425, mag:10, reload:2, noise:460},
     flame: {name:'FLAMETHROWER', ammo:'fuel', damage:8, interval:.12, range:135, spread:.7, mag:60, reload:2.4, noise:250}
@@ -300,15 +300,33 @@
       const count=def.pellets||1;
       for(let i=0;i<count;i++){
         const a=p.angle+(count>1?(i-(count-1)/2)*def.spread/(count-1):0),dx=Math.cos(a),dy=Math.sin(a);
-        let reach=def.range, victim=null;
+        let reach=def.range;
         const wall=lineObstacle(s,p.x,p.y,p.x+dx*reach,p.y+dy*reach);if(wall)reach*=wall.t;
-        for(const e of [...s.enemies,...(boss&&boss.active?[boss]:[])]){if(e.dead)continue;const ex=e.x-p.x,ey=e.y-p.y,along=ex*dx+ey*dy,side=Math.abs(ex*dy-ey*dx);if(along>0&&along<reach+(e.r||10)&&side<(e.r||10)+2){const near=Math.max(0,along-Math.sqrt(Math.max(0,e.r*e.r-side*side)));if(near<reach){reach=near;victim=e;}}}
-        if(victim===boss)root.DSBoss.hit(s,def.damage*power,api(s));else if(victim)hitEnemy(s,victim,def.damage*power,p);
-        s.shots.push({x:mx,y:my,tx:p.x+dx*reach,ty:p.y+dy*reach,life:.1,maxLife:.1,type:key,color:p.color});
+        const end=rayHits(s,p,dx,dy,reach,def,power,key);
+        s.shots.push({x:mx,y:my,tx:p.x+dx*end,ty:p.y+dy*end,life:.1,maxLife:.1,type:key,color:p.color,cleave:(def.cleave||0)>1});
       }
     }
     if(key==='flame'||target.wall)s.shots.push({x:mx,y:my,tx:target.x,ty:target.y,angle:p.angle,life:.13,maxLife:.13,type:key,color:p.color});
     if(def.ammo&&p.mag===0)reload(s,p,def);
+  }
+  // One pellet or bullet along a ray already shortened by walls (PLAYER_POWER Phase 2). Every enemy the ray crosses is
+  // ordered by entry distance; point-blank infected overlapping the muzzle count (entry clamps to 0). A weapon with
+  // cleave > 1 keeps damaging in order, retaining def.retain of its damage after each target; brutes and the boss stop it.
+  // The shotgun falls off from 100% at 40% of range to 50% at full range. Returns where the trace ends.
+  function rayHits(s,p,dx,dy,reach,def,power,key){
+    const boss=s.boss,hits=[],limit=def.cleave||1;
+    for(const e of [...s.enemies,...(boss&&boss.active?[boss]:[])]){if(e.dead)continue;const r=e.r||10,ex=e.x-p.x,ey=e.y-p.y,along=ex*dx+ey*dy,side=Math.abs(ex*dy-ey*dx);
+      if(along>-r&&along<reach+r&&side<r+2){const near=Math.max(0,along-Math.sqrt(Math.max(0,r*r-side*side)));if(near<reach)hits.push({e,near});}}
+    hits.sort((u,v)=>u.near-v.near);
+    let mult=1,endAt=reach;
+    for(let k=0;k<hits.length&&k<limit;k++){
+      const {e,near}=hits[k],fall=key==='shotgun'?(near<=def.range*.4?1:1-.5*Math.min(1,(near-def.range*.4)/(def.range*.6))):1,dmg=def.damage*power*mult*fall;
+      if(e===boss)root.DSBoss.hit(s,dmg,api(s));else hitEnemy(s,e,dmg,p);
+      endAt=near;mult*=def.retain||.6;
+      if(e===boss||e.type==='brute')break;
+      if(k===limit-1)break;endAt=reach;
+    }
+    return hits.length?endAt:reach;
   }
   // H / B: only ever a personal medkit. A refused press explains itself and consumes nothing.
   function useMedkit(s,p,feedback=false){
@@ -1024,5 +1042,5 @@
     if(s.players.length&&s.players.every(p=>p.dead)){s.mode='lost';s.paused=false;}
     camera(s,dt,aspect);
   }
-  root.DSGame={weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
+  root.DSGame={rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
 })(typeof window!=='undefined'?window:globalThis);

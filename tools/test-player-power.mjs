@@ -42,5 +42,38 @@ test('capacity never grows back when a co-op survivor is downed', () => {
   const s = solo(); G.addPlayer(s, 'pad:0'); s.players[1].dead = true; assert.equal(G.weaponCap(s), 3);
 });
 
+// ---- Phase 2: shotgun cleave ----
+function line(types, spacing = 30, start = 40) { const s = solo(9), p = s.players[0]; s.world.obstacles = []; p.x = 0; p.y = 0; const es = types.map((t, i) => G.spawn(s, t, start + i * spacing, 0)); return { s, p, es }; }
+const SG = G.WEAPONS.shotgun;
+test('a shotgun pellet damages up to three aligned infected in order, keeping 60% after each', () => {
+  const { s, p, es } = line(['walker', 'walker', 'walker', 'walker'], 12); es.forEach(e => { e.hp = e.maxHp = 1000; }); // all inside 40% of range: no falloff
+  const end = G.rayHits(s, p, 1, 0, SG.range, SG, 1, 'shotgun');
+  const dealt = es.map(e => +(1000 - e.hp).toFixed(3));
+  assert.deepEqual(dealt, [17, +(17 * .6).toFixed(3), +(17 * .36).toFixed(3), 0]); assert.ok(Math.abs(end - (es[2].x - es[2].r)) < 1e-9, 'the trace ends at the last target');
+});
+test('pellets fall off with distance and stop at walls, brutes and the boss', () => {
+  const near = line(['walker'], 0, 40), far = line(['walker'], 0, 180); for (const k of [near, far]) k.es[0].hp = k.es[0].maxHp = 1000;
+  G.rayHits(near.s, near.p, 1, 0, SG.range, SG, 1, 'shotgun'); G.rayHits(far.s, far.p, 1, 0, SG.range, SG, 1, 'shotgun');
+  assert.equal(1000 - near.es[0].hp, 17); const f = 1000 - far.es[0].hp; assert.ok(f > 17 * .5 - 1e-9 && f < 17 * .6, 'far falloff ' + f);
+  const b = line(['brute', 'walker']); b.es.forEach(e => { e.hp = e.maxHp = 1000; }); G.rayHits(b.s, b.p, 1, 0, SG.range, SG, 1, 'shotgun');
+  assert.equal(1000 - b.es[0].hp, 17); assert.equal(b.es[1].hp, 1000, 'a brute stops the pellet');
+  const w = line(['walker', 'walker'], 60); w.es.forEach(e => { e.hp = e.maxHp = 1000; }); w.s.world.obstacles = [{ x: 70, y: -40, w: 10, h: 80, type: 'wall' }];
+  const wall = G.lineObstacle(w.s, 0, 0, SG.range, 0); const reach = SG.range * wall.t; G.rayHits(w.s, w.p, 1, 0, reach, SG, 1, 'shotgun');
+  assert.equal(1000 - w.es[0].hp, 17); assert.equal(w.es[1].hp, 1000, 'nothing behind a wall is hit');
+});
+test('point-blank infected overlapping the survivor are hit, once per pellet', () => {
+  const { s, p, es } = line(['walker', 'walker'], 0, -4); es.forEach(e => { e.hp = e.maxHp = 1000; });
+  G.rayHits(s, p, 1, 0, SG.range, SG, 1, 'shotgun'); assert.equal(es.filter(e => e.hp < 1000).length, 2); assert.ok(es.every(e => 1000 - e.hp <= 17), 'no double hits');
+});
+test('single-target guns are unchanged: a bullet stops at its first victim', () => {
+  const { s, p, es } = line(['walker', 'walker']); es.forEach(e => { e.hp = e.maxHp = 1000; }); const AR = G.WEAPONS.ar;
+  G.rayHits(s, p, 1, 0, AR.range, AR, 1, 'ar'); assert.equal(1000 - es[0].hp, AR.damage); assert.equal(es[1].hp, 1000);
+});
+test('a full shotgun blast into a packed doorway beats the old one-target pellets', () => {
+  const { s, p, es } = line(['walker', 'walker', 'walker'], 16, 40); es.forEach(e => { e.hp = e.maxHp = 1000; });
+  for (let i = 0; i < SG.pellets; i++) { const a = (i - (SG.pellets - 1) / 2) * SG.spread / (SG.pellets - 1); G.rayHits(s, p, Math.cos(a), Math.sin(a), SG.range, SG, 1, 'shotgun'); }
+  const total = es.reduce((n, e) => n + 1000 - e.hp, 0); assert.ok(total > SG.pellets * SG.damage * 1.2, 'packed total ' + total.toFixed(1));
+});
+
 console.log(results.join('\n'));
 if (failed) { console.log(failed + ' player-power tests failed'); process.exitCode = 1; } else console.log('player-power tests passed');
