@@ -392,6 +392,8 @@
   }
 
   // =====================================================================
+  // grenade 8x8: a round in flight, dark olive body, brass band, lit edge
+  function makeGrenade(){return ['..KKKK..','.KLMMDK.','KLMMMMDK','KYYYYYYK','KMMMMMDK','KMMMMDDK','.KDDDDK.','..KKKK..'];}
   A.define('vfx',{
     muzzleS:{frames:{down:makeMuzzle('S',14,10)},pal:'MAT.ember',anchor:'center',fps:30,note:'14x10, 3 flicker frames, stubby directional cone + 1 spike'},
     muzzleM:{frames:{down:makeMuzzle('M',20,14)},pal:'MAT.ember',anchor:'center',fps:30,note:'20x14, 3 flicker frames, longer cone + forward spike'},
@@ -404,6 +406,7 @@
     reviveRing:{frames:{down:[makeReviveFrame(0),makeReviveFrame(1),makeReviveFrame(2),makeReviveFrame(3)]},pal:'MAT.loot',anchor:'center',note:'48x24, 4f, cyan ring expands and thins over 0.5s'},
     smokePuff:{frames:{down:[makeSmokePuffFrame(0),makeSmokePuffFrame(1),makeSmokePuffFrame(2),makeSmokePuffFrame(3)]},pal:'MAT.basalt',anchor:'center',note:'16x16, 4f, unused today: rising dissipating puff'},
     emberMote:{frames:{down:[makeEmberMoteFrame(0),makeEmberMoteFrame(1)]},pal:'MAT.ember',anchor:'center',note:'6x6, 2f, unused today: a lone drifting spark'},
+    grenade:{rows:makeGrenade(),pal:{K:'#0b1216',D:'#2c3624',M:'#4f5d3a',L:'#7d8a5c',Y:'#b8963f'},anchor:'center',note:'8x8 grenade round in flight'},
     explosion:{frames:{down:[makeExplosionFrame(0),makeExplosionFrame(1),makeExplosionFrame(2),makeExplosionFrame(3),makeExplosionFrame(4)]},pal:'MAT.ember',anchor:'center',note:'28x28, 5f, unused today: fast expand then a scalloped, settling ember blob'},
     pickupSparkle:{frames:{down:[makePickupSparkleFrame(0),makePickupSparkleFrame(1),makePickupSparkleFrame(2),makePickupSparkleFrame(3)]},pal:'MAT.loot',anchor:'center',note:'10x10, 4f, unused today: small twinkle'},
     footDust:{frames:{down:[makeFootDustFrame(0),makeFootDustFrame(1),makeFootDustFrame(2)]},pal:'MAT.concrete',anchor:'center',note:'12x8, 3f, unused today: small ground puff'},

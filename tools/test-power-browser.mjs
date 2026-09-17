@@ -38,6 +38,17 @@ try {
   await page.waitForFunction(() => DeadSignal.menu === null && !DeadSignal.state.overflowQueue.length, null, { polling: 50 });
   const st = await page.evaluate(() => { const p = DeadSignal.state.players[0]; return { n: p.weaponInventory.length, weapon: p.weapon, drop: DeadSignal.state.loot.filter(l => l.type === 'weapon' && l.lock > 0).map(l => l.weapon) }; });
   assert.deepEqual(st, { n: 3, weapon: 'shotgun', drop: ['smg'] }); pass('confirming drops the chosen weapon beside the survivor and play resumes');
+  // Phase 3–5: duplicate preview, launcher burst, napalm ground (captures reviewed by hand)
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.evaluate(() => { const s = DeadSignal.state, p = s.players[0]; s.spawnAcc = -1e12; s.enemies = []; p.x = 0; p.y = 2400; s.camera.x = 0; s.camera.y = 2400; p.invuln = 1e9;
+    p.weaponInventory = [{ weapon: 'ar', quality: 1, mag: 30, attachments: ['ar_pierce'] }, { weapon: 'launcher', quality: 1, mag: 1, attachments: [] }]; p.backup = false; p.weaponSlot = 0; Object.assign(p, p.weaponInventory[0]); p.attachments = ['ar_pierce'];
+    s.loot.push({ id: 'dup', x: p.x + 10, y: p.y, type: 'weapon', weapon: 'ar', quality: 2, amount: 1, label: 'rifle' }); });
+  await page.waitForTimeout(400); await page.screenshot({ path: out + '/duplicate-preview.png' });
+  await page.keyboard.press('e'); await page.waitForFunction(() => DeadSignal.state.players[0].weaponInventory[0].attachments.length === 2, null, { polling: 50 }); pass('E on a duplicate upgrades the matching weapon');
+  await page.evaluate(() => { const s = DeadSignal.state, p = s.players[0]; s.ammo.grenades = 4; DSGame.selectWeapon(s, p, 1); p.auto = true; p.moveAngle = -Math.PI / 2;
+    for (let i = 0; i < 7; i++) DSGame.spawn(s, i % 3 ? 'walker' : 'runner', (i - 3) * 14, 2250 - (i % 2) * 14, { alert: true, state: 'chase', target: { x: 0, y: 2400 }, alertT: 1e9 }); });
+  await page.waitForFunction(() => DeadSignal.state.fx.some(f => f.sprite === 'vfx/explosion'), null, { polling: 20, timeout: 8000 });
+  await page.screenshot({ path: out + '/launcher-burst.png' }); pass('the launcher fires a round that bursts in a lit explosion');
   assert.deepEqual(errors, []);
   console.log(results.join('\n')); console.log('power browser checks passed');
 } finally { await browser.close(); }

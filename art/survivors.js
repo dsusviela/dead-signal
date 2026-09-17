@@ -555,6 +555,20 @@
     ironAccents(g,[[11,4,'H'],[12,4,'H'],[13,4,'H'],[15,5,'K'],[16,5,'K'],[24,5,'H'],[25,5,'H'],[26,5,'H'],[2,6,'D'],[3,6,'D']]);
     return toRows(g);
   }
+  function makeLauncher(){ // stubby break-open grenade launcher: skeletal stock, fat revolving drum, short wide barrel
+    var g=mkGrid(34,12);
+    rect(g,0,5,7,8,'M');rect(g,0,4,2,9,'M');  // skeletal stock and butt pad
+    rect(g,7,4,13,8,'M');                        // receiver
+    rect(g,12,2,21,10,'M');                      // drum, taller than the rest
+    rect(g,21,3,33,8,'M');                       // barrel
+    rect(g,5,8,8,11,'M');                        // grip, centre x6 = .18w
+    outlineFromFill(g,'K');
+    shadeTopDown(g,'L','M','D');
+    despeckle(g);
+    pin(g,14,4,19,8,'D');                        // drum face reads dark
+    ironAccents(g,[[14,5,'K'],[16,5,'K'],[18,5,'K'],[14,7,'K'],[16,7,'K'],[18,7,'K'],[23,4,'H'],[24,4,'H'],[25,4,'H'],[32,5,'K'],[32,6,'K'],[1,6,'D']]);
+    return toRows(g);
+  }
   function makeRifle(){
     var g=mkGrid(40,12);
     rect(g,0,4,11,9,'M');      // stock with a cheek rest
@@ -632,6 +646,7 @@
     wpn_smg:{rows:makeSmg(),pal:IRON,anchor:{x:.4,y:.5},note:'26x12 folding-stock SMG, box mag'},
     wpn_ar:{rows:makeAr(),pal:IRON,anchor:{x:.4,y:.5},note:'34x12 assault rifle, curved mag, iron sights'},
     wpn_shotgun:{rows:makeShotgun(),pal:IRON,anchor:{x:.4,y:.5},note:'34x12 pump shotgun, dark foreend'},
+    wpn_launcher:{rows:makeLauncher(),pal:IRON,anchor:{x:.4,y:.5},note:'34x12 grenade launcher, revolving drum, short wide barrel'},
     wpn_rifle:{rows:makeRifle(),pal:IRON,anchor:{x:.4,y:.5},note:'40x12 scoped bolt rifle, long barrel'},
     wpn_flame:{rows:makeFlame(),pal:flamePal,anchor:{x:.4,y:.5},note:'36x16 flamethrower, rust tank, ember pilot light'}
   });

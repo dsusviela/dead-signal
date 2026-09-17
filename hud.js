@@ -13,7 +13,7 @@
   const CHAIN=['checkpoint','industry','ruins','hospital','quarantine','northline'];
   const districtCards=()=>root.DSWorld.DISTRICTS.filter(d=>d.card).sort((a,b)=>CHAIN.indexOf(a.id)-CHAIN.indexOf(b.id)).map(d=>[d.id,d.mapLabel,d.card.role,d.card.note,d.mapPalette?d.mapPalette.light:d.color]);
   const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The gate needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry four weapons solo, three each in co-op, plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.']];
-  const SHORT={pistol:'PISTOL',ar:'AR',shotgun:'SHOTGUN',smg:'SMG',rifle:'RIFLE',flame:'FLAMER'};
+  const SHORT={pistol:'PISTOL',ar:'AR',shotgun:'SHOTGUN',smg:'SMG',rifle:'RIFLE',flame:'FLAMER',launcher:'LAUNCHER'};
   const ui={menu:null,focus:0,stack:[],pointer:{x:-1,y:-1},items:[],hover:null,upgradeFor:null,objective:null,location:null,arrive:0,panels:[]};
   let k=1,u=1,W=0,H=0,bindings={state:()=>null,restart:()=>{},resume:()=>{},toTitle:()=>{}};
   let last={top:0,bottom:0};
@@ -163,7 +163,9 @@
     // a survivor down outranks every stash, vehicle or door hint
     const down=s.players.find(p=>p.dead);
     if(down&&living.length){const helper=living.some(q=>Math.hypot(q.x-down.x,q.y-down.y)<48);message=tag(down)+'DOWN · '+(helper?'REVIVING '+Math.round(down.revive/3*100)+'%':'NEEDS A TEAMMATE');sub=helper?'Stay beside them':'Stand beside them for three seconds to revive';return {message,sub,alert:true};}
-    for(const p of living){if(p.vehicle!=null)continue;const it=G.nearestInteract(s,p);if(it){const def=G.WEAPONS[it.weapon];message=tag(p)+key(p,'interact')+def.name+' '+('*'.repeat(it.quality||1));sub=(p.weaponInventory.length<G.weaponCap(s)?'Equip slot '+(p.weaponInventory.length+1):'Replace '+G.WEAPONS[p.weapon].name)+' · '+def.ammo.toUpperCase();break;}}
+    for(const p of living){if(p.vehicle!=null)continue;const it=G.nearestInteract(s,p);if(it){const def=G.WEAPONS[it.weapon],up=G.upgradeTarget(s,p,it);
+      if(up>=0){const w=p.weaponInventory[up],nx=G.nextAttachment(w);message=tag(p)+key(p,'interact')+'UPGRADE '+def.name+' · '+nx.label;sub='Tier '+((w.attachments||[]).length+1)+'/3 · '+nx.description+(up===(p.weaponSlot??0)&&!p.backup?'':' · slot '+(up+1))+' · or leave it for a teammate';break;}
+      message=tag(p)+key(p,'interact')+def.name+' '+('*'.repeat(it.quality||1))+((it.attachments||[]).length?' +'+it.attachments.length:'');sub=(p.weaponInventory.length<G.weaponCap(s)?'Equip slot '+(p.weaponInventory.length+1):'Replace '+G.WEAPONS[p.weapon||p.weaponInventory[p.weaponSlot??0].weapon].name)+' · '+def.ammo.toUpperCase();break;}}
     // refuelling first: pouring a jerrycan or fuelling the chapel generator (one press, stay beside it)
     if(!message)for(const p of living){const sup=s.supplies;
       if(p.refuel){const r=p.refuel;message=tag(p)+(r.kind==='generator'?'FUELLING THE GENERATOR · ':'POURING FUEL · ')+Math.floor(r.progress/r.time*100)+'%';sub='Stay beside it · moving away stops the pour, nothing is lost';break;}
@@ -206,6 +208,7 @@
     let x=m;const ry=y0+3*u,sup=s.supplies||{provisions:0,vehicleFuel:0};
     utext(g,'SQUAD',x,ry,12,COL.muted);x+=umeasure(g,'SQUAD',12)+10*u;
     const rows=[['▰',s.ammo.bullets,'BUL'],['▥',s.ammo.shells,'SHL'],['◩',s.ammo.fuel,'INCEND'],['◍',sup.provisions,'RATION'],['▣',sup.vehicleFuel,'L FUEL']];
+    if((s.ammo.grenades||0)>0||s.players.some(p=>p.weaponInventory.some(w=>w.weapon==='launcher')))rows.splice(3,0,['●',s.ammo.grenades||0,'GREN']);
     const lvl='LV '+s.level,right=W-m-umeasure(g,lvl,12)-Math.min(120*u,W*.1)-8*u;
     for(const [glyph,value,lab] of rows){const t=glyph+' '+value+' ',lw=umeasure(g,lab,12,'normal');if(x+umeasure(g,t,12)+lw>right)break;
       utext(g,glyph,x,ry,12,COL.gold);x+=umeasure(g,glyph+' ',12);utext(g,String(value),x,ry,12,COL.paper);x+=umeasure(g,value+' ',12);utext(g,lab,x,ry,12,COL.muted,'left','normal');x+=lw+14*u;}
@@ -233,9 +236,9 @@
     }
     // row B: weapon and magazine, fire state
     ry=y+19*u;
-    const rounds=p.dead?'—':def.ammo?p.mag+'/'+def.mag:'∞',mw=umeasure(g,rounds,12);utext(g,rounds,rx,ry,12,COL.gold,'right');
+    const rounds=p.dead?'—':def.ammo?p.mag+'/'+(p.backup||!p.weapon?def.mag:G.magFor({weapon:p.weapon,attachments:p.attachments})):'∞',mw=umeasure(g,rounds,12);utext(g,rounds,rx,ry,12,COL.gold,'right');
     const fire=driver?'DRIVING':p.reload&&!p.backup?'RELOAD':p.auto?'● AUTO':'○ HOLD',fw=umeasure(g,fire,12);utext(g,fire,rx-mw-10*u,ry,12,driver?COL.paper:p.reload&&!p.backup?COL.orange:p.auto?COL.mint:COL.orange,'right');
-    const wname=SHORT[p.backup||!p.weapon?'pistol':p.weapon]+(p.backup||!p.weapon?'':' '+'*'.repeat(p.quality||1));
+    const mods=p.backup||!p.weapon?0:(p.attachments||[]).length,wname=SHORT[p.backup||!p.weapon?'pistol':p.weapon]+(p.backup||!p.weapon?'':' '+'*'.repeat(p.quality||1))+(mods?' +'+mods:'');
     utext(g,fit(g,wname,12,rx-mw-fw-20*u-lx),lx,ry,12,COL.paper);
     // row C: conditional details (vehicle, stamina, regroup, upgrade badge)
     ry=y+35*u;let cx=lx,right=rx;

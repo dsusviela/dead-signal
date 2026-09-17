@@ -21,7 +21,7 @@
  }
  // facing from an angle: down/up when mostly vertical, else side (mirrored when aiming left)
  function facing(angle){const ca=Math.cos(angle||0),sa=Math.sin(angle||0),dir=Math.abs(sa)>Math.abs(ca)?(sa>0?'down':'up'):'side';return {dir,flip:dir==='side'&&ca<0};}
- const GUN_SIZE={pistol:'S',smg:'S',ar:'M',shotgun:'L',rifle:'M',flame:'L'};
+ const GUN_SIZE={pistol:'S',smg:'S',ar:'M',shotgun:'L',rifle:'M',flame:'L',launcher:'L'};
  function muzzleFlash(g,x,y,angle,key,s){
    const size=GUN_SIZE[key]||'M';ART.glow(g,x,y,26,'#ff9a35','77');
    if(ART.spec('vfx/muzzle'+size))ART.draw(g,'vfx/muzzle'+size,x,y,{rotate:angle,frame:Math.floor(s.time*30)%3});
@@ -137,7 +137,7 @@
  function loot(g,l,s){
    const x=l.x,y=l.y,pulse=Math.floor(s.time*5+l.x*.01)%2?0:-2;
    if(l.type==='xp'){if(hasArt('loot/xpShard'))ART.draw(g,'loot/xpShard',x,y+pulse,{frame:Math.floor(s.time*6+l.x*.01)%3});else diamond(g,x,y+pulse,5,'#0b1216','#79e2cf');ART.glow(g,x,y,20,'#79e2cf','2d');return;}
-   const fresh=hasArt('loot/medkit'),name=fresh?((l.type==='heal'||l.type==='medkit')?'loot/medkit':l.type==='evidence'?'loot/evidence':l.type==='payload'?'loot/payload':l.type==='override'?'loot/override':l.type==='provision'?'loot/provision':l.type==='vehicleFuel'?'loot/jerrycan':l.type==='weapon'?'loot/weaponCrate':l.ammo==='fuel'?'loot/fuelCan':l.ammo==='shells'?'loot/ammoShells':'loot/ammoBullets'):((l.type==='heal'||l.type==='medkit')?'medkit':l.type==='weapon'?'weapon':l.ammo==='fuel'?'fuel':'ammo'),col=(l.type==='heal'||l.type==='medkit')?'#9fd39f':l.type==='evidence'||l.type==='payload'||l.type==='override'?'#d8dbc8':l.type==='provision'?'#b8d86b':l.type==='vehicleFuel'?'#ffd249':l.type==='weapon'?'#ffb866':l.ammo==='fuel'?'#ff8b3d':'#d7cda8';
+   const fresh=hasArt('loot/medkit'),name=fresh?((l.type==='heal'||l.type==='medkit')?'loot/medkit':l.type==='evidence'?'loot/evidence':l.type==='payload'?'loot/payload':l.type==='override'?'loot/override':l.type==='provision'?'loot/provision':l.type==='vehicleFuel'?'loot/jerrycan':l.type==='weapon'?'loot/weaponCrate':l.ammo==='fuel'?'loot/fuelCan':l.ammo==='shells'?'loot/ammoShells':l.ammo==='grenades'?'loot/ammoGrenades':'loot/ammoBullets'):((l.type==='heal'||l.type==='medkit')?'medkit':l.type==='weapon'?'weapon':l.ammo==='fuel'?'fuel':'ammo'),col=(l.type==='heal'||l.type==='medkit')?'#9fd39f':l.type==='evidence'||l.type==='payload'||l.type==='override'?'#d8dbc8':l.type==='provision'?'#b8d86b':l.type==='vehicleFuel'?'#ffd249':l.type==='weapon'?'#ffb866':l.ammo==='fuel'?'#ff8b3d':'#d7cda8';
    const hidden=l.interior&&(s.world.buildings||[]).some(h=>x>h.x&&x<h.x+h.w&&y>h.y&&y<h.y+h.h&&h.roofZones.some(z=>z.alpha>.5&&z.rects.some(r=>x>r.x&&x<r.x+r.w&&y>r.y&&y<r.y+r.h)));
    if(!hidden){ART.glow(g,x,y,32,col,'2b');}ART.shadow(g,x,y+9,14,.45);ART.draw(g,name,x,y+pulse,fresh?{}:{anchorY:.65});
    if(!hidden){g.strokeStyle=col+'66';g.lineWidth=1;g.strokeRect(Math.round(x-16),Math.round(y-16+pulse),32,29);}
@@ -410,6 +410,10 @@
    g.strokeStyle='#ff9b4a99';g.lineWidth=2;g.setLineDash([8,8]);for(const off of [-62,62]){g.beginPath();if(b.vertical){g.moveTo(b.coord+off,top);g.lineTo(b.coord+off,top+c.h);}else{g.moveTo(left,b.coord+off);g.lineTo(left+c.w,b.coord+off);}g.stroke();}g.setLineDash([]);
  }
  function projectiles(g,s){
+   // burning ground (napalm attachment) and grenades in flight: the round rides a shallow arc toward its target
+   for(const f of s.fires||[]){g.globalAlpha=Math.min(1,f.t*1.5)*.85;if(hasArt('vfx/fire'))ART.draw(g,'vfx/fire',f.x,f.y+8,{frame:Math.floor(s.time*12+f.x)%5});ART.glow(g,f.x,f.y,36,'#ff6a2a','30');}g.globalAlpha=1;
+   for(const q of s.grenades||[]){const total=Math.hypot(q.tx-(q.sx??q.x),q.ty-(q.sy??q.y))||1,left=Math.hypot(q.tx-q.x,q.ty-q.y),u=1-left/total,lift=Math.sin(Math.PI*Math.max(0,Math.min(1,u)))*Math.min(40,total*.15);
+     if(!LIT)ART.shadow(g,q.x,q.y+2,4,.4);if(hasArt('vfx/grenade'))ART.draw(g,'vfx/grenade',q.x,q.y-12-lift,{rotate:s.time*14});else circle(g,q.x,q.y-12-lift,3,'#4f5d3a');}
    for(const shot of s.shots){const q=Math.max(0,shot.life/shot.maxLife);g.globalAlpha=q;
      if(shot.type==='flame'){const a=shot.angle;ART.glow(g,shot.x+Math.cos(a)*52,shot.y+Math.sin(a)*52,72,'#ff6a2a','3f');
        if(hasArt('vfx/flameTongue')){for(let i=0;i<5;i++){const d=22+i*22,j=Math.sin(s.time*28+i*2.1)*6*(i/5),px=shot.x+Math.cos(a)*d-Math.sin(a)*j,py=shot.y+Math.sin(a)*d+Math.cos(a)*j;g.globalAlpha=q*(1-i*.12);ART.draw(g,'vfx/flameTongue',px,py,{rotate:a,frame:(Math.floor(s.time*24)+i)%5,scale:1+i*.15});}g.globalAlpha=q;continue;}
@@ -429,7 +433,7 @@
    if(hasArt('vfx/bloodDecal'))for(const d of s.decals||[])if(Math.abs(d.x-v.x)<v.w/2+30&&Math.abs(d.y-v.y)<v.h/2+30)ART.draw(g,'vfx/bloodDecal',d.x,d.y,{variant:d.variant,alpha:.85});
    root.DSBoss.drawGround(g,s);
    worldPass(g,s,v);projectiles(g,s);
-   for(const f of s.fx){g.globalAlpha=Math.min(1,f.life*2);if(f.sprite&&hasArt(f.sprite)){ART.draw(g,f.sprite,f.x,f.y,{frame:Math.min(f.frames-1,Math.floor((1-f.life/f.maxLife)*f.frames)),variant:f.variant||0});continue;}text(g,f.text,f.x,f.y-(1-f.life/f.maxLife)*22,f.color,8);}g.globalAlpha=1;
+   for(const f of s.fx){g.globalAlpha=Math.min(1,f.life*2);if(f.sprite&&hasArt(f.sprite)){ART.draw(g,f.sprite,f.x,f.y,{frame:Math.min(f.frames-1,Math.floor((1-f.life/f.maxLife)*f.frames)),variant:f.variant||0,scale:f.scale||1});continue;}text(g,f.text,f.x,f.y-(1-f.life/f.maxLife)*22,f.color,8);}g.globalAlpha=1;
    // DS_DIAGNOSTIC_LIGHT (development only, city_v2 art review): skip the night so materials are judged in neutral light
    if(L&&!root.DS_DIAGNOSTIC_LIGHT)L.draw(g,s,c); // the night: multiply the lightmap over everything in the world, before the vignette and the HUD
    g.restore();

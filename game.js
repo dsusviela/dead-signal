@@ -29,8 +29,39 @@
     shotgun: {name:'PUMP SHOTGUN', ammo:'shells', damage:17, pellets:6, spread:.46, interval:.95, range:190, mag:6, reload:2.2, noise:520, cleave:3, retain:.6},
     smg: {name:'SUBMACHINE GUN', ammo:'bullets', damage:10, interval:.105, range:220, mag:36, reload:1.6, noise:350},
     rifle: {name:'MARKSMAN RIFLE', ammo:'bullets', damage:65, interval:.8, range:425, mag:10, reload:2, noise:460},
-    flame: {name:'FLAMETHROWER', ammo:'fuel', damage:8, interval:.12, range:135, spread:.7, mag:60, reload:2.4, noise:250}
+    flame: {name:'FLAMETHROWER', ammo:'fuel', damage:8, interval:.12, range:135, spread:.7, mag:60, reload:2.4, noise:250},
+    // PLAYER_POWER Phase 4: a carried slot, scarce shared grenades, a travelling round that bursts once
+    launcher: {name:'GRENADE LAUNCHER', ammo:'grenades', damage:100, edge:35, radius:80, speed:420, interval:.9, range:330, mag:1, reload:2.5, noise:520, projectile:true}
   };
+  // PLAYER_POWER Phase 3/5: fixed three-tier progressions per weapon, earned in order from duplicate drops. `mod` adds
+  // (pellets, cleave, mag), multiplies (*Mul) or sets flags (linger) on the weapon's stats; see weaponStats().
+  const ATTACHMENTS={
+    shotgun:[{id:'sg_choke',label:'CHOKE',description:'+1 pellet',mod:{pellets:1}},{id:'sg_slug',label:'SLUG LOAD',description:'pellets cleave one more target',mod:{cleave:1}},{id:'sg_tube',label:'EXTENDED TUBE',description:'magazine +2',mod:{mag:2}}],
+    ar:[{id:'ar_pierce',label:'AP ROUNDS',description:'bullets pass one infected at 60%',mod:{cleave:1,retain:.6}},{id:'ar_extmag',label:'EXTENDED MAG',description:'magazine +10',mod:{mag:10}},{id:'ar_speed',label:'SPEED LOADER',description:'reload −30%',mod:{reloadMul:.7}}],
+    smg:[{id:'smg_suppressor',label:'SUPPRESSOR',description:'firing noise −40%',mod:{noiseMul:.6}},{id:'smg_drum',label:'DRUM MAG',description:'magazine +18',mod:{mag:18}},{id:'smg_grip',label:'QUICK GRIP',description:'equip delay −60%',mod:{equipMul:.4}}],
+    rifle:[{id:'rf_pierce',label:'PENETRATOR',description:'shots pass two infected at 80%',mod:{cleave:2,retain:.8}},{id:'rf_match',label:'MATCH AMMO',description:'damage +25%',mod:{damageMul:1.25}},{id:'rf_bolt',label:'SMOOTH BOLT',description:'fire interval −25%',mod:{intervalMul:.75}}],
+    flame:[{id:'fl_linger',label:'NAPALM MIX',description:'leaves burning ground',mod:{linger:true}},{id:'fl_nozzle',label:'WIDE NOZZLE',description:'cone +35%',mod:{spreadMul:1.35}},{id:'fl_tank',label:'BIG TANK',description:'tank +30',mod:{mag:30}}],
+    launcher:[{id:'gl_twin',label:'TWIN CHAMBER',description:'two grenades per load',mod:{mag:1}},{id:'gl_blast',label:'HEAVY CHARGE',description:'blast radius +25%',mod:{radiusMul:1.25}},{id:'gl_reload',label:'BREAK ACTION',description:'reload −30%',mod:{reloadMul:.7}}]
+  };
+  const statCache=new Map();
+  function weaponStats(key,attachments){
+    const ids=attachments&&attachments.length?attachments:null,ck=key+'|'+(ids?ids.join(','):'');if(statCache.has(ck))return statCache.get(ck);
+    const d={...WEAPONS[key]};
+    for(const a of ATTACHMENTS[key]||[])if(ids&&ids.includes(a.id)){const m=a.mod;
+      if(m.pellets)d.pellets=(d.pellets||1)+m.pellets;if(m.cleave)d.cleave=(d.cleave||1)+m.cleave;if(m.retain)d.retain=m.retain;if(m.mag)d.mag+=m.mag;
+      if(m.reloadMul)d.reload*=m.reloadMul;if(m.intervalMul)d.interval*=m.intervalMul;if(m.noiseMul)d.noise*=m.noiseMul;if(m.damageMul)d.damage*=m.damageMul;
+      if(m.spreadMul)d.spread*=m.spreadMul;if(m.radiusMul)d.radius*=m.radiusMul;if(m.equipMul)d.equipMul=m.equipMul;if(m.linger)d.linger=true;}
+    statCache.set(ck,d);return d;
+  }
+  function magFor(w){return weaponStats(w.weapon,w.attachments).mag;}
+  function nextAttachment(w){const list=ATTACHMENTS[w.weapon]||[],have=w.attachments||[];return list.find(a=>!have.includes(a.id))||null;}
+  // the carried instance a weapon drop would upgrade, or -1: the selected slot first, then the first matching slot
+  function upgradeTarget(s,p,item){
+    if(!item||item.type!=='weapon'||p.dead)return -1;saveWeapon(p);
+    const ok=i=>{const w=p.weaponInventory[i];return w&&w.weapon===item.weapon&&nextAttachment(w);};
+    if(!p.backup&&ok(p.weaponSlot??0))return p.weaponSlot??0;
+    for(let i=0;i<p.weaponInventory.length;i++)if(ok(i))return i;return -1;
+  }
   const ENEMIES = {
     walker:{r:10,hp:36,speed:36,damage:9,xp:2}, runner:{r:8,hp:25,speed:70,damage:7,xp:2},
     ghost:{r:10,hp:33,speed:47,damage:10,xp:3}, brute:{r:17,hp:170,speed:27,damage:18,xp:7},
@@ -43,7 +74,7 @@
   function create(seed) {
     const world=W().create(seed);
     const s={seed,rng:seed||1,time:0,wave:1,threat:1,mode:'title',paused:false,players:[],enemies:[],loot:[],shots:[],fx:[],
-      ammo:{bullets:90,shells:16,fuel:65},circuit:{emergency:false},supplies:{provisions:0,vehicleFuel:0,generatorFuelled:false},world,boss:null,radio:{active:false,done:false,progress:0},
+      ammo:{bullets:90,shells:16,fuel:65,grenades:0},circuit:{emergency:false},supplies:{provisions:0,vehicleFuel:0,generatorFuelled:false},world,boss:null,radio:{active:false,done:false,progress:0},
       camera:{x:0,y:2800,w:740,h:420},settings:{drivingStyle:'steering'},kills:0,level:1,xp:0,nextXp:24,banner:'',bannerT:0,
       audioEvents:[],spawnAcc:0,band:null,bandWave:0,noise:[],noiseId:0,nextId:1,opened:0,entered:false,bossHold:0,lastDistrict:'',elapsed:0};
     for(const site of world.sites) for(const item of (site.loot||[site])) s.loot.push({...item,site:site.id});
@@ -214,7 +245,7 @@
     if(random(s)<.5)s.fx.push({x:e.x+(random(s)-.5)*10,y:e.y-14,sprite:'vfx/bloodHit',frames:3,life:.25,maxLife:.25,text:'',color:'#fff'});
     if(e.hp<=0){e.dead=true;s.kills++;if(e.type!=='ghost'){s.decals=s.decals||[];s.decals.push({x:e.x,y:e.y+4,variant:e.id%3});if(s.decals.length>240)s.decals.shift();}if(e.xp) s.loot.push({id:s.nextId++,x:e.x,y:e.y,type:'xp',amount:e.xp,label:'experience'});}
   }
-  function reload(s,p,def){if(p.reload||!def.ammo||p.mag>=def.mag||s.ammo[def.ammo]<=0)return;emit(s,'reload');makeNoise(s,p,'reload');p.reload=def.reload;p.reloadWeapon=p.weapon;}
+  function reload(s,p,def){if(p.reload||!def.ammo||p.mag>=def.mag||(s.ammo[def.ammo]||0)<=0)return;emit(s,'reload');makeNoise(s,p,'reload');p.reload=def.reload;p.reloadWeapon=p.weapon;}
   // What a survivor can see at night (lights.js draws the same rule): a cone the way they walk, a near circle,
   // anything under a working lamp, floodlight, burning wreck or the boss glow, and infected that glow themselves.
   const SIGHT={half:.61,range:340,near:90};
@@ -263,7 +294,7 @@
   }
   // survivors always aim at the nearest target (the weapon tracks it whether or not they are firing); otherwise they face the way they walk
   function aim(s,p){
-    const key=p.backup||!p.weapon?'pistol':p.weapon,def=WEAPONS[key];
+    const key=p.backup||!p.weapon?'pistol':p.weapon,def=key==='pistol'?WEAPONS.pistol:weaponStats(key,p.attachments);
     p.target=acquire(s,p,def);
     if(p.target)p.angle=Math.atan2(p.target.y-p.y,p.target.x-p.x);
   }
@@ -276,13 +307,13 @@
     p.backup=slot<0;
     if(!p.backup){p.weaponSlot=slot;const w=p.weaponInventory[slot];Object.assign(p,w);p.attachments=(w.attachments||[]).slice();}
     // Switching cancels an unfinished reload; it never refills a magazine.
-    p.reload=0;p.reloadWeapon=null;p.shotCd=Math.max(p.shotCd,.25);makeNoise(s,p,'equip');
+    p.reload=0;p.reloadWeapon=null;p.shotCd=Math.max(p.shotCd,.25*(p.backup?1:weaponStats(p.weapon,p.attachments).equipMul||1));makeNoise(s,p,'equip');
   }
   function fire(s,p,dt){fireWeapon(s,p,dt);saveWeapon(p);}
   function fireWeapon(s,p,dt){
-    const key=p.backup||!p.weapon?'pistol':p.weapon, def=WEAPONS[key];
+    const key=p.backup||!p.weapon?'pistol':p.weapon, def=key==='pistol'?WEAPONS.pistol:weaponStats(key,p.attachments);
     p.shotCd=Math.max(0,p.shotCd-dt);
-    if(p.reload>0){p.reload=Math.max(0,p.reload-dt);if(!p.reload&&p.reloadWeapon===p.weapon){const own=WEAPONS[p.weapon],n=Math.min(own.mag-p.mag,s.ammo[own.ammo]);p.mag+=n;s.ammo[own.ammo]-=n;} }
+    if(p.reload>0){p.reload=Math.max(0,p.reload-dt);if(!p.reload&&p.reloadWeapon===p.weapon){const own=weaponStats(p.weapon,p.attachments),n=Math.max(0,Math.min(own.mag-p.mag,s.ammo[own.ammo]||0));p.mag+=n;s.ammo[own.ammo]-=n;} }
     if(!p.auto||p.shotCd>0||(!p.backup&&p.reload>0))return;
     const target=p.target,boss=s.boss;
     if(!target)return;
@@ -293,9 +324,13 @@
     const reach=(key==='flame'||key==='rifle'||key==='ar')?28:22,mx=p.x+Math.cos(p.angle)*reach,my=p.y-14+Math.sin(p.angle)*reach;
     makeNoise(s,p,'shot',def.noise);
     const power=p.damage*(key==='pistol'?1:1+.25*(p.quality-1));
-    if(target.wall){target.wall.hp-=def.damage*power*(def.pellets||1);if(target.wall.hp<=0){makeNoise(s,target,'break');effect(s,target.x,target.y,'PATH CLEARED','#a8b9b8');W().removeObstacle(s.world,target.wall);s.navVersion=(s.navVersion||0)+1;} }
+    if(def.projectile){launchGrenade(s,p,target,def,power,mx,my);}
+    else if(target.wall){target.wall.hp-=def.damage*power*(def.pellets||1);if(target.wall.hp<=0){makeNoise(s,target,'break');effect(s,target.x,target.y,'PATH CLEARED','#a8b9b8');W().removeObstacle(s.world,target.wall);s.navVersion=(s.navVersion||0)+1;} }
     else if(key==='flame'){
-      for(const e of [...s.enemies,...(boss&&boss.active?[boss]:[])]){if(e.dead)continue;let a=Math.atan2(e.y-p.y,e.x-p.x)-p.angle;a=Math.atan2(Math.sin(a),Math.cos(a));if(dist(p,e)<def.range+(e.r||0)&&Math.abs(a)<.48&&!lineObstacle(s,p.x,p.y,e.x,e.y)){if(e===boss)root.DSBoss.hit(s,def.damage*power,api(s));else hitEnemy(s,e,def.damage*power,p);}}
+      const half=.48*(def.spread/WEAPONS.flame.spread);
+      for(const e of [...s.enemies,...(boss&&boss.active?[boss]:[])]){if(e.dead)continue;let a=Math.atan2(e.y-p.y,e.x-p.x)-p.angle;a=Math.atan2(Math.sin(a),Math.cos(a));if(dist(p,e)<def.range+(e.r||0)&&Math.abs(a)<half&&!lineObstacle(s,p.x,p.y,e.x,e.y)){if(e===boss)root.DSBoss.hit(s,def.damage*power,api(s));else hitEnemy(s,e,def.damage*power,p);}}
+      if(def.linger&&(s.time-(p.lastLinger||-9))>.3){p.lastLinger=s.time;const t=target.x!=null?target:null,dd=t?Math.min(def.range*.85,dist(p,t)):def.range*.6,fx=p.x+Math.cos(p.angle)*dd,fy=p.y+Math.sin(p.angle)*dd;
+        if(!lineObstacle(s,p.x,p.y,fx,fy)){(s.fires||(s.fires=[])).push({x:fx,y:fy,t:2.5,owner:p.id});if(s.fires.length>8)s.fires.shift();}}
     }else{
       const count=def.pellets||1;
       for(let i=0;i<count;i++){
@@ -327,6 +362,33 @@
       if(k===limit-1)break;endAt=reach;
     }
     return hits.length?endAt:reach;
+  }
+  // ---- grenades and burning ground (PLAYER_POWER Phase 4/5) ----
+  const GRENADE_CAP=12;
+  function launchGrenade(s,p,target,def,power,mx,my){
+    const list=s.grenades||(s.grenades=[]);if(list.length>=GRENADE_CAP)list.shift();
+    const tx=target.x,ty=target.y,d=Math.hypot(tx-p.x,ty-p.y)||1,reachD=Math.min(d,def.range);
+    list.push({id:s.nextId++,owner:p.id,x:p.x,y:p.y,sx:mx,sy:my,tx:p.x+(tx-p.x)/d*reachD,ty:p.y+(ty-p.y)/d*reachD,speed:def.speed,radius:def.radius,damage:def.damage*power,edge:def.edge*power,done:false});
+  }
+  function explode(s,g){
+    if(g.done)return;g.done=true;const boss=s.boss,R=g.radius;
+    for(const e of s.enemies){if(e.dead||e.bossOwned&&e.type==='boss')continue;const d=Math.max(0,dist(g,e)-(e.r||10));if(d>R||lineObstacle(s,g.x,g.y,e.x,e.y))continue;
+      const dmg=g.damage+(g.edge-g.damage)*(d/R);hitEnemy(s,e,dmg,{x:g.x,y:g.y});
+      const stun=e.type==='brute'?.2:.5;e.stunT=Math.max(e.stunT||0,stun);if(e.type!=='brute'){const k=36/(Math.hypot(e.x-g.x,e.y-g.y)||1);W().move(s.world,e,(e.x-g.x)*k,(e.y-g.y)*k);}}
+    if(boss&&boss.active&&boss.hp>0){const d=Math.max(0,dist(g,boss)-boss.r);if(d<=R&&!lineObstacle(s,g.x,g.y,boss.x,boss.y))root.DSBoss.hit(s,g.damage+(g.edge-g.damage)*(d/R),api(s));}
+    for(const o of W().queryObstacles(s.world,g.x-R,g.y-R,g.x+R,g.y+R))if(o.hp>0&&!o.protected&&!o.driveable&&o.debris!=='optional-clear'&&o.type!=='car'){const cx=o.x+o.w/2,cy=o.y+o.h/2;if(Math.hypot(cx-g.x,cy-g.y)<R){o.hp-=g.damage;if(o.hp<=0){W().removeObstacle(s.world,o);s.navVersion=(s.navVersion||0)+1;effect(s,cx,cy,'PATH CLEARED','#a8b9b8');}}}
+    s.fx.push({x:g.x,y:g.y,sprite:'vfx/explosion',frames:5,life:.45,maxLife:.45,text:'',color:'#ff8b3d',scale:R/40});
+    makeNoise(s,g,'break',WEAPONS.launcher.noise+140);emit(s,'explosion');
+  }
+  function projectilesTick(s,dt){
+    if(s.grenades&&s.grenades.length){
+      for(const g of s.grenades){if(g.done)continue;const dx=g.tx-g.x,dy=g.ty-g.y,d=Math.hypot(dx,dy),step=g.speed*dt;
+        const nx=d<=step?g.tx:g.x+dx/d*step,ny=d<=step?g.ty:g.y+dy/d*step,hit=lineObstacle(s,g.x,g.y,nx,ny);
+        if(hit){g.x+=(nx-g.x)*Math.max(0,hit.t-.02);g.y+=(ny-g.y)*Math.max(0,hit.t-.02);explode(s,g);continue;}
+        g.x=nx;g.y=ny;if(d<=step)explode(s,g);}
+      s.grenades=s.grenades.filter(g=>!g.done);
+    }
+    if(s.fires&&s.fires.length){for(const f of s.fires){f.t-=dt;f.acc=(f.acc||0)+dt;if(f.acc<.25)continue;f.acc-=.25;for(const e of s.enemies)if(!e.dead&&dist(f,e)<22+(e.r||10))hitEnemy(s,e,7*.25,null);}s.fires=s.fires.filter(f=>f.t>0);}
   }
   // H / B: only ever a personal medkit. A refused press explains itself and consumes nothing.
   function useMedkit(s,p,feedback=false){
@@ -363,6 +425,14 @@
     else if(item.type==='provision'&&!s.rationHinted){s.rationHinted=true;notify(s,p,'Squad ration · '+label(p,'eat')+' eats one for stamina','#b8d86b','hint-ration');}
     else if(item.type==='xp')xp(s,item.amount);
     else if(item.type==='heal'){if(s.players.every(q=>q.dead||q.hp>=q.maxHp))return false;s.players.forEach(q=>{if(!q.dead)q.hp=Math.min(q.maxHp,q.hp+item.amount);});makeNoise(s,p,'heal');effect(s,item.x,item.y,'SQUAD +'+item.amount+' HP','#79e2cf');}
+    else if(item.type==='weapon'&&upgradeTarget(s,p,item)>=0){
+      // duplicate: the carried instance gains its next attachment and the better quality; the drop's loaded rounds join the reserve
+      const slot=upgradeTarget(s,p,item),w=p.weaponInventory[slot],next=nextAttachment(w),def=WEAPONS[item.weapon];
+      w.attachments=(w.attachments||[]).concat(next.id);w.quality=Math.max(w.quality||1,item.quality||1);
+      if(def.ammo&&item.mag)s.ammo[def.ammo]=(s.ammo[def.ammo]||0)+item.mag;
+      if(!p.backup&&(p.weaponSlot??0)===slot){p.attachments=w.attachments.slice();p.quality=w.quality;}
+      effect(s,p.x,p.y-26,def.name+' · '+next.label,'#ffd249');notify(s,p,'Upgraded '+def.name+' · '+next.label+' ('+next.description+')','#ffd249','upgrade-'+next.id);emit(s,'attachment',item.weapon);
+    }
     else if(item.type==='weapon'){
       saveWeapon(p);
       const slot=p.weaponInventory.length<weaponCap(s)?p.weaponInventory.length:(p.weaponSlot??0),previous=p.weaponInventory[slot];
@@ -805,6 +875,7 @@
   }
   function enemyTick(s,e,dt){
     if(e.dead||e.bossOwned)return;e.hitCd=Math.max(0,e.hitCd-dt);e.flash=Math.max(0,(e.flash||0)-dt);
+    if(e.stunT>0){e.stunT-=dt;return;} // blast stagger: no movement and no attacks
     const living=s.players.filter(p=>!p.dead);if(!living.length)return;
     // Hear each event once. The destination is a snapshot, not a player reference.
     for(const n of s.noise)if(n.id>e.heardNoise&&n.audible>0&&dist(e,n)<=n.r){e.heardNoise=n.id;investigate(e,n);}
@@ -1029,6 +1100,7 @@
     s.noise=s.noise.filter(n=>{n.audible-=dt;return (n.life-=dt)>0;});s.fx=s.fx.filter(f=>(f.life-=dt)>0);s.shots=s.shots.filter(f=>(f.life-=dt)>0);
     for(const l of s.loot)if(l.lock)l.lock-=dt;
     const ins={};for(const p of s.players)ins[p.id]=conditionInput(p,inputs[p.id]||{});inputs=ins;
+    projectilesTick(s,dt);
     for(const v of s.vehicles)vehicleTick(s,v,inputs[v.driver]||{},dt);
     for(const p of s.players)playerTick(s,p,inputs[p.id]||{},dt);
     interiors(s,dt);doorsTick(s,dt);
@@ -1042,5 +1114,5 @@
     if(s.players.length&&s.players.every(p=>p.dead)){s.mode='lost';s.paused=false;}
     camera(s,dt,aspect);
   }
-  root.DSGame={rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
+  root.DSGame={selectWeapon,ATTACHMENTS,weaponStats,magFor,nextAttachment,upgradeTarget,explode,projectilesTick,GRENADE_CAP,rayHits,weaponCap,dropWeapon,resolveOverflow,BINDINGS,deviceOf,label,notify,rearmTriggers,conditionInput,TRIGGER_DEAD_ZONE,create,EVIDENCE,HOLDS,EXIT,campaignMissing:missing,holdPoint,campaignAnchor:anchorOf,ARENA,setGate,sealArena,bossDefeated,gateById,VEHICLES,FUEL,refuelTarget,startRefuel,refuelTick,pourable,clearDebris,vehicleDef:vdef,generatorAnchor,occluded,HEADLIGHTS,eat,nearestDoor,startDoor,openDoor,doorById,addPlayer,step,camera,random,api,spawn,hitEnemy,hurt,upgrade,collect,lineObstacle,canSee,litAt,SIGHT,nearestInteract,useMedkit,MEDKIT_HEAL,MEDKIT_CAP,WEAPON_CAP,NOISE,makeNoise,UPGRADES,WEAPONS,COLORS,announce,CAR,carBlocked,vehicleTick,vehicleFor,nearestVehicle,enterVehicle,exitVehicle,parkVehicle};
 })(typeof window!=='undefined'?window:globalThis);

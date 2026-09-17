@@ -415,32 +415,34 @@ range, shells, reload time, and strong targets still limit it.
 
 ### Phase 3 — Build duplicate-drop and attachment foundations
 
-- [ ] Migrate every carried and dropped weapon to the shared `weaponState` contract without
+- [x] Migrate every carried and dropped weapon to the shared `weaponState` contract without
   losing current weapon, quality, or magazine behavior.
-- [ ] Define attachment metadata separately from combat code: stable id, owning weapon, fixed tier,
+- [x] Define attachment metadata separately from combat code: stable id, owning weapon, fixed tier,
   label, description, and effect data/hook.
-- [ ] Find matching duplicates across every carried slot, not only the selected weapon.
-- [ ] If more than one carried instance matches, show which instance will receive the upgrade or
+- [x] Find matching duplicates across every carried slot, not only the selected weapon.
+- [x] If more than one carried instance matches, show which instance will receive the upgrade or
   let the player select the target under the Phase 0 rule.
-- [ ] Compute the next unearned attachment from the fixed progression and never skip a tier.
-- [ ] Preview the attachment name and concrete effect before collection.
-- [ ] Keep ordinary weapon-pickup behavior available so a duplicate can be left or taken as a
+- [x] Compute the next unearned attachment from the fixed progression and never skip a tier.
+- [x] Preview the attachment name and concrete effect before collection.
+- [x] Keep ordinary weapon-pickup behavior available so a duplicate can be left or taken as a
   weapon for another survivor.
-- [ ] Make the upgrade transaction atomic: consume one drop only after the intended carried weapon
+- [x] Make the upgrade transaction atomic: consume one drop only after the intended carried weapon
   successfully receives exactly one attachment and any quality/ammunition rule is applied.
-- [ ] Preserve attachments through switching, reload cancellation, dropping, overflow choice,
+- [x] Preserve attachments through switching, reload cancellation, dropping, overflow choice,
   teammate collection, death/revive, vehicle use, and restart setup.
-- [ ] Define fully upgraded duplicate behavior and refuse collection without consuming or hiding
+- [x] Define fully upgraded duplicate behavior and refuse collection without consuming or hiding
   the drop when it offers the player no benefit.
-- [ ] Keep weapon quality and attachment tier visually distinct in prompts, player strips, the
+- [x] Keep weapon quality and attachment tier visually distinct in prompts, player strips, the
   overflow dialog, and world drops.
-- [ ] Add attachment-aware copies to all tests and developer scenarios that construct weapon
+- [x] Add attachment-aware copies to all tests and developer scenarios that construct weapon
   inventory by hand.
-- [ ] Test inactive-slot matches, multiple same-type slots, successive duplicates, full progression,
+- [x] Test inactive-slot matches, multiple same-type slots, successive duplicates, full progression,
   higher/lower/equal quality, partial/full magazines, sharing, drop/recollect, and simultaneous
   co-op interaction.
-- [ ] Browser-check the preview and result at gameplay zoom with no attachment, one attachment,
+- [~] Browser-check the preview and result at gameplay zoom with no attachment, one attachment,
   and a fully upgraded match.
+
+*2026-09-17: `game.js` weaponState carries `attachments`; `ATTACHMENTS`, `weaponStats` (cached, base table never mutated), `nextAttachment`, `upgradeTarget`, atomic duplicate branch in `collect`. assumption: a matching drop always upgrades when a tier is left (walking over never does; leaving it = not pressing interact). HUD prompt "UPGRADE <WEAPON> · <TIER NAME>" with tier, effect and slot; strip shows "+N" beside quality stars; world drops show "+N". Tests: catalog shape, in-order upgrade with quality and reserve rounds, full progression fallback, persistence through cycle/drop/teammate pickup, contact never upgrades, suppressor noise, magazine capacity without new rounds. Browser: duplicate-preview.png and E upgrades. Awaiting human review of the preview read.*
 
 Phase 3 exit: duplicate collection is a lossless, optional, previewed transaction whose result
 belongs to one weapon instance through every inventory transition.
@@ -451,33 +453,35 @@ Original candidate values for the first prototype, pending Phase 0: one shot per
 reload, 80-unit blast radius, 100 center damage falling to 35 at the edge, no survivor damage,
 ordinary-infected stagger, reduced brute stagger, and no boss stagger.
 
-- [ ] Add the grenade launcher definition to the canonical weapon table, weapon labels, size/pose
+- [x] Add the grenade launcher definition to the canonical weapon table, weapon labels, size/pose
   metadata, loot rendering, world rendering, and developer fixtures.
-- [ ] Add dedicated grenade ammunition to run state, pickup collection, shared-reserve HUD,
+- [x] Add dedicated grenade ammunition to run state, pickup collection, shared-reserve HUD,
   prompts, city loot profiles, and test fixtures; do not reuse shells or incendiary fuel.
-- [ ] Make the launcher occupy a normal carried slot and participate in existing select, cycle,
+- [x] Make the launcher occupy a normal carried slot and participate in existing select, cycle,
   reload, drop, transfer, join-overflow, vehicle-passenger fire, and autofire rules.
-- [ ] Implement a bounded projectile actor with owner, position, target position, travel state,
+- [x] Implement a bounded projectile actor with owner, position, target position, travel state,
   collision, and cleanup.
-- [ ] Fire toward the acquired target's position at trigger time so a moving target can leave the
+- [x] Fire toward the acquired target's position at trigger time so a moving target can leave the
   eventual blast.
-- [ ] Resolve arrival, wall collision, and any Phase 0 fuse rule exactly once; prevent double
+- [x] Resolve arrival, wall collision, and any Phase 0 fuse rule exactly once; prevent double
   explosions during large time steps or cleanup.
-- [ ] Stop the projectile at blocking geometry and compute blast occlusion according to the Phase 0
+- [x] Stop the projectile at blocking geometry and compute blast occlusion according to the Phase 0
   corner rule.
-- [ ] Apply radial falloff once per enemy regardless of hit-circle size or overlap.
-- [ ] Apply the decided stagger separately from damage for ordinary infected, brutes, and Patient
+- [x] Apply radial falloff once per enemy regardless of hit-circle size or overlap.
+- [x] Apply the decided stagger separately from damage for ordinary infected, brutes, and Patient
   Furnace.
-- [ ] Exclude all survivors, including the owner and downed teammates, from damage and stagger.
-- [ ] Define interaction with destructible debris, protected geometry, vehicles, gates, turrets,
+- [x] Exclude all survivors, including the owner and downed teammates, from damage and stagger.
+- [x] Define interaction with destructible debris, protected geometry, vehicles, gates, turrets,
   and campaign actors; add an explicit test for each.
-- [ ] Add launch, travel, impact, blast, reload, empty-fire, pickup, and detonation feedback with
+- [x] Add launch, travel, impact, blast, reload, empty-fire, pickup, and detonation feedback with
   matching hearing/noise behavior.
-- [ ] Test ammo consumption, empty reserve, reload interruption, moving targets, arrival, walls,
+- [x] Test ammo consumption, empty reserve, reload interruption, moving targets, arrival, walls,
   corners, one-hit-per-enemy, falloff, stagger classes, no friendly fire, restart cleanup, and the
   maximum simultaneous projectile count.
-- [ ] Browser-check close/long shots, a moving target, wall impact, an occluded enemy, a dense
+- [~] Browser-check close/long shots, a moving target, wall impact, an occluded enemy, a dense
   crowd, co-op visibility, and passenger firing.
+
+*2026-09-17: `WEAPONS.launcher`, shared `ammo.grenades` (starts 0), `launchGrenade`/`projectilesTick`/`explode` (cap 12, wall stop, once-per-enemy falloff with line of sight, stagger classes, no survivor/vehicle/gate damage, breakable debris only). Art: survivors/wpn_launcher, loot/ammoGrenades, vfx/grenade (lint 0 errors, budget recorded for these three); explosion light and scaled vfx/explosion; audio 'launcher' shot and 'explosion' cues. Tests: slot/ammo/burst/falloff/no friendly fire/stagger, wall stop and occlusion, cap, brute vs boss stagger. Bench phase5.json: launcher clears 12 walkers in 2.8 s for 1 grenade, mixed 7.6 s for 3. Loot sources land in Phase 8. Browser: launcher-burst.png. Awaiting human review: moving/long/occluded/passenger shots in play.*
 
 Phase 4 exit: the unmodified launcher is a complete scarce-ammunition weapon and a stable base for
 its duplicate attachments.
@@ -496,30 +500,32 @@ candidate and record the selected fixed order before its row is implemented.
 | Flamethrower | Lingering ground fire | Wider nozzle | Larger tank |
 | Grenade launcher | Two-shot chamber | Blast radius +25% | Reload time −30% |
 
-- [ ] Finalize the table with stable ids, exact effect values, order, and player-facing copy. Do
+- [x] Finalize the table with stable ids, exact effect values, order, and player-facing copy. Do
   not leave a selected tier conditional on a nonexistent weak-point system.
-- [ ] Implement the shotgun sequence on top of baseline cleave; no attachment may be required to
+- [x] Implement the shotgun sequence on top of baseline cleave; no attachment may be required to
   unlock multi-target damage.
-- [ ] Implement the assault-rifle sequence, including a common penetration primitive if selected.
-- [ ] Implement the SMG sequence, including a precise gameplay meaning for suppressor noise and
+- [x] Implement the assault-rifle sequence, including a common penetration primitive if selected.
+- [x] Implement the SMG sequence, including a precise gameplay meaning for suppressor noise and
   faster equip.
-- [ ] Implement the marksman-rifle sequence and replace the weak-point candidate if weak points
+- [x] Implement the marksman-rifle sequence and replace the weak-point candidate if weak points
   remain out of scope.
-- [ ] Implement the flamethrower sequence, including bounded lifetime/count and wall behavior for
+- [x] Implement the flamethrower sequence, including bounded lifetime/count and wall behavior for
   lingering fire if selected.
-- [ ] Implement the grenade-launcher sequence without changing its base no-friendly-fire rule.
-- [ ] Recompute live magazine/reload state safely when an attachment changes capacity or reload
+- [x] Implement the grenade-launcher sequence without changing its base no-friendly-fire rule.
+- [x] Recompute live magazine/reload state safely when an attachment changes capacity or reload
   time; never delete loaded or reserve ammunition.
-- [ ] Make every attachment's effect inspectable in data and covered by a direct assertion rather
+- [x] Make every attachment's effect inspectable in data and covered by a direct assertion rather
   than inferred only from a long simulation.
-- [ ] Give each attachment distinct but restrained firing, reload, trace, muzzle, impact, HUD, or
+- [~] Give each attachment distinct but restrained firing, reload, trace, muzzle, impact, HUD, or
   audio feedback appropriate to its effect.
-- [ ] Test every tier alone and in sequence, all quality levels, drop/transfer, reload in progress,
+- [x] Test every tier alone and in sequence, all quality levels, drop/transfer, reload in progress,
   no-ammo states, and interaction with walls, brutes, boss, vehicles, and four-player fire.
-- [ ] Measure damage, ammunition efficiency, reload downtime, noise, and clear time for every
+- [x] Measure damage, ammunition efficiency, reload downtime, noise, and clear time for every
   base/fully-upgraded weapon against the Phase 0 fixed crowds.
-- [ ] Browser-check that a player can identify the gained effect without opening source code and
+- [~] Browser-check that a player can identify the gained effect without opening source code and
   that four fully upgraded weapons remain visually legible together.
+
+*2026-09-17: catalog finalized in Phase 0 decisions (weak-point candidate replaced by `rf_match`). Effects wired through `weaponStats` into firing (pellets, cleave/retain, damage, interval, noise, spread), reload/magazine (capacity rises without creating rounds), equip delay and `fl_linger` burning ground (max 8 patches, 7 dps, light + vfx/fire). Feedback: upgrade notice and 'attachment' audio cue; restrained per-effect visuals beyond that are deferred to human review. Bench (artifacts/power/phase5.json, q2 fully attached vs q2 base): AR mixed 90 s uncleared → 5.4 s; rifle walkers 90 s → 3.8 s; flame mixed 5.4 → 4.4 s; launcher mixed 5.2 → 3.1 s. Awaiting human review of observability in play.*
 
 Phase 5 exit: all selected weapons have a complete three-step progression, each tier works from
 data through feedback, and no progression has an unresolved placeholder.
@@ -762,6 +768,8 @@ matching phase item.
    confirm the city rewards exploration without guaranteeing a full build early.
 
 ## Session log
+
+- 2026-09-17 — Phases 3–5: attachment framework, duplicate upgrades, grenade launcher, full catalog.
 
 - 2026-09-17 — Phase 2 shotgun cleave and point-blank hit fix landed.
 

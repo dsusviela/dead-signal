@@ -65,13 +65,14 @@ test('full inventory replaces selected gun and passes its loaded rounds to a tea
   G.collect(s,q,drop);assert.equal(q.weapon,'ar');assert.equal(q.mag,7);assert.equal(q.quality,2);
   assert.deepEqual({...s.ammo},reserve);assert.equal(G.collect(s,q,drop),false);
   // While the pistol is selected, replacement targets the last carried slot.
-  cycle(s);cycle(s);cycle(s);assert.equal(p.backup,true);takeGun(s,p,'rifle',1,0);
-  assert.equal(p.weaponInventory[0].weapon,'smg');assert.equal(p.weaponInventory[2].weapon,'rifle');assert.equal(p.weaponInventory[2].mag,0);
+  cycle(s);cycle(s);cycle(s);assert.equal(p.backup,true);takeGun(s,p,'flame',1,0); // a type not carried (a carried type would be a duplicate upgrade)
+  assert.equal(p.weaponInventory[0].weapon,'smg');assert.equal(p.weaponInventory[2].weapon,'flame');assert.equal(p.weaponInventory[2].mag,0);
   assert.equal(p.backup,false);assert.equal(p.mag,0);assert.deepEqual({...s.ammo},reserve);
 });
 test('identical gun types occupy distinct slots and switching cannot finish a reload for free',()=>{
   const s=G.create(303);G.addPlayer(s);s.mode='play';const p=s.players[0];p.invuln=999;
-  takeGun(s,p,'ar',1,7);takeGun(s,p,'ar',3,1);s.ammo.bullets=20;p.auto=true;p.shotCd=0;
+  // two same-type instances can still be carried (e.g. a teammate's drop taken as an ordinary pickup); a duplicate drop itself upgrades (PLAYER_POWER Phase 3)
+  p.weaponInventory=[{weapon:'ar',quality:1,mag:7,attachments:[]},{weapon:'ar',quality:3,mag:1,attachments:[]}];p.backup=false;p.weaponSlot=1;Object.assign(p,p.weaponInventory[1]);p.attachments=[];s.ammo.bullets=20;p.auto=true;p.shotCd=0;
   G.spawn(s,'walker',p.x+35,p.y,{alert:true});G.step(s,.01,{0:input()});
   assert.equal(p.mag,0);assert.ok(p.reload>0);assert.equal(p.weaponInventory[1].mag,0);
   p.auto=false;cycle(s);assert.equal(p.backup,true);assert.equal(p.reload,0);

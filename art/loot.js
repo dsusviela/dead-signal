@@ -268,9 +268,19 @@
   }
 
   // =====================================================================
+  // ammoGrenades 20x16: olive ammo can, lid open, two grenade rounds with brass bands
+  function makeAmmoGrenades(){
+    var g=mkGrid(20,16),x;
+    boxDouble(g,1,6,18,15,'K','M','L','D');chamfer(g,1,6,18,15);
+    [[5,1],[11,2]].forEach(function(p){var x0=p[0],y0=p[1];rect(g,x0,y0+1,x0+3,y0+7,'M');rect(g,x0+1,y0,x0+2,y0,'L');rect(g,x0,y0+4,x0+3,y0+4,'Y');setclip(g,x0+1,y0+1,'W');
+      setclip(g,x0-1,y0+2,'K');setclip(g,x0+4,y0+2,'K');setclip(g,x0,y0,'K');setclip(g,x0+3,y0,'K');});
+    rect(g,15,5,18,5,'D');                         // lid edge standing open
+    return toRows(g);
+  }
   A.define('loot',{
     medkit:{rows:makeMedkit(),pal:'MAT.loot',anchor:'feet',note:'20x18, white case double outline, green cross, red latch'},
     ammoBullets:{rows:makeAmmoBullets(),pal:'MAT.loot',anchor:'feet',note:'20x16, olive/gold box with a bullet icon'},
+    ammoGrenades:{rows:makeAmmoGrenades(),pal:'MAT.loot',anchor:'feet',note:'20x16, olive ammo can with two brass-banded grenade rounds'},
     ammoShells:{rows:makeAmmoShells(),pal:'MAT.loot',anchor:'feet',note:'20x16, red shell box, two shells poking out'},
     fuelCan:{rows:makeFuelCan(),pal:'MAT.loot',anchor:'feet',note:'18x22, orange jerry can, cap, dark handle'},
     weaponCrate:{rows:makeWeaponCrate(),pal:'MAT.loot',anchor:'feet',note:'28x18, gold-latched dark case, slightly open, glint'},

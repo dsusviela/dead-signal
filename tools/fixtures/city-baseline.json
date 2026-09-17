@@ -158,7 +158,8 @@
     "startingSharedAmmo": {
       "bullets": 90,
       "shells": 16,
-      "fuel": 65
+      "fuel": 65,
+      "grenades": 0
     },
     "startingPerPlayer": {
       "medkits": 1,

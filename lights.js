@@ -69,6 +69,8 @@
    }
    for(i=0;i<s.shots.length;i++){var sh=s.shots[i];if(sh.type!=='flame')continue;addLight(sh.x+Math.cos(sh.angle)*52,sh.y+Math.sin(sh.angle)*52,90,'#ff7b35',.5*Math.max(0,sh.life/sh.maxLife));}
    if(s.boss&&s.boss.active)addLight(s.boss.x,s.boss.y,260,'#ff6a2a',.9,s.boss);
+   for(i=0;i<s.fx.length;i++){var fx=s.fx[i];if(fx.sprite==='vfx/explosion'&&inView(fx.x,fx.y,160))addLight(fx.x,fx.y,150,'#ff9a45',Math.min(1,fx.life/fx.maxLife*1.6));}
+   for(i=0;i<(s.fires||[]).length;i++){var fr=s.fires[i];if(inView(fr.x,fr.y,70))addLight(fr.x,fr.y,64,'#ff6a2a',.6);}
    if(Math.abs(c.x)<c.w/2+430&&Math.abs(c.y)<c.h/2+430)addLight(0,0,320,'#ff543b',.45);
    var mast=null;for(var mi=0;mi<(w.setpieces||[]).length;mi++)if(w.setpieces[mi].kind==='radio')mast=w.setpieces[mi];
    // the restored tower is the strongest light in the city: a wide steady pool plus the pulse, seen from well outside the view

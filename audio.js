@@ -75,6 +75,7 @@
     if(type==='shot'){
       const gun=detail||'pistol';
       if(gun==='flame'){noise(.15,.19,650);tone(65,.13,.07,'sawtooth',t,effects,35);return;}
+      if(gun==='launcher'){tone(92,.16,.14,'triangle',t,effects,48);noise(.08,.12,900,t);return;}
       const profile={pistol:[.10,.24,1700,150],ar:[.07,.20,2200,130],smg:[.055,.15,2700,190],shotgun:[.29,.39,1200,90],rifle:[.22,.32,3000,110]}[gun]||[.1,.2,1800,150];
       noise(profile[0],profile[1],profile[2]);tone(profile[3],.10,.19,'triangle',t,effects,35);
       if(gun==='shotgun')noise(.09,.08,3200,t+.22,effects,'highpass');
@@ -121,6 +122,10 @@
       [190,165,150,138].forEach((f,i)=>tone(f,.07,.05,'sine',t+i*.11));
     }else if(type==='refuelled'){
       noise(.02,.06,5200,t,effects,'highpass');tone(520,.05,.06,'triangle',t+.03);
+    }else if(type==='explosion'){
+      noise(.55,.34,420,t);tone(58,.5,.22,'sine',t,effects,28);noise(.18,.16,2600,t+.02,effects,'highpass');
+    }else if(type==='attachment'){
+      tone(660,.06,.06,'triangle',t);tone(990,.09,.05,'triangle',t+.07);noise(.03,.04,4200,t,effects,'highpass');
     }else if(type==='reject'){
       tone(110,.12,.07,'square');tone(98,.14,.06,'square',t+.14);
     }else if(type==='pourStop'){
