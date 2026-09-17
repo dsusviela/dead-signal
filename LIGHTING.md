@@ -119,3 +119,15 @@ brighter than its unlit self while the ground beside it is M% brighter" is the s
 settles a lighting question. Reference crops in `artifacts/`: `light-before.png`,
 `light-after.png`, `light-fix-car.png`, `light-fix-bus.png`, `light-fix-night.png`,
 `light-fix-shadow-rule.png`, `light-fix-lamp.png`.
+
+## city_v2 changes (2026-09-17)
+
+- **Low solids do not stop flashlights.** `lights.js rayT` skips `car`, `rubble`, `barrier`, `debris`, open-gate
+  bollards and posts, so a waist-high object is never cut by a hard black wedge through its own sprite. Those casters
+  still take flashlight shadows (`castShadows` no longer treats `kind:'low'` occluders as cone-blocked) and throw a
+  short, half-strength contact shadow (max 12 units) instead of a full offset silhouette.
+- **Diagnostic light.** `window.DS_DIAGNOSTIC_LIGHT=true` (or `tools/v2-scenes.mjs --diag`) skips the night lightmap
+  for neutral material review. Development only.
+- **New light sources**, each tied to a visible object: St. Orison entrance canopy, the Ashworks Loading Court battery
+  work light, the Furnace Plant gate flood, the Rear Court pole, amber/cyan arena gate post lamps, the warm ash skip.
+- Watchtower lamp `dy` is 83 (window band centre of the 52x104 tower).

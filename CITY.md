@@ -1572,3 +1572,13 @@ review, then tick the matching tracker items above.
    through a reopened gate (the gate has a centre bollard; the lanes on either side are open).
 9. [ ] Balance feel: whether the 5–8 % ammunition trim against Phase 0 plus the new
    ration/fuel economy gives the intended scarcity in real runs.
+
+## city_v2 follow-up (2026-09-17)
+
+`city_v2.md` supersedes this tracker for district ownership, the map, street composition, controls and HUD. Delivered:
+authored 36-block ownership (`world.js BLOCK_OWNERS`; the four central blocks are Central Quarantine), district map
+palettes, per-block RNG and composed frontage (`COMPOSE`: attached parcels, one access opening per row, named pockets
+and courtyards), pilot blocks (`city.js PILOT_BLOCKS`), Ashworks/Quarantine fabric archetypes (workshop, storageShed,
+dispatchOffice, requisitionOffice, stagingDepot), district set pieces, parks, ground materials, H/B heal and R/RB eat
+(the combined H/LT binding above is superseded), analog trigger driving, compact HUD. South Blocks' economy bullet
+weight is now 1.5 (was .85) to keep its 50-seed share. Remaining human review is listed in `city_v2.md`.

@@ -54,6 +54,10 @@ npm run test:browser
 
 Run the local server first. Browser checks cover the interface, medkit press edges, simulated gamepads, and rendered audio waveforms; physical controllers and couch difficulty still need playtesting. Screenshots are written to `artifacts/`.
 
+## City v2 (2026-09-17)
+
+The city is six districts owned block by block (see the map legend): South Blocks, Old Quarter, Civic Ward, Northline, Ashworks and Central Quarantine. Streets are built from attached frontage with alleys, forecourts and named courtyards; each district has its own facades, roofs, ground materials and litter. Development tools: `node tools/v2-scenes.mjs [--diag]` (district captures, neutral light), `node tools/hud-matrix.mjs` (HUD budget captures), `node tools/v2-frontage.mjs` (frontage coverage), `node tools/v2-voids.mjs` (open filler patches). Plan and evidence: `city_v2.md`.
+
 ## Files
 
 - `world.js`: fixed geography, seeded scavenging sites, collision, city and map drawing.

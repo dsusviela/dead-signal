@@ -630,3 +630,21 @@ collision rect.
   2026-09-16 v2 follow-up audit confirms registry ids, quarantine browser registration and a
   passing art-reference suite; the orphaned airdrop is gone. Complete frame/state, collision and
   street-read acceptance through `city_v2.md` P0; existence alone is not visual approval.
+
+## city_v2 families and revisions (2026-09-17)
+
+New families registered in `index.html`: `frontage` (35 ids: brick rows, shopfronts, awnings, shutters, rear walls,
+back doors, bin nooks, terraces, collapse ends, party walls, collapse floor/spill), `industrial` (39: metal/sawtooth/
+monitor roofs, corrugated walls, workshop/office fronts, loading door/dock, pipes and joints, gantry, conveyor, hopper,
+yard clutter; overhead pieces use `tint:'shadow'`), `civic` (31: ward roofs, canopy, glass link, ambulance bay, fire
+apron/bays, depot, transformer, cable pole/drum/rack, broadcast front, quarantine fence/gate/post, queue rails, tent
+group, processing link, requisition board), `streetlife` (22 flat decals: bags, boxes, paper, glass, brick spill,
+timber, tipped bin, drains, damp, wall dirt, crossings, curb cuts, lane marks).
+Redrawn: all ground fillers + edges/corners/footing/grime (`tiles`), watchtower, `wrecks/car_*` (police/hatch/burnt
+parametric saloon), `vehicles/sedan_h/_v` + new `sedan_vs` (southbound front face), `quarantine/*` gates, bollards,
+evac barrier + `gateOpen_h/_v`, `survivors/civilian` (4 people x 3 frames), park pieces in `lots`, and the P2 weakest
+list: `signs/market`, `signs/police`, `lots/trolley`, `lots/rubbleSpill`, `buildings/furn_shelfAisle`,
+`buildings/furn_gearRack`. `npm run art:lint:all`: 455 targets, 0 errors, 3021 warnings within the recorded budget.
+Renderer contracts: `render.js` facade `KITS`/`REAR` per district, `overhead` props drawn after roofs with a shadow
+copy, tile-anchored solids, vertical closed gates raised. Placement lives in `world.js streetLife()`,
+`districtPieces()`, `dressCourts()` and `dressLots()`. Evidence: `artifacts/city/v2/`.

@@ -748,8 +748,9 @@ consumers; this document does not reset or duplicate that implementation.
   script registration; report fallback occurrences instead of accepting silent substitutions.
   *`test-art-refs.mjs` now checks state frame counts and index.html registration; `DSRender.fallbacks()`
   counts placeholder draws with positions and `v2-scenes.mjs` records them per view.*
-- [ ] Reconcile CITY.md/ART.md status against current code. Record outstanding human review
+- [x] Reconcile CITY.md/ART.md status against current code. Record outstanding human review
   separately from automated evidence; do not carry old “landed” assertions into v2 acceptance.
+  *CITY.md gained a "city_v2 follow-up" section naming what v2 supersedes (ownership, H/LT binding, economy weight); ART.md gained "city_v2 families and revisions" listing new families, redraws and renderer contracts. Human review items are collected in this file's closing audit entry.*
 
 Exit: each visible problem has a location/state and an accountable implementation task.
 
@@ -1008,20 +1009,28 @@ Exit: sound and light explain the same physical spaces and states that the playe
 
 ### V2-6 — Final review and closeout
 
-- [ ] Run relevant city/art/campaign/vehicle tests, then `npm test` and `npm run test:browser`.
-- [ ] Run `npm run art:lint:all` and record its actual result; separate pre-existing warnings
+- [x] Run relevant city/art/campaign/vehicle tests, then `npm test` and `npm run test:browser`.
+  *2026-09-17 final: npm test exit 0 (144 PASS lines), npm run test:browser exit 0 (45 PASS lines).*
+- [x] Run `npm run art:lint:all` and record its actual result; separate pre-existing warnings
   from new errors/warnings. A passing budgeted gate does not imply zero strict-lint warnings.
-- [ ] Preserve CITY.md's implemented zero-error/per-sprite warning-budget gate; review any
+  *455 targets, 0 errors, 3021 warnings, within budget. Pre-v2: 276 targets, 0 errors, 904 warnings. The increase is the new frontage/industrial/civic/streetlife families and the ground variants; strict lint (art:lint:strict) reports the same 0 errors.*
+- [x] Preserve CITY.md's implemented zero-error/per-sprite warning-budget gate; review any
   intended budget changes. Keep strict lint diagnostics distinct from the budgeted pass.
-- [ ] Review the same approach/center/exit screenshots against V2-0 with labels hidden and shown.
-- [ ] Compare 50-seed resource envelopes and one/four-player simulation/render/lighting/audio
+  *Gate unchanged; budgets recorded once after the reviewed art pass and afterwards only for sprites changed in this session (sedan_vs, P2 redraws).*
+- [~] Review the same approach/center/exit screenshots against V2-0 with labels hidden and shown.
+  *Automated: artifacts/city/v2/scenes-after/ captures the same 18 district views + maps + void0034a as scenes-before (seed 12345, 1280x720), 0 fallback draws, 0 page errors; labels-hidden reads use the --diag captures in scenes-facades-diag, scenes-pieces, scenes-parks, scenes-wide. Awaiting human review: open scenes-before and scenes-after side by side and, for each district, name the district from the after image without the HUD label and cite two physical cues.*
+- [x] Compare 50-seed resource envelopes and one/four-player simulation/render/lighting/audio
   budgets. Update geometry fixtures only after reviewing intentional changes, not to hide failures.
-- [ ] Complete a solo run and a four-player run through all districts, truck use, optional dozer
+  *test-city envelope test passes over seeds 1-50 (pickups 231-267, bullets/shells/medkits/provisions/fuel inside ECONOMY.envelopes; South Blocks min shares bullets 14.8%, medkits 7.7%, provisions 11.1%). Fixture diffs were reviewed at every --write (logged per commit). CPU bench sim1 1.23 ms, sim4 4.74 ms (before 1.20 / 4.47). Browser render/step vs pre-v2 in the V2-3 measurement note; peak voices 15/48.*
+- [~] Complete a solo run and a four-player run through all districts, truck use, optional dozer
   clearing, arena and self-rescue. Finish outstanding browser/listening reviews explicitly.
-- [ ] Recheck V2-0A controls and HUD budgets under final district/combat load, including all
+  *Automated: test-campaign "the full chain in canon order, with retreat and re-entry, ends only at the escape" and vehicle/dozer suites pass on the final geometry. Awaiting human review: (solo) new expedition, walk Checkpoint → Ashworks fuel → chapel generator → St. Orison records → board the fire truck → clear one debris pile with the bulldozer → arena → payload → Blackglass transmit → escape; (4P) same route with four pads, all aboard the truck once; note any blocked route, unreadable place or HUD overlap.*
+- [~] Recheck V2-0A controls and HUD budgets under final district/combat load, including all
   pending upgrades, mixed devices, boss tells, documents and concurrent co-op interactions.
-- [ ] Update CITY.md, ART.md, AUDIO.md, LIGHTING.md and README where delivered behavior changed;
+  *hud-matrix on the final build (artifacts/city/v2/hud-final, 28 captures, 4 viewports x 7 states incl. 4P upgrades, combat, vehicle, downed, boss): max vertical 15.28%, max area 15.75%, top <=4.19%, dock <=11.11%, core text >=12 px, 0 page errors. Controls covered by test-input/test-controls. Physical-controller check awaiting human review (steps under V2-0A).*
+- [x] Update CITY.md, ART.md, AUDIO.md, LIGHTING.md and README where delivered behavior changed;
   link evidence here and retire superseded visual acceptance notes.
+  *CITY.md, ART.md, LIGHTING.md and README sections added 2026-09-17; AUDIO.md incidentals and dozer pitch added earlier.*
 
 Exit: the city is coherent in play, the map tells its geography, and every visible asset/state
 has passed integration review.
@@ -1102,6 +1111,16 @@ has passed integration review.
   Ashworks. No long-abandoned wilderness, arbitrary industrial props or implied arriving rescue.
 
 ## Audit log
+
+- 2026-09-17 — **Closing audit (Task A).** Every tracker item is [x] or [~] awaiting human review. Delivered in commits
+  18340dc..HEAD: V2-0 evidence tools (v2-scenes, hud-matrix, v2-voids, v2-frontage, fallback counter), V2-0A controls/
+  healing/HUD, V2-1 P0 art and gate/barrier rendering, V2-2 authored ownership + map, V2-3 pilots, V2-4 composed city,
+  district set pieces, parks, ground, P1 families and P2 redraws, V2-5 light/sound/campaign checks, V2-6 docs. Final:
+  npm test 0, test:browser 0, art lint 0 errors within budget, HUD 15.28% vertical. **Human review queue:** 00:34
+  location confirmation; uncoached new player + physical controller (V2-0A); listening review (V2-5); unlabelled
+  district read (V2-6); solo and four-player full runs (V2-6); P2 in-game read. Assumptions logged inline (campus
+  forecourt measurement, compound blocks judged by authored briefs, fire-station roller doors kept, ring fence kept).
+  Work in this and the previous session was partly done by reviewed subagent workflows before the no-subagent goal.
 
 - 2026-09-16 — Ground clarification: streets and sidewalks are a positive player reference;
   preserve them. Added a separate repair for visually untextured outdoor filler, including
