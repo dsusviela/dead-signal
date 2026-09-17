@@ -24,6 +24,10 @@ const STATES={
   combat4:{setup:party(4)+`for(const p of s.players)p.auto=true;for(let i=0;i<18;i++)DSGame.spawn(s,i%4?'walker':'runner',Math.cos(i)*260,2620+Math.sin(i)*200);`},
   vehicle4:{setup:party(4)+`const v=s.vehicles.find(q=>q.vehicleType==='fireTruck');v.fuel=v.maxFuel;for(const p of s.players){p.x=v.x+50;p.y=v.y;if(!DSGame.enterVehicle(s,v,p))throw new Error('boarding failed');}`},
   downed4:{setup:party(4)+`const p=s.players[3];p.hp=0;p.dead=true;p.revive=1.2;s.players[0].x=p.x+20;`},
+  // PLAYER_POWER Phase 9: fully upgraded co-op loadouts, launcher and grenades, armor states, a carried and a deployed turret
+  power4:{setup:party(4)+`const full=w=>({weapon:w,quality:3,mag:DSGame.magFor({weapon:w,attachments:DSGame.ATTACHMENTS[w].map(a=>a.id)}),attachments:DSGame.ATTACHMENTS[w].map(a=>a.id)});s.ammo.grenades=24;
+    s.players.forEach((p,i)=>{p.weaponInventory=[['ar','rifle','launcher'],['shotgun','smg','flame'],['launcher','ar','smg'],['rifle','shotgun','ar']][i].map(full);p.weaponSlot=0;Object.assign(p,p.weaponInventory[0]);p.attachments=p.weaponInventory[0].attachments.slice();p.armor=[50,32,9,0][i];});
+    s.players[3].armorBroken=1.2;s.players[1].turret={id:901,ammo:60,durability:150};s.turrets=[{id:900,ownerId:0,x:40,y:2560,angle:-.5,ammo:84,durability:90,cd:0,searchCd:0,target:null}];s.players[2].deploying={t:.4};s.players[2].turret={id:902,ammo:120,durability:150};`},
   boss4:{setup:party(4)+`for(const p of s.players){p.x=(p.id-1.5)*40;p.y=140;}DSBoss.start(s,DSGame.api(s));s.boss.hp=s.boss.maxHp*.4;`},
 };
 const report=[];

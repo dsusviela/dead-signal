@@ -707,34 +707,63 @@ their availability is neither accidental nor unlimited.
 
 ### Phase 9 — Finish presentation, controls, art, audio, and documentation
 
-- [ ] Audit every canonical weapon list in `game.js`, `render.js`, `hud.js`, `audio.js`, city loot,
+- [x] Audit every canonical weapon list in `game.js`, `render.js`, `hud.js`, `audio.js`, city loot,
   art references, fixtures, benchmarks, screenshots, README, and the field manual.
-- [ ] Add registered grenade-launcher survivor poses, world pickup art, projectile/blast effects,
+  Evidence: grep for hard-coded weapon lists: render GUN_SIZE, hud SHORT, audio profiles and city ECONOMY.weapons include
+  the launcher/AR; tools/test-audio.mjs weapon list extended to launcher + turret (8 distinct waveforms); the city
+  fixture and power-bench already cover the launcher; CITY.md mentions are historical measurements, left as records.
+- [x] Add registered grenade-launcher survivor poses, world pickup art, projectile/blast effects,
   grenade-ammo pickup art, and any required damaged/empty states.
-- [ ] Add turret pickup, carried, deployment, deployed, firing, empty, damaged, and broken art with
+  Evidence: survivors/wpn_launcher (held through the shared gun rig, so every pose/facing registers), loot/weaponCrate
+  (shared weapon pickup), vfx/grenade and vfx/explosion, loot/ammoGrenades; an empty launcher shows 0/1 on the strip.
+- [x] Add turret pickup, carried, deployment, deployed, firing, empty, damaged, and broken art with
   collision and muzzle origins matching simulation.
-- [ ] Add armor pickup and player/HUD hit/break feedback without requiring a full alternate sprite
-  set unless the chosen visual direction needs one.
-- [ ] Add attachment preview and earned-state iconography that remains distinct from weapon-quality
+  Evidence: loot/turretCase, survivors/turret_base + turret_head (head rotates, tracer origin 18 units along the
+  aim at the head height), deploy progress ring, muzzle glow, ammo gauge in the owner's colour, wear bar, "EMPTY"
+  label, break burst. Assumption: a carried turret is shown on the strip ("TURRET CARRIED · n RDS"), not as a
+  back-mounted sprite, to keep four overlapping survivors readable.
+- [x] Add armor pickup and player/HUD hit/break feedback without requiring a full alternate sprite
+  set unless the chosen visual direction needs one. Evidence: loot/armorVest; strip plate; rings (Phase 7).
+- [x] Add attachment preview and earned-state iconography that remains distinct from weapon-quality
   stars and does not overcrowd the four-player dock.
-- [ ] Add capacity/drop-choice, duplicate-upgrade, turret, armor, grenade, and refused-action copy
+  Evidence: "+N" after the quality stars on the strip and in pickup prompts; the duplicate prompt names the next
+  attachment and its effect. artifacts/power/hud/*-power4.png (four fully upgraded loadouts fit every viewport).
+- [x] Add capacity/drop-choice, duplicate-upgrade, turret, armor, grenade, and refused-action copy
   to the prompt hierarchy with player ownership where simultaneous actions are possible.
-- [ ] Add or reuse keyboard, Xbox, and PlayStation bindings for every new action. Do not overload a
+  Evidence: overflow dialog (Phase 1), "P# [key] UPGRADE …", "P# DEPLOYING TURRET · %", "P# LOADING TURRET",
+  "P# [E] LOAD TURRET · [T] PACK UP", player notices for every refusal (armor full, one turret, no room, turret full,
+  no bullets), squad GREN counter.
+- [x] Add or reuse keyboard, Xbox, and PlayStation bindings for every new action. Do not overload a
   control until Phase 0 has specified context and priority.
-- [ ] Add launch, explosion, turret deploy/fire/empty/break, attachment gained, armor hit/break, and
+  Evidence: one new action `deploy` (T / LB / L1) in BINDINGS; Pause → Controls lists it
+  (artifacts/power/phase9/controls-*.png); launcher uses fire, loading uses interact per Phase 0 priority.
+- [x] Add launch, explosion, turret deploy/fire/empty/break, attachment gained, armor hit/break, and
   dialog cues within the global audio voice budget.
-- [ ] Give all essential audio events a visible equivalent and make effects obey music/effects mute,
+  Evidence: audio.js launcher/turret shot profiles, 'explosion', 'attachment', 'armor' hit/break/pickup, 'turret'
+  deploy/retrieve/break; test-audio asserts each is audible and distinct, and a stacked four-player burst
+  (4 explosions, 4 launcher, 4 shotgun, 4 armor hits, 24 turret shots) stays below clipping within 48 voices.
+  An empty turret is silent by design (visible "EMPTY" label).
+- [x] Give all essential audio events a visible equivalent and make effects obey music/effects mute,
   pause, restart, loss, victory, and source-destruction lifecycle rules.
-- [ ] Update the field manual with party-size capacity, duplicate progression, grenade ammunition,
+  Evidence: explosions have fx + light, turret fire has tracers + muzzle glow, break/armor-break have text,
+  attachment has a notice; all cues go through the shared effects bus covered by the mute/pause lifecycle tests.
+- [x] Update the field manual with party-size capacity, duplicate progression, grenade ammunition,
   turret controls/resupply, and armor. Keep it concise enough to use during play.
-- [ ] Update README and any design/status documents that state the old capacity, weapon list, loot
-  behavior, or direct-to-health model.
-- [ ] Register and lint all new art; update the checked-in warning budget only for intentional,
-  reviewed warnings.
-- [ ] Run HUD matrices at every supported aspect ratio, party size, UI scale, controller family,
+  Evidence: MANUAL cards 05 UPGRADES AND GRENADES and 06 TURRETS AND ARMOR; the manual now lays out any number of
+  card rows and drops the district strip when it would not fit (artifacts/power/phase9/manual-*.png, 1366x600 fits).
+- [x] Update README and any design/status documents that state the old capacity, weapon list, loot
+  behavior, or direct-to-health model. Evidence: README controls, capacity/upgrade paragraph, and a new launcher /
+  turret / armor paragraph.
+- [x] Register and lint all new art; update the checked-in warning budget only for intentional,
+  reviewed warnings. Evidence: art:lint:all 0 errors, within budget; budgets added only for the five new sprites.
+- [x] Run HUD matrices at every supported aspect ratio, party size, UI scale, controller family,
   and representative base/fully-upgraded equipment state.
-- [ ] Listen with one and four survivors during simultaneous upgraded gunfire, grenades, and turrets;
+  Evidence: tools/hud-matrix.mjs gains `power4`; artifacts/power/hud/report.json — power4 budgets equal calm4 at all
+  four viewports (e.g. 1280x720 vertical 15.28%, area 13.75%, core text 12 px); no page errors.
+- [~] Listen with one and four survivors during simultaneous upgraded gunfire, grenades, and turrets;
   confirm important state changes remain audible without clipping or starving existing cues.
+  Automated: the stacked-render audio test above. **Awaiting human review**: play four-player combat with two
+  turrets and launchers and listen for armor-break and turret-break cues through the gunfire.
 
 Phase 9 exit: no surface teaches the old rules, every action has correct device-specific guidance,
 and combat state remains legible when four players use the new systems together.
@@ -854,6 +883,8 @@ matching phase item.
   tests, four-strip captures). Fixed a render crash on loot labels for non-ammo pickups.
 - 2026-09-17 — Phase 8: loot economy (launchers 3–4, armor 6–9, grenades 8–12, two guaranteed turrets, AR in the
   salvage pool), baseline fixture rewritten after diff review, envelopes extended.
+- 2026-09-17 — Phase 9: controls row, manual cards 05/06 with adaptive layout, README, audio cue tests, HUD matrix
+  power4 state. Human listening pass queued.
 
 - 2026-09-17 — Phase 2 shotgun cleave and point-blank hit fix landed.
 

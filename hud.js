@@ -12,7 +12,7 @@
   // district cards read the world's canonical table, in the order the campaign chain visits them
   const CHAIN=['checkpoint','industry','ruins','hospital','quarantine','northline'];
   const districtCards=()=>root.DSWorld.DISTRICTS.filter(d=>d.card).sort((a,b)=>CHAIN.indexOf(a.id)-CHAIN.indexOf(b.id)).map(d=>[d.id,d.mapLabel,d.card.role,d.card.note,d.mapPalette?d.mapPalette.light:d.color]);
-  const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The gate needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry four weapons solo, three each in co-op, plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.']];
+  const MANUAL=[['01 / THE RUN','Get everyone out through Checkpoint Nine. The gate needs emergency power, the override and a finished broadcast. Ashworks fuel restarts the chapel generator; St. Orison\'s records point to Patient Furnace; killing it frees the override and the payload Blackglass needs. Notices and the map show the way. Go in any order and come back often. Committing to the fight in the fenced yard seals the gates and locks its difficulty; the kill does not end the run.'],['02 / STAY QUIET','Walk quietly. Hold Shift / RT to run; stamina recovers after a short rest. If exhausted, release run. R / RB eats a squad ration so stamina recovers faster; rations never heal. Shots, healing, reloading and breaking wreckage make noise; amber rings show how far it carries. Infected search where they last heard you.'],['03 / THE SQUAD','H / B uses one of your own medkits: +50 HP, only when hurt. Carry up to 3; walking over a kit collects it, it does not heal. Stand near a fallen teammate for three seconds to revive them. Stay together under one camera. Level-ups wait in Pause: each survivor picks their own upgrade there. Tab / View opens the city map.'],['04 / WEAPONS AND WHEELS','E / A takes a weapon or boards a vehicle. F / X enables autofire (starts off). Carry four weapons solo, three each in co-op, plus an unlimited pistol; Q / Y cycles them. Magazines reload from the squad reserve. Driving: W / RT accelerates, S / LT brakes and then reverses, A/D or the stick steers. Holding both triggers brakes to a stop.'],['05 / UPGRADES AND GRENADES','Taking a weapon you already carry adds its next attachment instead (three per gun: +N on your strip). The grenade launcher fires shared GREN rounds that burst on arrival and stagger infected; it never hurts the squad. The shotgun and pierce rounds hit several infected in a line.'],['06 / TURRETS AND ARMOR','One turret each, outside your slots. T / LB deploys it after standing still; T / LB beside it packs it up with its rounds. E / A beside any turret loads it from squad bullets. Infected wear it down. Armor vests soak damage before health, up to 50; armor never regenerates and medkits do not restore it.']];
   const SHORT={pistol:'PISTOL',ar:'AR',shotgun:'SHOTGUN',smg:'SMG',rifle:'RIFLE',flame:'FLAMER',launcher:'LAUNCHER'};
   const ui={menu:null,focus:0,stack:[],pointer:{x:-1,y:-1},items:[],hover:null,upgradeFor:null,objective:null,location:null,arrive:0,panels:[]};
   let k=1,u=1,W=0,H=0,bindings={state:()=>null,restart:()=>{},resume:()=>{},toTitle:()=>{}};
@@ -352,10 +352,10 @@
         item(it.id,cx,cy,cw,ch,()=>it.run());});
       button(g,'back',items[3].label,x,d.y+240*k,inner,34*k,ui.focus===3,true,items[3].run);
     }else if(name==='controls'){
-      const w=Math.min(760*k,W-32*k),rowsN=12,d=dialog(g,w,(150+rowsN*20)*k),x=d.x+28*k;
+      const w=Math.min(760*k,W-32*k),rowsN=13,d=dialog(g,w,(150+rowsN*20)*k),x=d.x+28*k;
       text(g,'PAUSED / CONTROLS',x,d.y+22*k,8,COL.orange);display(g,'Every survivor, their own buttons.',x,d.y+42*k,24,COL.paper);
       const B=root.DSGame.BINDINGS,cols=[['ACTION',null],['KEYBOARD','keyboard'],['XBOX / OTHER','xbox'],['PLAYSTATION','playstation']],cw=(w-56*k)/4;
-      const rows=[['Walk','move'],['Run on foot','run'],['Vehicle gas','gas'],['Brake, then reverse','brake'],['Steer','steer'],['Interact / board / leave','interact'],['Use your medkit','heal'],['Eat a squad ration','eat'],['Autofire on / off','fire'],['Cycle weapons','cycle'],['City map','map'],['Pause · upgrades','pause']];
+      const rows=[['Walk','move'],['Run on foot','run'],['Vehicle gas','gas'],['Brake, then reverse','brake'],['Steer','steer'],['Interact / board / leave','interact'],['Use your medkit','heal'],['Eat a squad ration','eat'],['Autofire on / off','fire'],['Cycle weapons','cycle'],['Deploy / pack up turret','deploy'],['City map','map'],['Pause · upgrades','pause']];
       let y=d.y+80*k;cols.forEach(([t],i)=>text(g,t,x+i*cw,y,8,COL.gold));y+=20*k;
       for(const [label,a] of rows){cols.forEach(([t,dev],i)=>text(g,dev?(dev==='keyboard'&&a==='steer'?'A/D':B[dev][a]):label,x+i*cw,y,8,dev?COL.paper:COL.muted,'left',dev?'bold':'normal'));y+=20*k;}
       button(g,'back',items[0].label,x,d.y+d.h-44*k,w-56*k,32*k,true,true,items[0].run);
@@ -374,10 +374,11 @@
     }else if(name==='manual'){
       const w=Math.min(820*k,W-30*k),cw=(w-60*k-30*k)/2;
       const rowH=r=>16*k+13*k*Math.max(wrap(g,MANUAL[r*2][1],8,cw-10*k).length,wrap(g,MANUAL[r*2+1][1],8,cw-10*k).length)+10*k;
-      const h=Math.min(H-30*k,(22+20+40+10+8+10+(H>620?64:0)+40+30)*k+rowH(0)+rowH(1)),d=dialog(g,w,h);let y=d.y+22*k;const x=d.x+30*k;
+      const rowsN=Math.ceil(MANUAL.length/2),rowsH=Array.from({length:rowsN},(_,r)=>rowH(r)).reduce((a,b)=>a+b,0),base=(22+20+40+10+8+10+40+30)*k,showCards=H-30*k-base-rowsH>=64*k;
+      const h=Math.min(H-30*k,base+(showCards?64*k:0)+rowsH),d=dialog(g,w,h);let y=d.y+22*k;const x=d.x+30*k;
       text(g,'SURVIVOR FIELD MANUAL / 001',x,y,8,COL.orange);y+=20*k;display(g,'Know the city. Make every round count.',x,y,26,COL.paper);y+=40*k;
       g.fillStyle=COL.line;g.fillRect(x,y,w-60*k,1);y+=10*k;
-      for(let row=0;row<2;row++){
+      for(let row=0;row<rowsN;row++){
         MANUAL.slice(row*2,row*2+2).forEach(([t,body],col)=>{
           const cx=x+col*(cw+30*k);
           g.fillStyle=COL.orange;g.fillRect(cx,y,2*k,14*k);text(g,t,cx+10*k,y,8,COL.gold);
@@ -386,7 +387,7 @@
         y+=rowH(row);
       }
       y+=8*k;g.fillStyle=COL.line;g.fillRect(x,y,w-60*k,1);y+=10*k;
-      if(H>620){const cards=districtCards(),dw=(w-60*k-4*(cards.length-1)*k)/cards.length;cards.forEach(([id,name,role,note,col],i)=>{const dx=x+i*(dw+4*k);g.fillStyle='#091115';g.fillRect(dx,y,dw,52*k);g.strokeStyle=col;g.strokeRect(dx+.5,y+.5,dw-1,52*k-1);text(g,name,dx+8*k,y+7*k,7,col);text(g,role,dx+8*k,y+20*k,6,COL.paper,'left','normal');text(g,note,dx+8*k,y+33*k,6,COL.muted,'left','normal');});y+=64*k;}
+      if(showCards){const cards=districtCards(),dw=(w-60*k-4*(cards.length-1)*k)/cards.length;cards.forEach(([id,name,role,note,col],i)=>{const dx=x+i*(dw+4*k);g.fillStyle='#091115';g.fillRect(dx,y,dw,52*k);g.strokeStyle=col;g.strokeRect(dx+.5,y+.5,dw-1,52*k-1);text(g,name,dx+8*k,y+7*k,7,col);text(g,role,dx+8*k,y+20*k,6,COL.paper,'left','normal');text(g,note,dx+8*k,y+33*k,6,COL.muted,'left','normal');});y+=64*k;}
       button(g,'close','UNDERSTOOD',x,Math.min(y,d.y+h-56*k),220*k,40*k,true,false,items[0].run);
     }else if(name==='fullmap'){
       const size=Math.min(H-120*k,W-240*k,560*k),w=size+210*k,h=size+110*k,d=dialog(g,w,h);

@@ -36,11 +36,17 @@ try{
   }
   const baseline=await render();assert.ok(baseline.rms>.001,'music generates audible samples');assert.ok(baseline.peak<1);
   const signatures=new Set();
-  for(const detail of ['pistol','ar','smg','shotgun','rifle','flame']){
+  for(const detail of ['pistol','ar','smg','shotgun','rifle','flame','launcher','turret']){
     const out=await render([{type:'shot',detail}]);
     assert.ok(out.rms>0&&out.peak<1,detail+' is audible without clipping');signatures.add(out.signature.toFixed(4));
   }
-  assert.equal(signatures.size,6,'each weapon has a distinct waveform');
+  assert.equal(signatures.size,8,'each weapon and the turret has a distinct waveform');
+  // PLAYER_POWER Phase 9: power cues are audible, distinct and stay inside the voice cap when stacked
+  for(const [type,detail] of [['explosion'],['attachment'],['armor','hit'],['armor','break'],['armor','pickup'],['turret','deploy'],['turret','retrieve'],['turret','break']]){
+    const out=await render([{type,detail}]);assert.ok(Math.abs(out.signature-baseline.signature)>.01,type+' '+(detail||'')+' changes the waveform');assert.ok(out.peak<1);
+  }
+  const crowd=[];for(let i=0;i<4;i++)crowd.push({type:'explosion'},{type:'shot',detail:'launcher'},{type:'armor',detail:'hit'},{type:'shot',detail:'shotgun'});for(let i=0;i<24;i++)crowd.push({type:'shot',detail:'turret'});
+  const stacked=await render(crowd);assert.ok(stacked.peak<1,'four-player power combat does not clip ('+stacked.peak.toFixed(3)+')');assert.ok(stacked.voices<=48,'voices '+stacked.voices);
   for(const type of ['heal','hurt','pickup','reload','level','revive','engine','crash']){
     const out=await render([{type}]);assert.ok(Math.abs(out.signature-baseline.signature)>.01,type+' changes the waveform');assert.ok(out.peak<1);
   }
