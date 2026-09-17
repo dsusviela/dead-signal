@@ -75,14 +75,13 @@
     return g;
   }
 
-  function makeMarket(){ // shopping cart
-    var g=panelBase(),x;
-    rect(g,7,8,24,13,'Q');
-    for(x=10;x<=21;x+=4)rect(g,x,8,x,13,'M');
-    rect(g,7,10,24,10,'M');
-    line(g,7,8,4,5,'Q');line(g,4,5,4,4,'Q');
-    disc(g,10,16,2,2,'Q');disc(g,21,16,2,2,'Q');
-    outlineFrom(g,['Q'],'K');
+  function makeMarket(){ // shopping cart in side view: dark glyph on the pale panel, wire basket, push handle, two wheels
+    var g=panelBase(),x,y,x0,x1;
+    rect(g,4,6,7,6,'K');line(g,7,6,9,9,'K');                          // handle grip and bar
+    for(y=8;y<=15;y++){x0=9+Math.floor((y-8)/3);x1=26-Math.floor((y-8)/1.6);rect(g,x0,y,x1,y,'K');}  // basket, front slopes in
+    for(y=10;y<=13;y+=3)for(x=12;x<=22;x+=3)if(g[y][x]==='K'&&g[y][x+1]==='K')rect(g,x,y,x+1,y,'P');      // wire mesh holes
+    rect(g,10,17,23,17,'K');line(g,11,16,10,17,'K');                   // chassis bar
+    [[13,19],[21,19]].forEach(function(c){rect(g,c[0]-1,c[1]-1,c[0]+1,c[1]+1,'K');setclip(g,c[0],c[1],'Q');});
     return toRows(g);
   }
   function makePharmacy(){ // pill capsule + pale-sage cross
@@ -104,12 +103,16 @@
     outlineFrom(g,['Q'],'K');
     return toRows(g);
   }
-  function makePolice(){ // badge/shield
-    var g=panelBase(),y,inset;
-    rect(g,10,5,21,14,'H');
-    for(y=15;y<=18;y++){inset=y-14;rect(g,10+inset,y,21-inset,y,'H');}
-    rect(g,14,9,17,9,'P');
-    outlineFrom(g,['H'],'K');
+  function makePolice(){ // police badge: a dark shield with a pale six-point star and a banner bar
+    var g=panelBase(),x,y,inset;
+    rect(g,9,4,22,13,'K');
+    for(y=14;y<=19;y++){inset=Math.round((y-13)*1.1);rect(g,9+inset,y,22-inset,y,'K');}
+    setclip(g,9,4,'P');setclip(g,22,4,'P');rect(g,15,4,16,4,'P');       // notched top edge
+    // six-point star: two overlapping triangles, symmetric about x=15.5
+    function tri(ax,ay,bx,by,cx,cy,px,py){var d1=(px-bx)*(ay-by)-(ax-bx)*(py-by),d2=(px-cx)*(by-cy)-(bx-cx)*(py-cy),d3=(px-ax)*(cy-ay)-(cx-ax)*(py-ay);return !((d1<0||d2<0||d3<0)&&(d1>0||d2>0||d3>0));}
+    for(y=5;y<=16;y++)for(x=9;x<=22;x++){var px=x+.5,py=y+.5;if(tri(16,5.2,21.4,14,10.6,14,px,py)||tri(16,16.8,10.6,8,21.4,8,px,py))g[y][x]='H';}
+    rect(g,15,10,16,11,'L');
+    rect(g,12,18,19,18,'L');                                              // name banner
     return toRows(g);
   }
   function makeFire(){ // helmet + crossed axes

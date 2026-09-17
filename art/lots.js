@@ -87,7 +87,7 @@
   var PATH_PAL=pal2(GRAVEL_PAL,{G:'#2c3524',F:'#3a4430'}); // G/F grass blades growing over the gravel edge (a step above tiles/grass)
   var BENCHV_PAL={K:'#1a0e0b',D:'#3f2a22',M:'#62463a',L:'#80655a',I:MAT.iron.L,J:MAT.iron.M,S:'#0d100b'}; // weathered slats (MAT.wood hue, less chroma), iron frames; S = shadow on grass
   var WORN_PAL={T:'#342c22',U:'#443a2d',G:'#2b3124'}; // trodden soil a step above the lawn, G = surviving grass tufts
-  var RUBBLE2_PAL=pal2(MAT.concrete,{B:MAT.brick.M,C:MAT.brick.L});
+  var RUBBLE2_PAL=pal2(MAT.concrete,{B:MAT.brick.M,C:MAT.brick.L}); // K/D/M/L concrete: dust, plaster; B/C brick
   var PAINT_PAL={D:MAT.asphalt.D,K:shade(MAT.ember.K,-6),Y:HAZARD_Y,W:MAT.concrete.L};
   var CHECKLIST_PAL=pal2(MAT.concrete,{C:MAT.iron.M});
   var PARKING_PAL={K:MAT.asphalt.K,D:MAT.asphalt.D,W:MAT.concrete.L};
@@ -665,14 +665,14 @@
   // =====================================================================
   // trolley 20x16: tipped shopping trolley, thin iron wireframe (decal)
   // =====================================================================
-  function makeTrolley(){
-    var w=20,h=16,g=mkGrid(w,h);
-    rect(g,2,4,16,4,'M');rect(g,2,4,2,11,'M');rect(g,16,4,16,10,'M');
-    rect(g,2,11,10,11,'M');
-    rect(g,3,5,15,10,'.'); // basket interior stays open (wire mesh, not filled)
-    var x;for(x=4;x<16;x+=3)rect(g,x,5,x,9,'M');
-    disc(g,15,13,2,2,'D');disc(g,7,12,2,2,'D');
-    outlineFrom(g,['M','D'],'K');
+  function makeTrolley(){ // tipped on its side: pale wire basket with a mesh grid, push handle, castors in the air
+    var w=20,h=16,g=mkGrid(w,h),x,y;
+    for(y=3;y<=11;y++){var x0=2+Math.floor((y-3)/4),x1=15;for(x=x0;x<=x1;x++){var edge=y===3||y===11||x===x0||x===x1;if(edge)g[y][x]=y===3||x===x0?'H':'L';else if((x-x0)%3===0||(y-3)%3===0)g[y][x]='M';}}
+    rect(g,15,1,18,1,'H');rect(g,15,2,15,2,'L');setclip(g,18,2,'L');                                   // push handle bar over the back of the basket
+    rect(g,3,12,14,12,'M');                                                       // chassis rail
+    [[4,14],[13,14]].forEach(function(c){rect(g,c[0]-1,c[1]-1,c[0]+1,c[1],'K');setclip(g,c[0],c[1]-1,'H');}); // castors
+    setclip(g,3,3,'H');setclip(g,4,3,'H');                                        // glint on the lit rim
+    outlineFrom(g,['L','M','D','H'],'K');
     return toRows(g);
   }
 
@@ -735,12 +735,12 @@
   // =====================================================================
   // rubbleSpill 40x18 x2: fresh brick/plaster spill (decal)
   // =====================================================================
-  function makeRubbleSpill(variant){
+  function makeRubbleSpill(variant){ // fresh spill: grey dust fan with distinct brick and plaster chunks, biggest at the source edge
     var w=40,h=18,g=mkGrid(w,h),rng=mulberry32(variant===0?85:86),x,y,d,cx=variant===0?16:24;
-    for(y=0;y<h;y++)for(x=0;x<w;x++){
-      d=Math.sqrt(((x-cx)/18)*((x-cx)/18)+((y-10)/7)*((y-10)/7));
-      if(d<1&&rng()<(1-d)*0.9)g[y][x]=rng()<0.3?'B':(rng()<0.5?'C':'D');
-    }
+    for(y=0;y<h;y++)for(x=0;x<w;x++){d=Math.sqrt(((x-cx)/19)*((x-cx)/19)+((y-5)/12)*((y-5)/12));if(d<1&&rng()<(1-d)*1.3)g[y][x]='D';} // dust fan from the wall (top edge)
+    function chunk(px,py,cw,ch,brick){for(var yy=0;yy<ch;yy++)for(var xx=0;xx<cw;xx++)setclip(g,px+xx,py+yy,yy===0?(brick?'C':'L'):(brick?'B':'M'));setclip(g,px+cw-1,py+ch-1,'K');}
+    for(var i=0;i<11;i++){var t=i/11,r=rng(),px=Math.round(cx-14+rng()*28),py=Math.round(1+t*t*13+rng()*2),big=t<.45;chunk(px,py,big?3+(r*2|0):2,big?2+(r>.6?1:0):2,rng()<.6);}
+    for(i=0;i<6;i++)setclip(g,Math.round(cx-17+rng()*34),Math.round(9+rng()*8),rng()<.5?'L':'C');                 // loose grit at the fan's edge
     return toRows(g);
   }
 

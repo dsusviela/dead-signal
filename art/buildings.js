@@ -308,6 +308,7 @@
   // furn_crates 32x28: 2x2 wood crates with iron corner banding
   // =====================================================================
   var FURN_CRATES_PAL=pal2(MAT.wood,{I:MAT.iron.M,J:MAT.iron.L});
+  var AISLE_PAL=pal2(MAT.iron,{B:MAT.wood.M,C:MAT.olive.M,E:MAT.wood.L}); // grey store shelving, leftover cardboard and tins
   function makeFurnCrates(){
     var w=32,h=28,g=mkGrid(w,h);
     var K='K',D='D',M='M',L='L',I='I',J='J';
@@ -355,18 +356,17 @@
   // furn_shelfAisle 18x100 x2: stripped store aisle shelving from above,
   // most compartments left bare (rule 13); a knocked-over item in [1]
   // =====================================================================
-  function makeFurnShelfAisle(variant){
-    var w=18,h=100,g=mkGrid(w,h);
-    var K='K',D='D',M='M',L='L',I='I',J='J',y;
-    bevel(g,0,0,17,99,K,L,M,D);
-    for(y=12;y<96;y+=14){rect(g,1,y,16,y+1,D);setclip(g,1,y,K);setclip(g,16,y,K);setclip(g,1,y+1,K);setclip(g,16,y+1,K);}
-    if(variant===0){
-      rect(g,3,4,8,9,I);setclip(g,3,4,K);setclip(g,8,9,K);
-      rect(g,4,60,7,63,J);setclip(g,4,60,K);setclip(g,7,63,K);
-    }else{
-      rect(g,10,32,15,37,I);setclip(g,10,32,K);setclip(g,15,37,K);
-      rect(g,2,80,13,83,J);setclip(g,2,80,K);setclip(g,13,83,K); // fallen across the shelf
-    }
+  function makeFurnShelfAisle(variant){ // gondola from above: iron spine, two rows of shelf decks with bay uprights, stripped bare
+    var w=18,h=100,g=mkGrid(w,h),x,y,rng=function(n){n=(n*2654435761+variant*97)>>>0;return ((n^(n>>>13))%1000)/1000;};
+    rect(g,0,0,17,99,'K');
+    rect(g,1,1,7,98,'D');rect(g,10,1,16,98,'D');                        // shadowed shelf decks
+    rect(g,8,1,9,98,'L');setclip(g,8,1,'H');setclip(g,9,1,'H');         // central spine, lit along its top
+    for(y=1;y<99;y+=11){rect(g,1,y,7,y,'M');rect(g,10,y,16,y,'M');}      // bay uprights crossing both decks
+    for(y=2;y<98;y++){setclip(g,1,y,'M');setclip(g,16,y,'M');}          // shelf lips
+    // what is left: a few boxes and tins, more at the far end of [1]; one box knocked flat into the aisle
+    for(var bay=0;bay<9;bay++)for(var side=0;side<2;side++){if(rng(bay*7+side*3+1)>(variant?.32:.22))continue;
+      var bx=side?11:2,by=3+bay*11+(rng(bay+side*5)*4|0),bw=2+(rng(bay*3+side)*3|0);rect(g,bx+(side?0:5-bw),by,bx+(side?bw:5)-(side?0:0),by+2,rng(bay+9*side)>.5?'B':'C');setclip(g,bx+(side?0:5-bw),by,'E');}
+    if(variant===1){rect(g,11,76,17,79,'C');setclip(g,17,79,'K');setclip(g,11,76,'E');}
     return toRows(g);
   }
 
@@ -509,14 +509,19 @@
   // =====================================================================
   // furn_gearRack 60x16: top rail, hooks; three coats, one bare hook, one helmet
   // =====================================================================
-  function makeFurnGearRack(){
-    var w=60,h=16,g=mkGrid(w,h);
-    var K='K',M='M',H='H',C='C',E='E';
-    rect(g,2,1,57,2,M);setclip(g,2,1,K);setclip(g,57,1,K);setclip(g,2,2,K);setclip(g,57,2,K);
-    [8,24,40,52].forEach(function(x){setclip(g,x,3,M);setclip(g,x,4,K);});
-    [8,24,40].forEach(function(x){rect(g,x-3,5,x+3,13,C);setclip(g,x-1,7,E);setclip(g,x,7,E);});
-    outlineFrom(g,[C],K);
-    disc(g,52,8,3,3,M);disc(g,52,8,2,2,H);
+  function makeFurnGearRack(){ // hook rail: three hanging turnout coats (shoulders, sleeves, reflective band), a bare hook, a helmet
+    var w=60,h=16,g=mkGrid(w,h),x,y;
+    rect(g,2,1,57,2,'M');rect(g,2,1,57,1,'H');setclip(g,2,1,'K');setclip(g,57,1,'K');setclip(g,2,2,'K');setclip(g,57,2,'K');
+    [8,22,36,50].forEach(function(x){setclip(g,x,3,'M');});
+    [8,22,36].forEach(function(cx,i){
+      for(y=4;y<=14;y++){var half=y===4?1:y===5?4:5;for(x=cx-half;x<=cx+half;x++)g[y][x]=(x===cx&&y>5)?'K':(x<cx?'E':'C');}   // shoulders, lit left side, front opening
+      rect(g,cx-5,11,cx+5,11,'H');setclip(g,cx,11,'K');                                   // reflective band
+      if(i===1){rect(g,cx+5,6,cx+6,13,'C');}                                               // one sleeve swings out
+    });
+    outlineFrom(g,['C','E','H'],'K');
+    // helmet on the last hook, front view: dome, brim, visor edge
+    for(y=4;y<=9;y++)for(x=45;x<=55;x++){var d=Math.hypot((x-50)/5.2,(y-9.5)/5.2);if(d<=1)g[y][x]=d>.8?'K':(x<50?'H':'M');}
+    rect(g,44,10,56,10,'K');rect(g,45,10,55,10,'M');setclip(g,50,6,'H');
     return toRows(g);
   }
 
@@ -801,7 +806,7 @@
     furn_shelf:{rows:makeFurnShelf(),pal:'MAT.wood',anchor:'feet',note:'60x16, top-down wood shelf, dividers, a few items; also placed 16x60 unrotated per world.js, overhang is expected'},
     furn_crates:{rows:makeFurnCrates(),pal:FURN_CRATES_PAL,anchor:'feet',note:'32x28, 2x2 wood crates with iron corner banding'},
     furn_counter:{rows:makeFurnCounter(),pal:'MAT.wood',anchor:'feet',note:'80x22, top-down shop counter, raised back ledge, two items'},
-    furn_shelfAisle:{variants:[makeFurnShelfAisle(0),makeFurnShelfAisle(1)],pal:FURN_CRATES_PAL,anchor:'feet',note:'18x100, stripped store aisle shelving, mostly bare, one knocked-over item per variant'},
+    furn_shelfAisle:{variants:[makeFurnShelfAisle(0),makeFurnShelfAisle(1)],pal:AISLE_PAL,anchor:'feet',note:'18x100, stripped store aisle shelving, mostly bare, one knocked-over item per variant'},
     furn_checkout:{rows:makeFurnCheckout(),pal:CHECKOUT_PAL,anchor:'feet',note:'60x22, checkout counter, recessed belt with seams, dead till'},
     furn_vending:{rows:makeFurnVending(),pal:IRON_GLASS_PAL,anchor:'feet',note:'26x18, iron vending cabinet, smashed glass front, coin slot'},
     furn_desk:{rows:makeFurnDesk(),pal:'MAT.wood',anchor:'feet',note:'48x26, wood desk, side drawer block, papers'},

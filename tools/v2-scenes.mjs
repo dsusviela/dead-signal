@@ -28,6 +28,8 @@ const SCENES={};
 for(const [d,views] of Object.entries(STREETS))for(const [v,[x,y,a]] of Object.entries(views))SCENES[`${d}-${v}`]={setup:at(x,y,a),settle:900};
 Object.assign(SCENES,{
   fullmap:{setup:`DeadSignal.ui.open('fullmap');`,settle:400},
+  // P2 art in place: the supermarket sales floor (aisles, trolley) and the police sign
+  p2Market:{setup:at(-500,1850,-Math.PI/2),settle:900},p2Police:{setup:at(150,2300,0),settle:900},p2Rubble:{setup:at(-2800,-600,Math.PI/2),settle:900},
   // V2-3 pilots: the South Blocks north alley into police staff parking, and the Ashworks loading lane into the loading court
   pilotSouthAlley:{setup:at(725,1760,Math.PI/2),settle:900},pilotSouthCourt:{setup:at(900,1990,Math.PI),settle:900},pilotAshLane:{setup:at(3100,2200,0),settle:900},pilotAshCourt:{setup:at(3380,1990,-Math.PI/2),settle:900},
   // parks and the graveyard (city_v2 Section 2 finish review): each from inside its main path cross

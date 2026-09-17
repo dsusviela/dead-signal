@@ -655,8 +655,18 @@ facades, and props that disappear into the night palette.
   and the graveyard; fix weak silhouettes, scale, contact with the ground and canopy occlusion.
   *lots.js pass (paths, benchPark_v, wornPatch, graveFlat, pathGravel) reviewed and integrated; trees, beds and
   notices read at gameplay zoom in neutral light.*
-- [ ] Finish existing weak signs, furniture, trolley and rubble alongside their consuming scenes;
+- [~] Finish existing weak signs, furniture, trolley and rubble alongside their consuming scenes;
   keep a per-asset disposition (keep/revise/replace) and before/after evidence until accepted.
+  *Redrawn by hand (no subagents), lint 0 errors, budget recorded only for these ids:
+  signs/market — replace: dark side-view cart (handle, wire basket, chassis, wheels) on the pale panel;
+  signs/police — replace: dark shield badge with a pale six-point star and name bar;
+  lots/trolley — revise: lit wire basket with mesh, push handle and castors;
+  lots/rubbleSpill x2 — replace: dust fan from the wall with distinct brick and plaster chunks;
+  buildings/furn_shelfAisle x2 — replace: gondola from above (lit spine, shelf decks, bay uprights, a few leftover
+  boxes and tins) so it no longer reads as a pillar;
+  buildings/furn_gearRack — revise: shaped turnout coats with reflective bands, swinging sleeve, domed helmet.
+  Before: ART.md weakest list; after: scratch previews and scenes-p2/p2Market, p2Police, p2Rubble (diag).
+  Awaiting human review of the in-game read.*
 - [x] Redraw the screenshot watchtower and police-car family to the reference-specific contract
   above; correct the tower's emitter placement. Review other oversized box-like props for
   recognizable silhouette, volume, access/support, material separation and ground contact.
