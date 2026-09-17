@@ -19,7 +19,7 @@ try{
       if(options.musicMuted)DSAudio.toggleMusic();DSAudio.unlock();if(options.muted)DSAudio.toggleMute();if(options.prime)DSAudio.primeIncidentals();
       const s={mode:'play',paused:!!options.paused,audioEvents:events,wave:1,threat:1,boss:options.boss?{active:true}:null,
         vehicles:options.vehicles||(options.car?[{id:'car',driver:0,fuel:100,dead:false,speed:options.speed||0,x:0,y:0}]:[]),
-        camera:{x:0,y:0},world:options.world||null,circuit:options.circuit||null,campaign:options.campaign||null,players:options.players||[]};
+        camera:{x:0,y:0},world:options.world||null,circuit:options.circuit||null,campaign:options.campaign||null,players:options.players||[],enemies:options.enemies||[]};
       DSAudio.update(s);
       const engines=DSAudio.status.engines;
       if(options.stop==='park'){s.vehicles[0].driver=null;DSAudio.update(s);}
@@ -84,6 +84,10 @@ try{
   const volley=['ar','smg','shotgun','rifle','pistol','flame','ar','smg'].map(detail=>({type:'shot',detail}));
   const heavy=await render([...volley,{type:'strain',detail:'bulldozer'},{type:'generator'}],{boss:true,world,circuit:{emergency:true},campaign,players,vehicles:['sedan','fireTruck','bulldozer'].map((t,i)=>({id:t,vehicleType:t,driver:i,fuel:100,dead:false,speed:200,x:i*10,y:0}))});
   assert.ok(heavy.voices<=48&&heavy.peak<1,'peak voices '+heavy.voices);assert.equal(heavy.engines,3);
+  // the frantic score under a chasing horde, with the same volley and three engines
+  const horde=Array.from({length:70},(_,i)=>({x:Math.cos(i)*200,y:Math.sin(i)*200,dead:false,state:'chase',alert:true}));
+  const fight=await render([...volley,{type:'hurt'},{type:'explosion'}],{players,enemies:horde,world,circuit:{emergency:true},vehicles:['sedan','fireTruck','bulldozer'].map((t,i)=>({id:t,vehicleType:t,driver:i,fuel:100,dead:false,speed:200,x:i*10,y:0}))});
+  assert.ok(fight.voices<=48&&fight.peak<1,'overrun score with gunfire and engines: voices '+fight.voices+' peak '+fight.peak.toFixed(3));assert.equal(fight.engines,3,'engines survive the overrun score');
   assert.ok((await render([{type:'step',detail:'wood'}],{musicMuted:true,world,circuit:{emergency:true},players})).rms>0,'music off keeps effects and loops');
   assert.equal((await render([{type:'step',detail:'wood'}],{muted:true,world,circuit:{emergency:true},players})).rms,0,'all sound off silences everything');
   // ---- city_v2 Section 5: sparse, source-bound incidental one-shots, never a bed ----

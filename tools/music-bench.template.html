@@ -1,0 +1,226 @@
+<title>Dead Signal Score Bench</title>
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* One deliberate look: a field receiver in a dead city. Single dark theme by choice. */
+  :root{
+    --ground:#0c1110;--panel:#141c1b;--line:#24302e;--ink:#dde6e2;--dim:#83958f;--hot:#ff5a3c;--quiet:#6bc6b9;
+    --accent:#6bc6b9;
+    --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    color-scheme:dark;
+  }
+  html,body{background:var(--ground);color:var(--ink)}
+  body{font:14px/1.5 var(--mono);padding-inline:16px;padding-block:20px 48px}
+  .wrap{max-width:1080px;margin:0 auto;display:grid;gap:20px}
+  h1{font:700 clamp(28px,5vw,44px)/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance}
+  h1 span{color:var(--accent);transition:color .6s}
+  .lede{color:var(--dim);max-width:68ch;margin:6px 0 0}
+  .label{font:500 13px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+  button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:10px 12px;cursor:pointer;text-align:left}
+  button:hover{border-color:var(--dim)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .top{display:flex;flex-wrap:wrap;gap:16px;align-items:end;justify-content:space-between}
+  #power{font:700 18px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;background:var(--accent);color:#08100e;border:0;padding:14px 22px}
+  .readout{display:flex;flex-wrap:wrap;gap:18px;font-variant-numeric:tabular-nums}
+  .readout div{display:grid;gap:2px}
+  .readout b{font:700 22px/1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+  .readout small{color:var(--dim);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+  #scope{width:100%;height:110px;display:block;background:var(--panel);border:1px solid var(--line);border-radius:3px}
+  .quarters{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+  .quarters button{display:grid;gap:4px;border-top:3px solid var(--q)}
+  .quarters button strong{font:700 17px/1.1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+  .quarters button span{color:var(--dim);font-size:12px;line-height:1.35}
+  .states{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .states button strong{display:block;font:700 17px/1.1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+  .states button span{color:var(--dim);font-size:12px}
+  .states button[data-state="fight"] strong,.states button[data-state="overrun"] strong,.states button[data-state="boss"] strong{color:var(--hot)}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+  @media (max-width:720px){.cols{grid-template-columns:1fr}}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+  .meters{display:grid;gap:6px}
+  .meter{display:grid;grid-template-columns:72px 1fr 40px;gap:10px;align-items:center;font-size:12px;font-variant-numeric:tabular-nums}
+  .meter i{height:8px;background:var(--line);border-radius:2px;overflow:hidden;display:block}
+  .meter i u{display:block;height:100%;width:0;background:var(--accent);transition:width .1s linear}
+  .meter em{font-style:normal;color:var(--dim);text-align:right}
+  label.check{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px}
+  .notes{color:var(--dim);font-size:12px;max-width:68ch;margin:0}
+  .notes b{color:var(--ink);font-weight:500}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Score bench · <span id="qname">South Blocks</span></h1>
+      <p class="lede">This runs the real <code>audio.js</code> from the game. Pick a quarter and a danger state, then listen. Gunfire, CREST and a downed survivor fire the same events the game sends.</p>
+    </div>
+    <button id="power" type="button">Start listening</button>
+  </header>
+
+  <div class="readout" aria-live="polite">
+    <div><small>Quarter</small><b id="rq">—</b></div>
+    <div><small>State</small><b id="rs">—</b></div>
+    <div><small>Voices / 48</small><b id="rv">0</b></div>
+    <div><small>Out peak</small><b id="rp">0.00</b></div>
+  </div>
+  <canvas id="scope" width="1080" height="110" aria-label="Output waveform"></canvas>
+
+  <section>
+    <p class="label">Quarter</p>
+    <div class="quarters" id="quarters"></div>
+  </section>
+
+  <section>
+    <p class="label">Danger</p>
+    <div class="states" id="states"></div>
+  </section>
+
+  <div class="cols">
+    <section>
+      <p class="label">Events</p>
+      <div class="row">
+        <button id="guns" type="button">Fire rifles (3 s)</button>
+        <button id="crest" type="button">CREST surge</button>
+        <button id="down" type="button">Survivor down</button>
+        <button id="tour" type="button">Play a scene (60 s)</button>
+      </div>
+      <p class="label" style="margin-top:16px">Boss phase</p>
+      <div class="row" id="phases"></div>
+      <label class="check" style="margin-top:14px"><input type="checkbox" id="real"> Realistic step-downs (danger fades over 10–20 s, as in game)</label>
+    </section>
+    <section>
+      <p class="label">Layers</p>
+      <div class="meters" id="meters"></div>
+    </section>
+  </div>
+
+  <p class="notes"><b>The scene</b>: 12 s calm → something investigates → spotted, fight → the horde, overrun → they lose you, back down → a new quarter. <b>Step-downs</b>: off, a lower state starts clean at once. On, it waits the game's dwell times, so you hear the real release. <b>Quarters</b>: as in game, a new quarter takes about 3 s plus a bar, then the drone glides over.</p>
+</div>
+
+<script>
+/*__AUDIO_JS__*/
+</script>
+<script>
+(function(){
+  const QUARTERS=[
+    ['checkpoint','South Blocks','#6bc6b9','Cold, grieving. Detuned piano, cello drone, heartbeat.'],
+    ['ruins','Old Quarter','#8e7eaf','Haunted. Sinking music box, ghost choir, knocks.'],
+    ['hospital','Civic Ward','#79e2cf','Clinical dread. Glass bells, monitor beep, clusters.'],
+    ['northline','Northline','#ffd249','Exposed. Open fifths, far electric piano, low SOS.'],
+    ['industry','Ashworks','#ff7b35','Heavy metal-work. Bowed metal, anvils, grind.'],
+    ['quarantine','Central Quarantine','#ff543b','Oppressive. Low brass, octatonic choir.']
+  ];
+  const STATES=[
+    ['calm','Calm','Nothing knows you are here',[0,0,0]],
+    ['suspense','Suspense','Something is investigating',[12,0,4]],
+    ['fight','Fight','Spotted and chased',[40,20,0]],
+    ['overrun','Overrun','The horde arrives',[80,60,0]],
+    ['boss','Patient Furnace','The boss fight',[40,20,0]]
+  ];
+  const $=id=>document.getElementById(id);
+  let quarter='checkpoint',danger='calm',phase=1,guns=0,started=false,analyser=null,limiter=null,tourTimers=[];
+  window.DSWorld={district:()=>({id:quarter})};
+  // capture the game's limiter so the scope can read the final output
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(AC){const make=AC.prototype.createDynamicsCompressor;AC.prototype.createDynamicsCompressor=function(){const c=make.call(this);limiter=c;return c;};}
+
+  const makeState=()=>({mode:'play',paused:false,time:0,wave:1,threat:1,surge:'SWELL',camera:{x:0,y:0},
+    players:[{id:0,x:0,y:0,dead:false},{id:1,x:20,y:0,dead:false}],enemies:[],audioEvents:[],boss:null});
+  let st=makeState();
+  function crowd(n,chase,alert){
+    st.enemies=Array.from({length:n},(_,i)=>{const r=30+(i%24)*11;
+      return {x:Math.cos(i*2.4)*r,y:Math.sin(i*2.4)*r,dead:false,state:i<chase?'chase':i<chase+alert?'investigate':'roam',alert:i<chase+alert};});
+  }
+  function apply(fresh){
+    const S=STATES.find(s=>s[0]===danger);
+    if(fresh){const old=st;st=makeState();st.players=old.players;}
+    crowd(...S[3]);
+    st.boss=danger==='boss'?{active:true,phase,ai:{mode:'active'}}:null;
+    render();
+  }
+  function setDanger(id){
+    const order=STATES.map(s=>s[0]),down=order.indexOf(id)<order.indexOf(danger);
+    danger=id;apply(down&&!$('real').checked);
+  }
+
+  // ---- controls ----
+  QUARTERS.forEach(([id,name,col,desc])=>{
+    const b=document.createElement('button');b.type='button';b.id='q-'+id;b.style.setProperty('--q',col);
+    b.innerHTML=`<strong>${name}</strong><span>${desc}</span>`;
+    b.onclick=()=>{quarter=id;render();};$('quarters').appendChild(b);
+  });
+  STATES.forEach(([id,name,desc])=>{
+    const b=document.createElement('button');b.type='button';b.id='s-'+id;b.dataset.state=id;
+    b.innerHTML=`<strong>${name}</strong><span>${desc}</span>`;
+    b.onclick=()=>{stopTour();setDanger(id);};$('states').appendChild(b);
+  });
+  [1,2,3].forEach(p=>{
+    const b=document.createElement('button');b.type='button';b.id='p-'+p;b.textContent='Phase '+p;
+    b.onclick=()=>{phase=p;if(danger!=='boss')danger='boss';apply(false);};$('phases').appendChild(b);
+  });
+  const LAYERS=['drone','bed','texture','motif','pulse','combat','overrun','boss','sting'];
+  LAYERS.forEach(k=>{const d=document.createElement('div');d.className='meter';d.innerHTML=`<span>${k}</span><i><u id="m-${k}"></u></i><em id="v-${k}">0.00</em>`;$('meters').appendChild(d);});
+
+  $('guns').onclick=()=>{guns=performance.now()+3000;};
+  $('crest').onclick=()=>{st.surge='CREST';setTimeout(()=>{st.surge='SWELL';},3000);};
+  $('down').onclick=()=>{st.players[1].dead=true;setTimeout(()=>{st.players[1].dead=false;},6000);};
+  function stopTour(){tourTimers.forEach(clearTimeout);tourTimers=[];$('tour').setAttribute('aria-pressed','false');}
+  $('tour').onclick=()=>{
+    stopTour();if(!started)start();$('tour').setAttribute('aria-pressed','true');
+    const real=$('real');const was=real.checked;real.checked=true;
+    const at=(s,fn)=>tourTimers.push(setTimeout(fn,s*1000));
+    danger='calm';apply(true);
+    at(12,()=>setDanger('suspense'));
+    at(22,()=>setDanger('fight'));
+    at(26,()=>{guns=performance.now()+4000;});
+    at(32,()=>setDanger('overrun'));
+    at(34,()=>{st.surge='CREST';setTimeout(()=>{st.surge='SWELL';},3000);});
+    at(42,()=>setDanger('calm'));
+    at(50,()=>{const i=QUARTERS.findIndex(q=>q[0]===quarter);quarter=QUARTERS[(i+1)%QUARTERS.length][0];render();});
+    at(62,()=>{real.checked=was;stopTour();});
+  };
+
+  function start(){
+    if(started)return;started=true;
+    DSAudio.unlock();
+    if(limiter){analyser=limiter.context.createAnalyser();analyser.fftSize=2048;limiter.connect(analyser);}
+    $('power').textContent='Listening';$('power').disabled=true;
+    let last=performance.now();
+    setInterval(()=>{
+      const now=performance.now();st.time+=(now-last)/1000;last=now;
+      if(now<guns&&Math.random()<.45)st.audioEvents.push({type:'shot',detail:'rifle'});
+      DSAudio.update(st);
+    },16);
+    requestAnimationFrame(draw);
+  }
+  $('power').onclick=start;
+
+  function render(){
+    const Q=QUARTERS.find(q=>q[0]===quarter);
+    document.documentElement.style.setProperty('--accent',Q[2]);$('qname').textContent=Q[1];
+    QUARTERS.forEach(([id])=>$('q-'+id).setAttribute('aria-pressed',String(id===quarter)));
+    STATES.forEach(([id])=>$('s-'+id).setAttribute('aria-pressed',String(id===danger)));
+    [1,2,3].forEach(p=>$('p-'+p).setAttribute('aria-pressed',String(danger==='boss'&&p===phase)));
+  }
+  const buf=new Float32Array(2048),cv=$('scope'),g=cv.getContext('2d');
+  let peakHold=0;
+  function draw(){
+    const s=DSAudio.status,bus=DSAudio.musicBus,names={checkpoint:'South Blocks',ruins:'Old Quarter',hospital:'Civic Ward',northline:'Northline',industry:'Ashworks',quarantine:'Central Quarantine'};
+    $('rq').textContent=names[s.quarter]||'—';$('rs').textContent=s.musicState||'—';$('rv').textContent=s.voices;
+    if(bus)LAYERS.forEach(k=>{const v=Math.max(0,Math.min(1,bus[k].gain.value));$('m-'+k).style.width=(v*100)+'%';$('v-'+k).textContent=v.toFixed(2);});
+    const w=cv.width,h=cv.height;g.fillStyle='#141c1b';g.fillRect(0,0,w,h);
+    g.strokeStyle='#24302e';g.beginPath();g.moveTo(0,h/2);g.lineTo(w,h/2);g.stroke();
+    if(analyser){
+      analyser.getFloatTimeDomainData(buf);let p=0;
+      g.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--accent');g.lineWidth=1.5;g.beginPath();
+      for(let i=0;i<buf.length;i++){const x=i/buf.length*w,y=h/2-buf[i]*h*1.6;i?g.lineTo(x,y):g.moveTo(x,y);p=Math.max(p,Math.abs(buf[i]));}
+      g.stroke();peakHold=Math.max(p,peakHold*.97);$('rp').textContent=peakHold.toFixed(2);
+    }
+    requestAnimationFrame(draw);
+  }
+  render();
+})();
+</script>
